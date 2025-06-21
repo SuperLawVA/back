@@ -62,7 +62,7 @@ public class UserServiceImpl implements UserService {
         User u = userRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("회원이 없습니다."));
         u.changeEmail(dto.getEmail());
-        u.changeNickname(dto.getNickname());
+        //u.changeNickname(dto.getNickname());
         User saved = userRepository.save(u);
         return UserResponseDTO.from(saved);
     }

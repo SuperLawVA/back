@@ -9,9 +9,8 @@ import java.util.Map;
 
 @SpringBootApplication
 public class BackApplication {
-
     public static void main(String[] args) {
-        // .env 파일 로드 (.env 또는 환경변수)
+        // .env 파일 로드
         Dotenv dotenv = Dotenv.configure()
                 .directory(System.getProperty("user.dir"))
                 .filename(".env")
@@ -47,7 +46,7 @@ public class BackApplication {
         // 데이터베이스 연결 실패 시에도 애플리케이션 시작 허용 설정
         env.put("spring.datasource.continue-on-error", "true");
         env.put("spring.sql.init.continue-on-error", "true");
-        
+
         // 디버깅 정보 출력
         System.out.println("=== 환경변수 로딩 완료 ===");
         System.out.println("DATABASE_URL: " + (getEnv("DATABASE_URL", dotenv) != null ? "설정됨" : "미설정"));
