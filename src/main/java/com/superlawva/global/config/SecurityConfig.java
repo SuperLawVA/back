@@ -73,6 +73,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/swagger-resources/**",
+                                "/api/alarms/**",
                                 "/webjars/**"
                         ).permitAll()
                         .requestMatchers(POST, "/users").permitAll()
