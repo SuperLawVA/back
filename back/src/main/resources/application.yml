@@ -1,7 +1,7 @@
-# 🔐 환경변수를 사용한 안전한 설정 파일
+# 🟢 공통 설정 (모든 프로필에 적용)
 spring:
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    active: local # 기본 프로필
 
   # JPA 공통 설정
   jpa:
@@ -10,16 +10,23 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
         use_sql_comments: true
 
-  # 📧 이메일 설정 (환경변수 사용)
+  # 🟢 파일 업로드 설정
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+      enabled: true
+
+  # 🟢 이메일 설정
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    username: ${MAIL_USERNAME:your-email@gmail.com}
+    password: ${MAIL_PASSWORD:your-app-password}
     properties:
       mail:
         smtp:
@@ -29,30 +36,54 @@ spring:
           debug: true
         debug: true
 
-# 🌐 앱 설정
+  # 🟢 MongoDB 설정 (OCR3 및 문서 관리)
+  data:
+    mongodb:
+      # 🚀 MongoDB Atlas 연결 (운영 환경)
+      uri: ${MONGODB_URI:mongodb://username:password@localhost:27017/database_name?authSource=admin}
+      # 로컬 개발용 대체 설정 (Atlas 미사용 시)
+      # host: ${MONGODB_HOST:localhost}
+      # port: ${MONGODB_PORT:27017}
+      # database: ${MONGODB_DATABASE:superlawva_docs}
+      # username: ${MONGODB_USERNAME:admin}
+      # password: ${MONGODB_PASSWORD:password123}
+      # authentication-database: ${MONGODB_AUTH_DB:admin}
+
+# 🟢 앱 설정
 app:
   email:
     enabled: true
   frontend:
     url: ${FRONTEND_URL:http://localhost:3000}
 
-# 🔑 카카오 로그인 설정 (환경변수 사용)
+# 🔵 카카오 로그인 설정
 kakao:
-  client-id: ${KAKAO_CLIENT_ID}
-  client-secret: ${KAKAO_CLIENT_SECRET}
+  client-id: ${KAKAO_CLIENT_ID:your-kakao-client-id}
+  client-secret: ${KAKAO_CLIENT_SECRET:your-kakao-client-secret}
   redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:5173/oauth/kakao/callback}
 
-# 🔑 네이버 로그인 설정 (환경변수 사용)
+# 🔵 네이버 로그인 설정
 naver:
-  client-id: ${NAVER_CLIENT_ID}
-  client-secret: ${NAVER_CLIENT_SECRET}
+  client-id: ${NAVER_CLIENT_ID:your-naver-client-id}
+  client-secret: ${NAVER_CLIENT_SECRET:your-naver-client-secret}
   redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:5173/oauth/naver/callback}
 
-# 🔒 JWT 설정 (환경변수 사용)
+# 🔵 JWT 설정
 jwt:
-  secret: ${JWT_SECRET}
+  secret: ${JWT_SECRET:JWT_SECRET_1234_JWT_SECRET_1234_JWT_SECRET_1234_JWT_SECRET_1234}
   access-token-validity: 3600000
   refresh-token-validity: 604800000
+
+# 🤖 OpenAI 설정 (LLM 기반 계약서 분석 강화) - Python Gemini 수준
+openai:
+  enabled: ${OPENAI_ENABLED:true} # ✅ 기본값을 true로 설정 (LLM 보완 활성화)
+  api:
+    key: ${OPENAI_API_KEY:your-openai-api-key-here} # 실제 API 키 설정 필요
+    url: ${OPENAI_API_URL:https://api.openai.com/v1/chat/completions}
+  model: ${OPENAI_MODEL:gpt-4o} # 🚀 Python Gemini 수준 성능을 위해 GPT-4o 사용
+  max-tokens: ${OPENAI_MAX_TOKENS:2000} # Python 수준 복잡한 응답 지원
+  temperature: ${OPENAI_TEMPERATURE:0.0} # 일관성을 위해 0으로 설정
+  timeout: ${OPENAI_TIMEOUT:45000} # 복잡한 분석을 위해 45초로 증가
 
 # Swagger 설정
 springdoc:
@@ -62,42 +93,49 @@ springdoc:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
-  packages-to-scan: com.springboot.controller
+  packages-to-scan: com.superlawva
 
-# 서버 설정
+# 기본 서버 설정
 server:
-  port: ${SERVER_PORT:8080}
+  port: 8080
+  max-http-header-size: 64KB
+  tomcat:
+    max-swallow-size: 100MB
+    max-http-post-size: 100MB
 
-# 로깅 설정
+# 기본 로깅 설정
 logging:
   level:
-    com.springboot: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.mail: TRACE
-    org.springframework.data.redis: DEBUG
-    org.hibernate.SQL: DEBUG
-    com.sun.mail: DEBUG
+    com.superlawva: DEBUG
+    com.superlawva.domain.ocr: DEBUG  # OCR 서비스 디버깅 강화
+    org.springframework.security: INFO
+    org.springframework.mail: INFO
+    org.springframework.data.redis: INFO
+    org.hibernate.SQL: INFO
+    com.sun.mail: INFO
 
 ---
-# 🏠 로컬 개발 환경
+# 🟢 로컬 개발 환경 프로필 (H2 사용)
 spring:
   config:
     activate:
       on-profile: local
 
-  # 🗄️ 로컬 MySQL 설정 (환경변수 사용)
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
 
-  # 🐳 Docker Redis 설정
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
+      host: localhost
+      port: 6379
       timeout: 2000ms
       lettuce:
         pool:
@@ -105,21 +143,28 @@ spring:
           max-idle: 8
           min-idle: 0
 
+# 🟢 로컬 환경용 Google Cloud Document AI 설정
+gcp:
+  enabled: true
+  project-id: ${GCP_PROJECT_ID:your-gcp-project-id}
+  location: ${GCP_LOCATION:us}
+  processor-id: ${GCP_PROCESSOR_ID:your-processor-id}
+  credentials:
+    path: classpath:service-account-key.json
+
 ---
-# 🚀 운영 환경
+# 🚀 운영 환경 프로필
 spring:
   config:
     activate:
       on-profile: prod
 
-  # 🗄️ 운영 MySQL 설정
   datasource:
     url: ${DATABASE_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
-  # ☁️ Redis Cloud 설정
   data:
     redis:
       host: ${REDIS_HOST}
@@ -134,20 +179,76 @@ spring:
         ssl:
           enabled: ${REDIS_SSL_ENABLED:true}
 
-  # 운영 JPA 설정
   jpa:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
 
-# 운영 서버 설정
 server:
   port: ${PORT:8080}
 
-# 운영 로깅 (최소화)
 logging:
   level:
-    com.springboot: INFO
+    com.superlawva: INFO
     org.springframework.security: WARN
     org.springframework.data.redis: WARN
     org.hibernate.SQL: WARN
+
+# 🟢 Google Cloud Document AI 설정
+gcp:
+  enabled: true
+  project-id: ${GCP_PROJECT_ID:your-gcp-project-id}
+  location: ${GCP_LOCATION:us}
+  processor-id: ${GCP_PROCESSOR_ID:your-processor-id}
+  credentials:
+    path: ${GCP_CREDENTIALS_PATH:classpath:service-account-key.json}
+    base64: ${GCP_CREDENTIALS_BASE64:}
+
+# 🟢 OCR 설정
+ocr:
+  max-file-size: 52428800 # 50MB
+  allowed-extensions: pdf,jpg,jpeg,png,tiff,bmp
+
+# 🚀 OCR2 설정 (Gemini 2.5 기반 고성능 계약서 분석)
+ocr2:
+  enabled: ${OCR2_ENABLED:true}
+  document-ai:
+    project-id: ${OCR2_DOC_AI_PROJECT_ID:your-gcp-project-id}
+    location: ${OCR2_DOC_AI_LOCATION:us}
+    processor-id: ${OCR2_DOC_AI_PROCESSOR_ID:your-processor-id}
+  gemini:
+    api-key: ${OCR2_GEMINI_API_KEY:your-gemini-api-key}
+    model: ${OCR2_GEMINI_MODEL:gemini-2.0-flash-exp}
+    max-tokens: ${OCR2_GEMINI_MAX_TOKENS:8192}
+    temperature: ${OCR2_GEMINI_TEMPERATURE:0.0}
+    timeout: ${OCR2_GEMINI_TIMEOUT:60000}
+  processing:
+    max-file-size: 10485760 # 10MB
+    timeout: 120000 # 2분
+    retry-attempts: 3
+  features:
+    detailed-analysis: true
+    metadata-generation: true
+    validation: true
+    debug-mode: ${OCR2_DEBUG_MODE:false}
+  processing-timeout: 300 # seconds
+  confidence-threshold: 0.8
+
+# 🤖 ML API 설정 (계약서 분석 및 내용증명서 생성)
+ml:
+  api:
+    base-url: ${ML_API_BASE_URL:http://localhost:8000} # ML 서버 URL
+    timeout: ${ML_API_TIMEOUT:120000} # 2분 (ML 처리 시간 고려)
+    retry-attempts: ${ML_API_RETRY:3}
+    connection-timeout: ${ML_API_CONNECTION_TIMEOUT:10000} # 10초
+    read-timeout: ${ML_API_READ_TIMEOUT:60000} # 1분
+  features:
+    contract-analysis: ${ML_CONTRACT_ANALYSIS_ENABLED:true}
+    proof-generation: ${ML_PROOF_GENERATION_ENABLED:true}
+    async-processing: ${ML_ASYNC_PROCESSING:false} # 동기/비동기 처리 선택
+  quality:
+    min-confidence-score: ${ML_MIN_CONFIDENCE:0.7} # 최소 신뢰도 점수
+    max-processing-time: ${ML_MAX_PROCESSING_TIME:180} # 최대 처리 시간(초)

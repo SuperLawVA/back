@@ -1,0 +1,24 @@
+### OCR3 API 테스트 - 계약서 이미지 업로드 및 MongoDB _id 반환 확인
+
+POST http://localhost:8080/api/upload/ocr3
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="test-contract.jpg"
+Content-Type: image/jpeg
+
+< ./test-contract.txt
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 
+# 기대 응답:
+# {
+#   "contract_data": {
+#     "id": "mongodb-generated-id",  // ← 이 부분이 MongoDB _id
+#     "contract_type": "월세",
+#     "dates": { ... },
+#     "property": { ... },
+#     "payment": { ... }
+#   },
+#   "debug_mode": false
+# } 

@@ -10,11 +10,67 @@
 .springBeans
 .sts4-cache
 
+# 🚨 중요: 빌드 관련 파일들 (용량 큰 파일)
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+*.jar
+*.war
+*.ear
+
+back/build
+
+# 🚨 Frontend 관련 파일들 (별도 리포지토리로 분리)
+front/
+
+# 🚨 업로드 파일들 (용량 큰 파일)
+uploads/
+*.pdf
+*.jpeg
+*.jpg
+*.png
+*.gif
+
+# 🚨 로그 파일들
+logs/
+*.log
+
+# 🔐 개인정보 및 민감한 설정 파일들
+src/main/resources/application.yml.template
+src/main/resources/application-*.yml
+!src/main/resources/application.yml
+src/main/resources/service-account-key.json
+**/service-account-key.json
+.env
+.env.template
+
+# 🏗️ IDE 설정 파일들
+.idea/
+*.iws
+*.iml
+*.ipr
+.vscode/
+
+# 🗑️ 백업 파일들
+*.backup
+*.bak
+*~
+*.tmp
+
+# 🐳 Docker 관련
+docker-compose.yml
+!docker-compose-*.yml
+
+# 🧹 기타 불필요한 파일들
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
 
 # Created by https://www.gitignore.io/api/git,java,maven,eclipse,windows
 
 ### Eclipse ###
-
 .metadata
 bin/
 tmp/
@@ -189,56 +245,9 @@ build/
 .project
 .settings
 bin
-build
 target
 dependency-reduced-pom.xml
 *.sublime-*
 /scratch
-.gradle
 README.html
-*.iml
-.idea
 .exercism
-
-# 백엔드 전용 무시
-*.log
-logs/
-
-
-# IntelliJ 설정
-.idea/
-out/
-
-# Application properties
-src/main/resources/application-*.yml
-!src/main/resources/application.yml.backup
-!src/main/resources/application.yml.backup2
-!src/main/resources/application.yml.template
-
-
-# Backup files
-build.gradle.backup
-build.gradle.backup2
-docker-compose.yml.backup
-
-*.backup
-springboot.backup
-src/main/java/com/springboot_backup/
-
-# 🔐 개인정보 보호
-.env
-.env.template
-src/main/resources/application.yml
-docker-compose.yml
-
-# 🏗️ 빌드 파일
-.gradle/
-*.log
-build/libs
-
-# Google Cloud 서비스 계정 키
-src/main/resources/service-account-key.json
-**/service-account-key.json
-
-*.pdf
-uploads

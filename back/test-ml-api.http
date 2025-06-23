@@ -1,0 +1,156 @@
+# 🤖 SuperLawva ML API 테스트
+# ML 서버와의 연동을 테스트하는 HTTP 요청 모음
+
+### 변수 설정
+@baseUrl = http://localhost:8080
+@contractId = 675506b4c4a60073fbff00c2d
+@userId = test-user-123
+@generatedDocumentId = generated-doc-123
+
+### 🔍 1. ML API 상태 확인
+GET {{baseUrl}}/api/ml/health
+Content-Type: application/json
+
+###
+
+### 🤖 2. AI 계약서 분석 요청
+POST {{baseUrl}}/api/ml/analyze/contract/{{contractId}}?userId={{userId}}
+Content-Type: application/json
+
+###
+
+### 📝 3. AI 내용증명서 생성 요청
+POST {{baseUrl}}/api/ml/generate/proof/{{contractId}}?userId={{userId}}
+Content-Type: application/json
+
+###
+
+### 📄 4. 생성된 문서 결과 조회
+GET {{baseUrl}}/api/ml/results/{{generatedDocumentId}}
+Content-Type: application/json
+
+###
+
+# =================================================================
+# 🔧 ML 서버 Mock API (ML 팀 구현 예정)
+# =================================================================
+
+### 🤖 ML 서버 - 계약서 분석 API (ML 팀 구현 예정)
+# POST http://localhost:8000/api/v1/analyze/contract
+# Content-Type: application/json
+# 
+# {
+#   "contract_id": "675506b4c4a60073fbff00c2d",
+#   "user_id": "test-user-123",
+#   "request_type": "CONTRACT_ANALYSIS",
+#   "contract_data": {
+#     "contract_type": "부동산임대차계약서",
+#     "dates": {
+#       "계약기간": {
+#         "시작일": "2024년 1월 1일",
+#         "종료일": "2025년 12월 31일"
+#       }
+#     },
+#     "property": {
+#       "소재지": "서울특별시 강남구 테헤란로 123",
+#       "용도": "주거용"
+#     },
+#     "payment": {
+#       "보증금": "5000만원",
+#       "월세": "100만원"
+#     },
+#     "lessor": {
+#       "이름": "김임대",
+#       "주소": "서울시 서초구 서초동 456"
+#     },
+#     "lessee": {
+#       "이름": "이세입",
+#       "주소": "서울시 강남구 역삼동 789"
+#     }
+#   },
+#   "additional_params": {
+#     "analysis_type": "COMPREHENSIVE",
+#     "output_format": "DETAILED",
+#     "language": "ko",
+#     "priority": "NORMAL"
+#   }
+# }
+
+###
+
+### 📝 ML 서버 - 내용증명서 생성 API (ML 팀 구현 예정)
+# POST http://localhost:8000/api/v1/generate/proof
+# Content-Type: application/json
+# 
+# {
+#   "contract_id": "675506b4c4a60073fbff00c2d",
+#   "user_id": "test-user-123",
+#   "request_type": "PROOF_GENERATION",
+#   "contract_data": {
+#     "contract_type": "부동산임대차계약서",
+#     "dates": {
+#       "계약기간": {
+#         "시작일": "2024년 1월 1일",
+#         "종료일": "2025년 12월 31일"
+#       }
+#     },
+#     "property": {
+#       "소재지": "서울특별시 강남구 테헤란로 123"
+#     },
+#     "payment": {
+#       "보증금": "5000만원",
+#       "월세": "100만원"
+#     }
+#   },
+#   "additional_params": {
+#     "analysis_type": "LEGAL_REVIEW",
+#     "output_format": "REPORT",
+#     "language": "ko",
+#     "priority": "HIGH"
+#   }
+# }
+
+### 📊 예상 ML 응답 형태 (ML 팀과 협의 필요)
+# {
+#   "success": true,
+#   "message": "계약서 분석이 완료되었습니다.",
+#   "contract_id": "675506b4c4a60073fbff00c2d",
+#   "user_id": "test-user-123",
+#   "request_type": "CONTRACT_ANALYSIS",
+#   "analysis_result": {
+#     "risk_score": 0.75,
+#     "risk_level": "MEDIUM",
+#     "risk_factors": [
+#       "보증금 반환 조건이 모호함",
+#       "계약 해지 조건이 불분명함"
+#     ],
+#     "legal_issues": [
+#       {
+#         "category": "PAYMENT",
+#         "severity": "MEDIUM",
+#         "description": "보증금 반환 기한이 명시되지 않음",
+#         "clause_reference": "제7조",
+#         "suggestion": "보증금 반환 기한을 명확히 명시할 것을 권장"
+#       }
+#     ],
+#     "recommendations": [
+#       "계약서에 보증금 반환 기한을 명시하세요",
+#       "월세 연체 시 조치사항을 구체적으로 명시하세요"
+#     ],
+#     "summary": "전반적으로 표준적인 임대차 계약서이나, 일부 조항의 명확화가 필요합니다."
+#   },
+#   "generated_content": {
+#     "content_type": "LEGAL_ANALYSIS",
+#     "title": "부동산임대차계약서 분석 보고서",
+#     "content": "본 계약서는 부동산임대차보호법에 따른 표준 임대차계약서로...",
+#     "confidence_score": 0.92
+#   },
+#   "processing_info": {
+#     "model_name": "SuperLawva-Contract-Analyzer-v2",
+#     "model_version": "2.1.0",
+#     "processing_time_seconds": 12.5,
+#     "token_count": 1842,
+#     "quality_score": 0.89,
+#     "processed_at": "2024-12-08T10:30:00Z"
+#   }
+# } 

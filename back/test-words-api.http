@@ -1,0 +1,44 @@
+### Words API 테스트
+
+### 1. 헬스 체크
+GET http://localhost:8080/api/health
+Accept: application/json
+
+### 2. 용어 검색 - 키워드: "양성훈련과정"
+GET http://localhost:8080/api/terms/search?keyword=양성훈련과정&page=1&pageSize=10
+Accept: application/json
+
+### 3. 용어 검색 - 키워드: "도로"
+GET http://localhost:8080/api/terms/search?keyword=도로&page=1&pageSize=10
+Accept: application/json
+
+### 4. 용어 검색 - 빈 키워드 (전체 조회)
+GET http://localhost:8080/api/terms/search?page=1&pageSize=20
+Accept: application/json
+
+### 5. 인기 검색어 조회
+GET http://localhost:8080/api/search-keywords/popular
+Accept: application/json
+
+### 6. 용어 상세 조회
+GET http://localhost:8080/api/terms/양성훈련과정
+Accept: application/json
+
+### 7. 새 용어 등록
+POST http://localhost:8080/api/upload/words
+Content-Type: application/json
+
+{
+  "word": "테스트용어",
+  "content": "이것은 테스트를 위한 용어 설명입니다."
+}
+
+### 8. POST로 검색 API 호출 (사용자가 언급한 방식)
+POST http://localhost:8080/api/terms/search
+Content-Type: application/json
+
+{
+  "keyword": "양성훈련과정",
+  "page": 1,
+  "pageSize": 10
+} 

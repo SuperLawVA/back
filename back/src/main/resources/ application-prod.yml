@@ -1,0 +1,8 @@
+# 운영 환경 설정
+gcp:
+  credentials:
+    # 옵션 1: 서버에 파일을 직접 배치하는 경우
+    path: file:/opt/app/credentials/service-account-key.json
+
+    # 옵션 2: 환경 변수로 Base64 인코딩된 키를 전달하는 경우
+    # base64: ${GCP_CREDENTIALS_BASE64}

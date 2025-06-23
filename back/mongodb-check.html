@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MongoDB 계약서 확인</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      .container {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      .button {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      .button:hover {
+        background: #0056b3;
+      }
+      .result {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+      }
+      .json {
+        background: #f1f3f4;
+        padding: 10px;
+        border-radius: 3px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🗄️ MongoDB 저장된 계약서 확인</h1>
+
+      <button class="button" onclick="getAllContracts()">
+        모든 계약서 조회
+      </button>
+      <button class="button" onclick="getContract('6853ea9d7a781429ac733ad0')">
+        특정 계약서 조회
+      </button>
+
+      <div id="result" class="result" style="display: none">
+        <div id="resultContent"></div>
+      </div>
+
+      <div id="explanation" class="result">
+        <h3>💡 MongoDB 저장 방식 설명</h3>
+        <ul>
+          <li><strong>데이터베이스:</strong> superlawva_docs</li>
+          <li><strong>컬렉션:</strong> contract_data</li>
+          <li><strong>포트:</strong> localhost:27017</li>
+          <li><strong>저장 위치:</strong> Docker Volume (mongodb_data)</li>
+          <li>
+            <strong>관리도구:</strong> Mongo Express (http://localhost:8081)
+          </li>
+        </ul>
+
+        <h4>🔄 저장 과정:</h4>
+        <ol>
+          <li>OCR3 API 호출 → 파일 업로드</li>
+          <li>GCP Document AI → 텍스트 추출</li>
+          <li>Gemini API → JSON 구조화</li>
+          <li>MongoDB 저장 → _id 자동 생성</li>
+          <li>클라이언트에 _id 포함 응답 반환</li>
+        </ol>
+      </div>
+    </div>
+
+    <script>
+      async function getAllContracts() {
+        try {
+          const response = await fetch("/api/upload/ocr3/contracts/all");
+          const data = await response.json();
+          document.getElementById("resultContent").innerHTML =
+            "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+          document.getElementById("result").style.display = "block";
+        } catch (error) {
+          document.getElementById("resultContent").innerHTML =
+            '<p style="color: red;">오류: ' + error.message + "</p>";
+          document.getElementById("result").style.display = "block";
+        }
+      }
+
+      async function getContract(id) {
+        try {
+          const response = await fetch(`/api/upload/ocr3/contracts/${id}`);
+          const data = await response.json();
+          document.getElementById("resultContent").innerHTML =
+            "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+          document.getElementById("result").style.display = "block";
+        } catch (error) {
+          document.getElementById("resultContent").innerHTML =
+            '<p style="color: red;">오류: ' + error.message + "</p>";
+          document.getElementById("result").style.display = "block";
+        }
+      }
+    </script>
+  </body>
+</html>

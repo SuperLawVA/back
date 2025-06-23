@@ -1,0 +1,20 @@
+### 간단한 Words API 테스트
+
+### 1. 헬스 체크 (서버 동작 확인)
+GET http://localhost:8080/api/health
+
+### 2. 전체 용어 조회 (RDS 연결 확인)
+GET http://localhost:8080/api/terms/search?page=1&pageSize=5
+
+### 3. 특정 용어 검색 (GET 방식 - 권장)
+GET http://localhost:8080/api/terms/search?keyword=양성훈련과정
+
+### 4. 같은 검색 (POST 방식)
+POST http://localhost:8080/api/terms/search
+Content-Type: application/json
+
+{
+  "keyword": "양성훈련과정",
+  "page": 1,
+  "pageSize": 10
+} 

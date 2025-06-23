@@ -14,11 +14,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.superlawva.domain.user.dto.AuthResponseDTO;
-import com.superlawva.domain.user.dto.EmailVerificationDTO;
-import com.superlawva.domain.user.dto.LoginRequestDTO;
-import com.superlawva.domain.user.dto.RegisterRequestDTO;
-import com.superlawva.domain.user.dto.RegisterResponseDTO;
+import com.superlawva.domain.user.dto.*;
 
 import com.superlawva.domain.user.entity.User;
 import com.superlawva.global.security.CustomUserDetails;

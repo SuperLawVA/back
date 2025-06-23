@@ -1,41 +1,84 @@
+# 🟢 공통 설정 (모든 프로필에 적용)
 spring:
   profiles:
-    active: local  # 기본 프로필
+    active: prod # MongoDB Atlas + RDS MySQL 사용
 
-  # 공통 설정
+  # Bean 오버라이딩 비활성화 (중복 Bean 해결됨)
+  main:
+    allow-bean-definition-overriding: false
+
+  # JPA 공통 설정
   jpa:
     hibernate:
-      ddl-auto: update  # create → update로 변경 (운영 시 validate)
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
         use_sql_comments: true
-    defer-datasource-initialization: true
 
-  # SQL 초기화 설정
-  sql:
-    init:
-      mode: never  # 운영에서는 never, 개발에서는 always
+  # 🟢 파일 업로드 설정
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+      enabled: true
 
-# 카카오 로그인 설정
+  # 🟢 이메일 설정
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: kplhn70k@gmail.com
+    password: iyedzrpaavauycut
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          debug: true
+        debug: true
+
+# 🟢 앱 설정
+app:
+  email:
+    enabled: true
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:3000}
+
+# 🔵 카카오 로그인 설정
 kakao:
   client-id: d5169e8b3457cc1295d2140ed61a3057
   client-secret: sGP9vhD5egFqjx3YogukbQBTf3KLKzbX
   redirect-uri: http://localhost:5173/oauth/kakao/callback
 
-# 네이버 로그인 설정
+# 🔵 네이버 로그인 설정
 naver:
   client-id: orAsAb4EzjWjhfXYwkYf
   client-secret: EnRBtf2cax
   redirect-uri: http://localhost:5173/oauth/naver/callback
 
-# JWT 설정
+# 🔵 JWT 설정
 jwt:
   secret: ${JWT_SECRET:JWT_SECRET_1234_JWT_SECRET_1234_JWT_SECRET_1234_JWT_SECRET_1234}
-  access-token-validity: 3600000 # 1시간
-  refresh-token-validity: 604800000 # 7일
+  access-token-validity: 3600000
+  refresh-token-validity: 604800000
+
+# 🟢 Google Cloud Document AI 설정 (local에서 검증된 설정 사용)
+gcp:
+  enabled: true
+  project-id: theta-gizmo-463308-j4
+  location: us
+  processor-id: 56d956757d67d15a
+  credentials:
+    path: classpath:service-account-key.json
+
+# 🚀 Gemini API 설정
+gemini:
+  api-key: AIzaSyDnnEgaWGdEfkanj4M5cEyfEdhzbPsFVpE
+  model-name: gemini-2.0-flash-exp
+  api-url: https://generativelanguage.googleapis.com
 
 # Swagger 설정
 springdoc:
@@ -45,35 +88,112 @@ springdoc:
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
-  packages-to-scan: com.springboot.controller
-  default-consumes-media-type: application/json
-  default-produces-media-type: application/json
+  packages-to-scan: com.superlawva
 
-# 로깅 설정
+# 기본 서버 설정
+server:
+  port: 8080
+  max-http-header-size: 64KB
+  tomcat:
+    max-swallow-size: 100MB
+    max-http-post-size: 100MB
+
+# 기본 로깅 설정
 logging:
   level:
-    com.springboot: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.superlawva: DEBUG
+    com.superlawva.domain.ocr: DEBUG
+    com.superlawva.domain.ocr3: DEBUG
+    org.springframework.security: INFO
+    org.springframework.mail: INFO
+    org.springframework.data.redis: INFO
+    org.hibernate.SQL: INFO
+    com.sun.mail: INFO
 
 ---
-# 로컬 개발 환경 (MySQL)
+# 🟢 로컬 개발 환경 프로필 (H2 + 로컬 MongoDB)
 spring:
   config:
     activate:
       on-profile: local
 
   datasource:
-    url: jdbc:mysql://localhost:3307/legal_ai_db?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:legal_ai_user}
-    password: ${DB_PASSWORD:xodud2355}  # 비밀번호
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # 🟢 로컬 MongoDB 설정
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+        # 🟢 MongoDB 설정 (OCR3 및 문서 관리)
+        mongodb:
+          # 🚀 MongoDB Atlas 연결 (운영 환경)
+          uri: ${MONGODB_URI:mongodb://admin:password123@localhost:27017/superlawva_docs?authSource=admin}
+
+# 🟢 로컬 환경용 Google Cloud Document AI 설정 (공통 설정 사용)
+
+---
+# 🚀 운영 환경 프로필 (MySQL + MongoDB Atlas)
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://superlawva-db.chg1ephxbhjv.ap-northeast-2.rds.amazonaws.com:3306/superlawva?useSSL=false&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: admin
+    password: ${DB_PASSWORD:superlawva$%^}
     driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # 🚀 MongoDB Atlas 설정
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb+srv://superlawva_admin:A1b2C3d4E5f6G7h8@superlawva-cluster.wwztiz1.mongodb.net/superlawva_docs?retryWrites=true&w=majority&appName=superlawva-cluster}
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 5
+        ssl:
+          enabled: ${REDIS_SSL_ENABLED:true}
 
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  web:
+    resources:
+      static-locations: classpath:/static/
 
 server:
-  port: 8080
+  port: ${PORT:8080}
+
+logging:
+  level:
+    com.superlawva: INFO
+    org.springframework.security: WARN
+    org.springframework.data.redis: WARN
+    org.hibernate.SQL: WARN

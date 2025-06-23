@@ -1,1 +1,2 @@
-rootProject.name = 'Ex30OAuth2RestAPI'
+rootProject.name = "SuperLawVA"
+include "back", "front", "ml"
