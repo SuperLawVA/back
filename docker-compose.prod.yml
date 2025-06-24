@@ -29,6 +29,9 @@ services:
       - JAVA_OPTS=-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0
       - LOGGING_LEVEL_ROOT=DEBUG
       - LOGGING_LEVEL_COM_SUPERLAWVA=DEBUG
+      - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=DEBUG
+      - LOGGING_LEVEL_ORG_HIBERNATE=DEBUG
+      - LOGGING_LEVEL_ORG_SQL=DEBUG
     deploy:
       resources:
         limits:

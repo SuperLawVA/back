@@ -188,8 +188,8 @@ jobs:
 
             # 로그 확인
             echo "=== 배포 완료 - 실시간 로그 확인 ==="
-            echo "30초간 실시간 로그 모니터링..."
-            timeout 30s $COMPOSE_CMD -f docker-compose.prod.yml logs -f app || true
+            echo "60초간 실시간 로그 모니터링..."
+            timeout 60s $COMPOSE_CMD -f docker-compose.prod.yml logs -f app || true
 
             echo "=== 최근 로그 확인 ==="
             $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=100 app
