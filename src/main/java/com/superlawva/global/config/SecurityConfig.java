@@ -6,6 +6,8 @@ import com.superlawva.global.security.filter.LogoutFilter;
 import com.superlawva.global.security.util.JwtTokenProvider;
 import com.superlawva.global.security.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -29,6 +31,8 @@ import static org.springframework.http.HttpMethod.POST;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
@@ -58,33 +62,27 @@ public class SecurityConfig {
     }
 
     @Bean
-public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-    http
-        .cors(withDefaults())
-        .csrf(csrf -> csrf.disable())
-        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers(
-                "/",
-                "/actuator/health", 
-                "/actuator/info", 
-                "/login/**", 
-                "/api/auth/**",
-                "/api/health",
-                "/api/v1/status",
-                "/api/upload/health",
-                "/swagger-ui/**",
-                "/v3/api-docs/**",
-                "/swagger-ui.html"
-            ).permitAll()
-            .anyRequest().authenticated()
-        )
-        .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
-        .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
-
-    return http.build();
-}
-
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        log.info("=== SecurityFilterChain 설정 시작 ===");
+        http
+            .cors(withDefaults())
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/", // 루트
+                    "/actuator/health", "/actuator/info",
+                    "/login/**", "/api/auth/**",
+                    "/api/health", "/api/v1/status", "/api/upload/health",
+                    "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html"
+                ).permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
+        log.info("=== SecurityFilterChain 설정 완료 ===");
+        return http.build();
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

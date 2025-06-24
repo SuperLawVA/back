@@ -146,7 +146,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health,info
   endpoint:
     health:
-      show-details: never # 또는 always
+      show-details: always
