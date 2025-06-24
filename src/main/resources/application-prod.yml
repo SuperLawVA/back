@@ -129,14 +129,15 @@ frontend:
 
 logging:
   level:
-    com.superlawva: INFO
+    com.superlawva: ${LOGGING_LEVEL_COM_SUPERLAWVA:INFO}
     com.superlawva.domain.ocr3: INFO
     com.superlawva.domain.document: INFO
     com.superlawva.domain.words: INFO
     com.superlawva.domain.ml: INFO
-    org.springframework.security: WARN
-    org.hibernate: WARN
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK:WARN}
+    org.hibernate: ${LOGGING_LEVEL_ORG_HIBERNATE:WARN}
     org.springframework.data.redis: WARN
+    root: ${LOGGING_LEVEL_ROOT:INFO}
 
 # 테스트 사용자 생성 비활성화 (프로덕션 환경)
 app:

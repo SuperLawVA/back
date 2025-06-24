@@ -27,7 +27,7 @@ spring:
       uri: ${MONGODB_URI:mongodb://admin:password@localhost:27017/superlawva_docs?authSource=admin}
     redis:
       host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6380}
+      port: ${REDIS_PORT:6379}
 
   mail:
     host: smtp.gmail.com
@@ -142,3 +142,13 @@ logging:
     org.hibernate.SQL: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator 설정 추가
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
