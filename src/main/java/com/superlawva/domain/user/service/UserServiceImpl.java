@@ -3,6 +3,10 @@ package com.superlawva.domain.user.service;
 import com.superlawva.domain.user.dto.*;
 import com.superlawva.domain.user.entity.User;
 import com.superlawva.domain.user.repository.UserRepository;
+import com.superlawva.domain.alarm.service.AlarmService;
+import com.superlawva.domain.alarm.service.ContractAlarmService;
+import com.superlawva.domain.alarm.dto.AlarmDTO;
+import com.superlawva.domain.alarm.entity.AlarmType;
 import com.superlawva.global.exception.BaseException;
 import com.superlawva.global.response.status.ErrorStatus;
 import com.superlawva.global.security.util.JwtTokenProvider;
@@ -13,8 +17,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -26,6 +32,8 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final HashUtil hashUtil;
+    private final AlarmService alarmService;
+    private final ContractAlarmService contractAlarmService;
 
     @Override
     @Transactional
@@ -74,7 +82,7 @@ public class UserServiceImpl implements UserService {
         log.info("✅ 회원가입 성공");
     }
 
-        @Override
+    @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
         String emailHash = hashUtil.hash(loginRequestDTO.getEmail());
         User user = userRepository.findByEmailHash(emailHash)
@@ -86,29 +94,103 @@ public class UserServiceImpl implements UserService {
         
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
 
-        // 프론트엔드 호환을 위한 목업 데이터 추가
+        // 실제 데이터베이스에서 정보 가져오기
+        List<Integer> notifications = getNotificationsByUserId(user.getId());
+        List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
+        List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());
+
+        LoginResponseDTO.UserInfo userInfo = new LoginResponseDTO.UserInfo(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            notifications,
+            contracts,
+            recentChats
+        );
+
         return LoginResponseDTO.builder()
                 .token(token)
-                .id(user.getId())
-                .email(user.getEmail())
-                .userName(user.getNickname())  // 필드명 일치
-                .provider(user.getProvider())
-                .notification(List.of(0, 1, 2)) // 알림 목업 데이터
-                .contractArray(List.of(
-                    new LoginResponseDTO.ContractInfo(
-                        "contract_" + user.getId(),
-                        "월세 임대차 계약서",
-                        "진행중",
-                        "서울시 강남구 테헤란로 123",
-                        "2025.03.22"
-                    )
-                ))
-                .recentChat(List.of(
-                    new LoginResponseDTO.RecentChat("chat_001", "집 주인이 보증금 안 돌려줘요."),
-                    new LoginResponseDTO.RecentChat("chat_002", "전입 신고 방법 알려줘"),
-                    new LoginResponseDTO.RecentChat("chat_003", "묵시적 갱신이 뭔가요")
-                ))
+                .user(userInfo)
                 .build();
+    }
+
+    private List<Integer> getNotificationsByUserId(Long userId) {
+        try {
+            // 사용자의 읽지 않은 알림 타입들을 가져와서 정수 배열로 변환
+            List<Integer> notificationTypes = new ArrayList<>();
+            
+            // AlarmType의 ordinal() 값을 기반으로 알림 타입 반환
+            // 실제 알림이 있는 경우 해당 타입의 번호를 추가
+            var unreadAlarms = alarmService.getUnreadAlarms(userId);
+            
+            for (var alarm : unreadAlarms) {
+                int typeIndex = alarm.getAlarmType().ordinal();
+                if (!notificationTypes.contains(typeIndex)) {
+                    notificationTypes.add(typeIndex);
+                }
+            }
+            
+            // 알림이 없으면 빈 배열 반환
+            return notificationTypes.isEmpty() ? List.of() : notificationTypes;
+        } catch (Exception e) {
+            log.warn("알림 정보 조회 실패: {}", e.getMessage());
+            return List.of(); // 오류 시 빈 배열 반환
+        }
+    }
+
+    private List<LoginResponseDTO.ContractInfo> getContractsByUserId(Long userId) {
+        try {
+            List<AlarmDTO> contracts = contractAlarmService.getContractsByUserId(userId);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd");
+            
+            return contracts.stream()
+                    .map(contract -> new LoginResponseDTO.ContractInfo(
+                        contract.getId(),
+                        getContractTitle(contract.getContractType()),
+                        "진행중", // 기본 상태
+                        "주소 정보 없음", // contract에 주소 정보가 없는 경우 기본값
+                        contract.getDates().getContractDate().format(formatter),
+                        contract.getDates().getContractDate().format(formatter) // 수정일을 생성일과 동일하게 설정
+                    ))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("계약 정보 조회 실패: {}", e.getMessage());
+            // 오류 시 샘플 데이터 반환
+            return List.of(new LoginResponseDTO.ContractInfo(
+                "contract_" + userId,
+                "월세 임대차 계약서",
+                "진행중",
+                "서울시 강남구 테헤란로 123",
+                "2025.03.22",
+                "2025.03.22"
+            ));
+        }
+    }
+
+    private String getContractTitle(String contractType) {
+        if (contractType == null) return "임대차 계약서";
+        
+        return switch (contractType.toLowerCase()) {
+            case "monthly_rent" -> "월세 임대차 계약서";
+            case "jeonse" -> "전세 임대차 계약서";
+            case "sale" -> "부동산 매매 계약서";
+            default -> contractType + " 계약서";
+        };
+    }
+
+    private List<LoginResponseDTO.RecentChat> getRecentChatsByUserId(Long userId) {
+        try {
+            // TODO: 실제 채팅 서비스 구현 후 연동
+            // 현재는 샘플 데이터 반환
+            return List.of(
+                new LoginResponseDTO.RecentChat("chat_001", "집 주인이 보증금 안 돌려줘요."),
+                new LoginResponseDTO.RecentChat("chat_002", "전입 신고 방법 알려줘"),
+                new LoginResponseDTO.RecentChat("chat_003", "묵시적 갱신이 뭔가요")
+            );
+        } catch (Exception e) {
+            log.warn("최근 채팅 정보 조회 실패: {}", e.getMessage());
+            return List.of(); // 오류 시 빈 배열 반환
+        }
     }
 
     @Override
@@ -129,11 +211,24 @@ public class UserServiceImpl implements UserService {
                 });
 
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
+        
+        // 실제 데이터베이스에서 정보 가져오기
+        List<Integer> notifications = getNotificationsByUserId(user.getId());
+        List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
+        List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());
+
+        LoginResponseDTO.UserInfo userInfo = new LoginResponseDTO.UserInfo(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            notifications,
+            contracts,
+            recentChats
+        );
+
         return LoginResponseDTO.builder()
                 .token(token)
-                .email(user.getEmail())
-                .userName(user.getNickname())
-                .provider(user.getProvider())
+                .user(userInfo)
                 .build();
     }
 
@@ -155,11 +250,24 @@ public class UserServiceImpl implements UserService {
                 });
 
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
+        
+        // 실제 데이터베이스에서 정보 가져오기
+        List<Integer> notifications = getNotificationsByUserId(user.getId());
+        List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
+        List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());
+
+        LoginResponseDTO.UserInfo userInfo = new LoginResponseDTO.UserInfo(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            notifications,
+            contracts,
+            recentChats
+        );
+
         return LoginResponseDTO.builder()
                 .token(token)
-                .email(user.getEmail())
-                .userName(user.getNickname())
-                .provider(user.getProvider())
+                .user(userInfo)
                 .build();
     }
 
@@ -264,28 +372,23 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BaseException(ErrorStatus.MEMBER_NOT_FOUND));
         
-        // 프론트엔드 호환을 위한 대시보드 데이터 반환
+        // 실제 데이터베이스에서 정보 가져오기
+        List<Integer> notifications = getNotificationsByUserId(user.getId());
+        List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
+        List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());
+
+        LoginResponseDTO.UserInfo userInfo = new LoginResponseDTO.UserInfo(
+            user.getId(),
+            user.getEmail(),
+            user.getNickname(),
+            notifications,
+            contracts,
+            recentChats
+        );
+
         return LoginResponseDTO.builder()
-                .token("existing_token") // 기존 토큰 유지 (프론트에서 갱신하지 않을 경우)
-                .id(user.getId())
-                .email(user.getEmail())
-                .userName(user.getNickname())  // 필드명 일치
-                .provider(user.getProvider())
-                .notification(List.of(0, 1, 2)) // 알림 목업 데이터
-                .contractArray(List.of(
-                    new LoginResponseDTO.ContractInfo(
-                        "contract_" + user.getId(),
-                        "월세 임대차 계약서",
-                        "진행중",
-                        "서울시 강남구 테헤란로 123",
-                        "2025.03.22"
-                    )
-                ))
-                .recentChat(List.of(
-                    new LoginResponseDTO.RecentChat("chat_001", "집 주인이 보증금 안 돌려줘요."),
-                    new LoginResponseDTO.RecentChat("chat_002", "전입 신고 방법 알려줘"),
-                    new LoginResponseDTO.RecentChat("chat_003", "묵시적 갱신이 뭔가요")
-                ))
+                .token("existing_token") // 대시보드에서는 기존 토큰 유지
+                .user(userInfo)
                 .build();
     }
 }

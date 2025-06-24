@@ -167,4 +167,40 @@ public class JwtTokenProvider {
             throw new IllegalArgumentException("임시 토큰이 유효하지 않거나 만료되었습니다.");
         }
     }
+
+    /**
+     * 쿠키나 헤더에서 JWT 토큰 추출 (선택사항 - 사용하지 않을 수도 있음)
+     */
+    public String getJwtFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        // 1. Authorization 헤더에서 먼저 확인
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        
+        // 2. 쿠키에서 확인 (필요시)
+        jakarta.servlet.http.Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (jakarta.servlet.http.Cookie cookie : cookies) {
+                if ("access-token".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * 토큰의 만료 시간을 가져옵니다
+     */
+    public long getExpirationTime(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getExpiration()
+                .getTime();
+    }
 }

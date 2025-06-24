@@ -84,7 +84,7 @@ spring:
 
 jwt:
   secret: ${JWT_SECRET}
-  access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:3600000}
+  access-token-validity: ${JWT_ACCESS_TOKEN_VALIDITY:86400000}
 
 # AES 양방향 암호화 설정
 aes:
@@ -93,16 +93,6 @@ aes:
 server:
   address: 0.0.0.0
   port: ${SERVER_PORT:8080}
-
-# Actuator 설정
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-  endpoint:
-    health:
-      show-details: always
 
 frontend:
   url: ${FRONTEND_URL:http://localhost:3000}

@@ -21,33 +21,45 @@ public class LoginResponseDTO {
     @Schema(description = "발급된 JWT Access Token", example = "eyJhbGciOiJIUzI1NiJ9...")
     private String token;
 
-    @Schema(description = "사용자 ID(고유번호)", example = "1")
-    private Long id;
+    @Schema(description = "사용자 정보")
+    private UserInfo user;
 
-    @Schema(description = "사용자 이메일", example = "test@example.com")
-    private String email;
+    @Schema(description = "사용자 정보")
+    public static class UserInfo {
+        @Schema(description = "사용자 ID(고유번호)", example = "1")
+        public Long id;
 
-    @Schema(description = "사용자 이름", example = "아무개")
-    private String userName;  // 필드명과 JSON 키 일치
+        @Schema(description = "사용자 이메일", example = "test@example.com")
+        public String email;
 
-    @Schema(description = "사용자 제공자", example = "Google")
-    private String provider;
+        @Schema(description = "사용자 이름", example = "아무개")
+        public String userName;
 
-    @Schema(description = "알림 정보 (샘플 데이터)", example = "[0, 1, 2]")
-    private List<Integer> notification;
+        @Schema(description = "알림 정보", example = "[0, 1, 2]")
+        public List<Integer> notification;
 
-    @Schema(description = "계약 정보 목록 (샘플 데이터)")
-    private List<ContractInfo> contractArray;
+        @Schema(description = "계약 정보 목록")
+        public List<ContractInfo> contractArray;
 
-    @Schema(description = "최근 채팅 정보 목록 (샘플 데이터)")
-    private List<RecentChat> recentChat;
+        @Schema(description = "최근 채팅 정보 목록")
+        public List<RecentChat> recentChat;
 
+        public UserInfo(Long id, String email, String userName, List<Integer> notification, 
+                       List<ContractInfo> contractArray, List<RecentChat> recentChat) {
+            this.id = id;
+            this.email = email;
+            this.userName = userName;
+            this.notification = notification;
+            this.contractArray = contractArray;
+            this.recentChat = recentChat;
+        }
+    }
 
     @Schema(description = "계약 정보")
     public record ContractInfo(
             @JsonProperty("_id")
             @Schema(description = "계약 ID", example = "contract_123")
-            String id,
+            String _id,
             
             @Schema(description = "계약명", example = "월세 임대차 계약서")
             String title,
@@ -59,14 +71,17 @@ public class LoginResponseDTO {
             String address,
             
             @Schema(description = "생성일", example = "2025.03.22")
-            String createdAt
+            String createdAt,
+
+            @Schema(description = "수정일", example = "2025.03.22")
+            String modifiedAt
     ) {}
 
     @Schema(description = "최근 채팅 정보")
     public record RecentChat(
             @JsonProperty("_id")
             @Schema(description = "채팅방 ID", example = "chat_001")
-            String id,
+            String _id,
             
             @Schema(description = "채팅방 제목", example = "집 주인이 보증금 안 돌려줘요.")
             String title

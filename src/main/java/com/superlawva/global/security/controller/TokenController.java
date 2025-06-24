@@ -7,11 +7,13 @@ import com.superlawva.global.response.ApiResponse;
 import com.superlawva.global.response.status.ErrorStatus;
 import com.superlawva.global.security.util.HashUtil;
 import com.superlawva.global.security.util.JwtTokenProvider;
+import com.superlawva.global.security.annotation.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,8 +26,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 import java.util.Optional;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @Tag(name = "⚠️ Test & Tools", description = "개발 및 테스트용 API")
 @RequiredArgsConstructor
@@ -85,24 +85,43 @@ public class TokenController {
     }
 
     @PostMapping("/regenerate")
-    public ApiResponse<Map<String, String>> regenerateToken(HttpServletRequest request) {
-        // 1. "Authorization" 헤더에서 리프레시 토큰 추출
-        String refreshToken = jwtTokenProvider.resolveToken(request);
-
-        // 2. 리프레시 토큰 유효성 검증
-        if (refreshToken != null && jwtTokenProvider.validate(refreshToken)) {
-            // 3. 토큰에서 이메일 추출
-            String email = jwtTokenProvider.getEmail(refreshToken);
-            // 4. 이메일로 사용자 정보 조회  
-            String emailHash = hashUtil.hash(email);
-            User user = userRepository.findByEmailHash(emailHash).orElse(null);
-            // 5. 새로운 액세스 토큰 생성
-            String newAccessToken = jwtTokenProvider.createToken(user.getEmail(), user.getId());
-            // 6. 새로운 액세스 토큰 반환
-            return ApiResponse.onSuccess(Map.of("accessToken", newAccessToken));
+    @Operation(
+        summary = "🔄 액세스 토큰 재발급",
+        description = """
+        현재 유효한 JWT 토큰을 사용하여 새로운 액세스 토큰을 발급받습니다.
+        
+        **사용 목적:**
+        - 토큰 만료 전 미리 갱신
+        - 보안 강화를 위한 정기적 토큰 교체
+        
+        **사용법:**
+        ```javascript
+        const response = await fetch('/regenerate', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        if (data.isSuccess) {
+            localStorage.setItem('access_token', data.result.accessToken);
+        }
+        ```
+        """
+    )
+    @SecurityRequirement(name = "JWT")
+    public ApiResponse<Map<String, String>> regenerateToken(@Parameter(hidden = true) @LoginUser User user) {
+        // 인증된 사용자가 없는 경우 에러
+        if (user == null) {
+            throw new BaseException(ErrorStatus._UNAUTHORIZED);
         }
 
-        // 7. 유효하지 않은 토큰일 경우 에러 응답
-        throw new BaseException(ErrorStatus.INVALID_OR_EXPIRED_TOKEN);
+        // 새로운 액세스 토큰 생성
+        String newAccessToken = jwtTokenProvider.createToken(user.getEmail(), user.getId());
+        
+        // 새로운 액세스 토큰 반환
+        return ApiResponse.onSuccess(Map.of("accessToken", newAccessToken));
     }
 }

@@ -2,7 +2,9 @@ package com.superlawva.global.config;
 
 import com.superlawva.domain.user.repository.UserRepository;
 import com.superlawva.global.security.filter.JwtAuthFilter;
+import com.superlawva.global.security.filter.LogoutFilter;
 import com.superlawva.global.security.util.JwtTokenProvider;
+import com.superlawva.global.security.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -32,6 +34,7 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     private final UserDetailsService userDetailsService;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     @Bean
     public JwtAuthFilter jwtAuthFilter() {
@@ -50,6 +53,11 @@ public class SecurityConfig {
     }
 
     @Bean
+    public LogoutFilter logoutFilter() {
+        return new LogoutFilter(jwtTokenProvider, refreshTokenService);
+    }
+
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .cors(withDefaults())
@@ -59,7 +67,8 @@ public class SecurityConfig {
                         .requestMatchers("/**").permitAll()  // 임시로 모든 경로 허용하여 디버깅
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
 
         return http.build();
     }
