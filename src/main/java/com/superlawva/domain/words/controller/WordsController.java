@@ -87,11 +87,11 @@ public class WordsController {
     }
     
     /**
-     * 헬스 체크 API
-     * GET /api/health
+     * Words 서비스 헬스 체크 API
+     * GET /api/words/health
      */
-    @GetMapping("/health")
-    public ResponseEntity<String> healthCheck() {
+    @GetMapping("/words/health")
+    public ResponseEntity<String> wordsHealthCheck() {
         return ResponseEntity.ok("Words API is running!");
     }
 }

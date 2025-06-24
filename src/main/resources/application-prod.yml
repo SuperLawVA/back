@@ -99,7 +99,7 @@ spring:
 
 # 🟢 운영 환경 Google Cloud 설정
 gcp:
-  enabled: ${GCP_ENABLED:true}
+  enabled: ${GCP_ENABLED:false}
   project-id: ${GCP_PROJECT_ID}
   location: ${GCP_LOCATION:us}
   processor-id: ${GCP_PROCESSOR_ID}
@@ -111,6 +111,24 @@ gemini:
   api-key: ${GEMINI_API_KEY}
   model-name: ${GEMINI_MODEL_NAME:gemini-2.0-flash-exp}
   api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com}
+
+# 계약 API 설정
+contract:
+  api:
+    base-url: ${CONTRACT_API_BASE_URL:}
+
+# 챗봇 API 설정
+chatbot:
+  api:
+    base-url: ${CHATBOT_API_BASE_URL:http://43.201.42.119:8000}
+    timeout: ${CHATBOT_API_TIMEOUT:30000}
+
+# ML API 설정
+ml:
+  api:
+    base-url: ${ML_API_BASE_URL:http://localhost:8000}
+    connection-timeout: ${ML_API_CONNECTION_TIMEOUT:10000}
+    read-timeout: ${ML_API_READ_TIMEOUT:60000}
 
 jwt:
   secret: ${JWT_SECRET}

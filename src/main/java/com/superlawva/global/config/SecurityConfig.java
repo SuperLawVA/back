@@ -71,9 +71,10 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/", // 루트
+                    "/health", // 간단한 헬스체크
                     "/actuator/health", "/actuator/info",
                     "/login/**", "/api/auth/**",
-                    "/api/health", "/api/v1/status", "/api/upload/health",
+                    "/api/health", "/api/health/detailed", "/api/v1/status", "/api/upload/health",
                     "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html"
                 ).permitAll()
                 .anyRequest().authenticated()

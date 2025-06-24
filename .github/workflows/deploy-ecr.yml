@@ -223,7 +223,7 @@ jobs:
 
             for i in {1..2}; do
               echo "헬스체크 시도 $i/2..."
-              if curl -f -m 150 http://localhost:8080/api/health; then
+              if curl -f -m 150 http://localhost:8080/actuator/health; then
                 echo "✅ 애플리케이션이 정상적으로 시작되었습니다!"
                 break
               else
