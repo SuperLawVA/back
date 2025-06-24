@@ -202,14 +202,14 @@ jobs:
             echo "더 많은 로그 확인:"
             $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=100 app
 
-            for i in {1..3}; do
-              echo "헬스체크 시도 $i/3..."
-              if curl -f -m 150 http://localhost:8080/auth/health; then
+            for i in {1..2}; do
+              echo "헬스체크 시도 $i/2..."
+              if curl -f -m 150 http://localhost:8080/api/health; then
                 echo "✅ 애플리케이션이 정상적으로 시작되었습니다!"
                 break
               else
-                echo "⏳ 애플리케이션 시작 대기 중... ($i/3)"
-                if [ $i -eq 2 ]; then
+                echo "⏳ 애플리케이션 시작 대기 중... ($i/2)"
+                if [ $i -eq 1 ]; then
                   echo "=== 중간 로그 확인 ($i) ==="
                   $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=50 app
                 fi
