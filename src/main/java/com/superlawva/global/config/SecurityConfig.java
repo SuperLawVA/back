@@ -58,20 +58,29 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(withDefaults())
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/**").permitAll()  // 임시로 모든 경로 허용하여 디버깅
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
+public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    http
+        .cors(withDefaults())
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers(
+                "/actuator/health", 
+                "/actuator/info", 
+                "/login/**", 
+                "/api/auth/**",
+                "/api/health",
+                "/api/v1/status",
+                "/api/upload/health"
+            ).permitAll()
+            .anyRequest().authenticated()
+        )
+        .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
+        .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+}
+
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {

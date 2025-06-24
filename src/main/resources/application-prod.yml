@@ -35,7 +35,7 @@ spring:
   # 🟢 운영 환경 MongoDB 설정
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/superlawva_docs}
+      uri: ${MONGODB_URI}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
@@ -134,3 +134,12 @@ logging:
 # 테스트 사용자 생성 비활성화 (프로덕션 환경)
 app:
   create-test-users: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+  endpoint:
+    health:
+      show-details: never # 또는 always

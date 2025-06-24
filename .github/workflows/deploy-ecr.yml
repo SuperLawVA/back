@@ -110,6 +110,9 @@ jobs:
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
 
+            # === MongoDB ===
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+
             # === Redis (Docker Container) ===
             REDIS_HOST=redis
             REDIS_PORT=6379
@@ -132,6 +135,22 @@ jobs:
             NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
             NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
             NAVER_REDIRECT_URI=${{ secrets.NAVER_REDIRECT_URI }}
+
+            # === AI 서비스 설정 ===
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            GEMINI_MODEL_NAME=gemini-2.0-flash-exp
+            GEMINI_API_URL=https://generativelanguage.googleapis.com
+
+            # === Google Cloud 설정 ===
+            GCP_ENABLED=${{ secrets.GCP_ENABLED }}
+            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+            GCP_LOCATION=us
+            GCP_PROCESSOR_ID=${{ secrets.GCP_PROCESSOR_ID }}
+
+            # === ML API 설정 ===
+            ML_API_BASE_URL=http://3.34.41.104:8000
+            ML_API_CONNECTION_TIMEOUT=10000
+            ML_API_READ_TIMEOUT=60000
 
             # === 기타 설정 ===
             FRONTEND_URL=https://super-lawva.vercel.app
