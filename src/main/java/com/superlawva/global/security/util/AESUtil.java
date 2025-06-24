@@ -20,8 +20,8 @@ public class AESUtil {
 
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/ECB/PKCS5Padding";
-    
-    @Value("${aes.secret-key:your_32_character_secret_key_here_}")
+
+    @Value("${aes.secret-key}")
     private String secretKey;
 
     /**
@@ -31,10 +31,15 @@ public class AESUtil {
      */
     public String encrypt(String plainText) {
         try {
+            // null 체크 추가
+            if (plainText == null) {
+                plainText = "";
+            }
+
             SecretKeySpec secretKeySpec = createSecretKey();
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.ENCRYPT_MODE, secretKeySpec);
-            
+
             byte[] encryptedBytes = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(encryptedBytes);
         } catch (Exception e) {
@@ -49,10 +54,15 @@ public class AESUtil {
      */
     public String decrypt(String encryptedText) {
         try {
+            // null 체크 추가
+            if (encryptedText == null || encryptedText.trim().isEmpty()) {
+                return "";
+            }
+
             SecretKeySpec secretKeySpec = createSecretKey();
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             cipher.init(Cipher.DECRYPT_MODE, secretKeySpec);
-            
+
             byte[] decodedBytes = Base64.getDecoder().decode(encryptedText);
             byte[] decryptedBytes = cipher.doFinal(decodedBytes);
             return new String(decryptedBytes, StandardCharsets.UTF_8);
@@ -94,7 +104,7 @@ public class AESUtil {
             String decrypted = decrypt(token);
             String[] parts = decrypted.split(":");
             if (parts.length < 2) return false;
-            
+
             long timestamp = Long.parseLong(parts[1]);
             long now = System.currentTimeMillis();
             return (now - timestamp) <= validityMs;
@@ -104,14 +114,17 @@ public class AESUtil {
     }
 
     private SecretKeySpec createSecretKey() {
-        // 32바이트 키 생성 (AES-256용)
-        byte[] keyBytes = new byte[32];
-        byte[] secretBytes = secretKey.getBytes(StandardCharsets.UTF_8);
-        
-        // 키가 32바이트보다 짧으면 패딩, 길면 자르기
-        System.arraycopy(secretBytes, 0, keyBytes, 0, Math.min(secretBytes.length, 32));
-        
-        return new SecretKeySpec(keyBytes, ALGORITHM);
+        try {
+            // Base64로 인코딩된 키를 디코딩
+            byte[] keyBytes = Base64.getDecoder().decode(secretKey);
+            return new SecretKeySpec(keyBytes, ALGORITHM);
+        } catch (IllegalArgumentException e) {
+            // Base64가 아닌 경우 기존 방식 사용 (fallback)
+            byte[] keyBytes = new byte[32];
+            byte[] secretBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(secretBytes, 0, keyBytes, 0, Math.min(secretBytes.length, 32));
+            return new SecretKeySpec(keyBytes, ALGORITHM);
+        }
     }
 
     /**

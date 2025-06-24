@@ -3,32 +3,45 @@ package com.superlawva.global.security.converter;
 import com.superlawva.global.security.util.AESUtil;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
-@Component
 @Converter
-@RequiredArgsConstructor
+@Slf4j
 public class AesCryptoConverter implements AttributeConverter<String, String> {
-
-    private final AESUtil aesUtil;
 
     @Override
     public String convertToDatabaseColumn(String attribute) {
-        // 엔티티의 속성(평문)을 DB 컬럼(암호문)으로 변환
-        if (!StringUtils.hasText(attribute)) {
-            return attribute;
+        // AES 암호화 임시 비활성화 - 값 그대로 저장
+        return attribute;
+
+        /*
+        if (attribute == null) {
+            return null;
         }
-        return aesUtil.encrypt(attribute);
+        try {
+            return AESUtil.encrypt(attribute);
+        } catch (Exception e) {
+            log.error("AES 암호화 실패: {}", e.getMessage());
+            return attribute; // 암호화 실패 시 원본 반환
+        }
+        */
     }
 
     @Override
     public String convertToEntityAttribute(String dbData) {
-        // DB 컬럼(암호문)을 엔티티의 속성(평문)으로 변환
-        if (!StringUtils.hasText(dbData)) {
-            return dbData;
+        // AES 복호화 임시 비활성화 - 값 그대로 반환
+        return dbData;
+
+        /*
+        if (dbData == null) {
+            return null;
         }
-        return aesUtil.decrypt(dbData);
+        try {
+            return AESUtil.decrypt(dbData);
+        } catch (Exception e) {
+            log.error("AES 복호화 실패: {}", e.getMessage());
+            return dbData; // 복호화 실패 시 원본 반환
+        }
+        */
     }
 } 
