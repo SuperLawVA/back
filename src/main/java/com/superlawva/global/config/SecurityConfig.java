@@ -65,13 +65,17 @@ public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(
+                "/",
                 "/actuator/health", 
                 "/actuator/info", 
                 "/login/**", 
                 "/api/auth/**",
                 "/api/health",
                 "/api/v1/status",
-                "/api/upload/health"
+                "/api/upload/health",
+                "/swagger-ui/**",
+                "/v3/api-docs/**",
+                "/swagger-ui.html"
             ).permitAll()
             .anyRequest().authenticated()
         )

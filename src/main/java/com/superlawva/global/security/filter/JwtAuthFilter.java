@@ -33,11 +33,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         log.debug("JwtAuthFilter 경로 체크: {}", path);
         
-        // /auth/** 경로는 JWT 검사 건너뜀 (회원가입, 로그인 등)
+        // JWT 검사에서 제외할 경로들
         boolean shouldSkip = path.startsWith("/auth") || 
                            path.startsWith("/actuator") ||
                            path.startsWith("/v3/api-docs") ||
-                           path.startsWith("/swagger-ui");
+                           path.startsWith("/swagger-ui") ||
+                           path.equals("/api/health") ||
+                           path.equals("/api/v1/status") ||
+                           path.equals("/api/upload/health") ||
+                           path.equals("/");
         
         if (shouldSkip) {
             log.debug("JWT 필터 건너뜀: {}", path);

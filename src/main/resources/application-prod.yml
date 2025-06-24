@@ -36,6 +36,13 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI}
+      auto-index-creation: false
+      # MongoDB 연결 실패 시에도 애플리케이션 시작 허용
+      connection-pool:
+        max-size: 10
+        min-size: 0
+        max-wait-time: 5000ms
+        max-connection-life-time: 30000ms
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
