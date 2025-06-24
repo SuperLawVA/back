@@ -6,6 +6,7 @@ import com.superlawva.domain.log.dto.PageViewRequestDTO;
 import com.superlawva.domain.log.dto.SessionRequestDTO;
 import com.superlawva.domain.log.entity.*;
 import com.superlawva.domain.log.repository.*;
+import com.superlawva.domain.user.entity.User;
 import com.superlawva.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -26,6 +28,7 @@ public class LogService {
 
     private final ClickLogRepository clickRepo;
     private final ErrorLogRepository errorRepo;
+    private final SearchResultRepository searchResultRepo;
     // Hover / Scroll … 필요시 추가
 
     private final UserRepository     userRepo;   // 🔑 User 엔티티 프록시용
@@ -123,4 +126,6 @@ public class LogService {
         err.setPath((String) m.get("path"));
         errorRepo.save(err);
     }
+
+
 }

@@ -60,8 +60,7 @@ public class UserController {
     @SecurityRequirement(name = "JWT")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "정보 조회 성공", content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자 정보를 찾을 수 없음")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)")
     })
     public ApiResponse<UserResponseDTO> getMyInfo(@Parameter(hidden = true) @LoginUser User user) {
         if (user == null) {
@@ -132,8 +131,8 @@ public class UserController {
     @SecurityRequirement(name = "JWT")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "정보 수정 성공", content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자 정보를 찾을 수 없음")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터 (유효성 검사 실패)")
     })
     public ApiResponse<UserResponseDTO> updateMyInfo(@Parameter(hidden = true) @LoginUser User user, @RequestBody @Valid UserRequestDTO.UpdateMyInfoDTO request) {
         if (user == null) {
@@ -180,8 +179,7 @@ public class UserController {
     @SecurityRequirement(name = "JWT")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "회원 탈퇴 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자 정보를 찾을 수 없음")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)")
     })
     public ApiResponse<Void> deleteMyAccount(@Parameter(hidden = true) @LoginUser User user) {
         if (user == null) {

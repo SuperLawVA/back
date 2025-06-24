@@ -1,4 +1,4 @@
-package com.superlawva.global.config;
+package com.superlawva.domain.mlcommon.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

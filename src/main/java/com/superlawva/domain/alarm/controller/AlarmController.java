@@ -10,6 +10,7 @@ import com.superlawva.global.response.status.ErrorStatus;
 import com.superlawva.global.security.annotation.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,10 @@ public class AlarmController {
     private final AlarmService alarmService;
 
     @Operation(summary = "내 알람 목록 조회", description = "현재 로그인한 사용자의 읽지 않은 알람을 조회합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알람 목록 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)")
+    })
     @GetMapping
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<List<AlarmResponseDTO>> getMyAlarms(@Parameter(hidden = true) @LoginUser User user) {
@@ -36,6 +41,10 @@ public class AlarmController {
     }
 
     @Operation(summary = "내 알람 통계 조회", description = "현재 로그인한 사용자의 알람 통계 정보를 조회합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알람 통계 조회 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)")
+    })
     @GetMapping("/stats")
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<AlarmStatsDTO> getMyAlarmStats(@Parameter(hidden = true) @LoginUser User user) {
@@ -45,6 +54,10 @@ public class AlarmController {
     }
 
     @Operation(summary = "모든 알람 읽음 처리", description = "현재 로그인한 사용자의 모든 알람을 읽음 상태로 변경합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알람 읽음 처리 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)")
+    })
     @PutMapping("/read-all")
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<Map<String, Object>> markAllAsRead(@Parameter(hidden = true) @LoginUser User user) {
@@ -54,6 +67,11 @@ public class AlarmController {
     }
 
     @Operation(summary = "알람 읽음 처리", description = "특정 알람을 읽음 상태로 변경합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알람 읽음 처리 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "알람을 찾을 수 없음")
+    })
     @PutMapping("/{alarmId}/read")
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<Map<String, Object>> markAsRead(@PathVariable Long alarmId) {
@@ -62,6 +80,11 @@ public class AlarmController {
     }
 
     @Operation(summary = "알람 삭제", description = "특정 알림을 삭제합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알람 삭제 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "알람을 찾을 수 없음")
+    })
     @DeleteMapping("/{alarmId}")
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<Map<String, Object>> deleteAlarm(@PathVariable Long alarmId) {
@@ -74,6 +97,11 @@ public class AlarmController {
     // ================================================================================================================
 
     @Operation(summary = "알람 수동 생성 (관리자/시스템용)", description = "단일 알람을 수동으로 생성합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "알람 생성 성공"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증되지 않은 사용자 (JWT 토큰 없음 또는 만료)"),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터")
+    })
     @PostMapping
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<Map<String, Object>> createAlarm(@RequestBody AlarmRequestDTO dto) {

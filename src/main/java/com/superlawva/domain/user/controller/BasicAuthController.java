@@ -32,18 +32,90 @@ public class BasicAuthController {
     @Operation(
         summary = "📝 일반 회원가입", 
         description = """
+        ## 📖 API 설명
         이메일과 비밀번호를 사용하여 새로운 사용자를 등록합니다.
         
-        **사용법:**
-        1. 이메일, 비밀번호, 이름을 입력하여 요청
-        2. 성공 시 회원가입 완료 메시지 반환
-        3. 실패 시 적절한 에러 메시지 반환
+        ## 🎯 프론트엔드 구현 가이드
         
-        **주의사항:**
-        - 이메일은 중복될 수 없습니다
-        - 비밀번호는 암호화되어 저장됩니다
-        - 비밀번호 복잡성 검증은 프론트엔드에서 처리됩니다
-        - 회원가입 후 바로 로그인하려면 `/auth/login` API를 사용하세요
+        ### 1. 요청 방법
+        ```javascript
+        const signupData = {
+            email: "user@example.com",          // 필수: 유효한 이메일 형식
+            password: "securePassword123!",     // 필수: 비밀번호
+            passwordConfirm: "securePassword123!", // 필수: 비밀번호 확인
+            userName: "홍길동"                   // 필수: 사용자 이름
+        };
+        
+        fetch('/auth/signup', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(signupData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.isSuccess) {
+                alert('회원가입이 완료되었습니다!');
+                window.location.href = '/login';  // 로그인 페이지로 이동
+            } else {
+                handleSignupError(data);
+            }
+        });
+        ```
+        
+                 ### 2. 유효성 검사 (프론트엔드에서 미리 확인)
+         ```javascript
+         function validateSignupForm(data) {
+             // 이메일 형식 검사 (간단한 형식)
+             const emailRegex = /^[^@]+@[^@]+$/;
+             if (!emailRegex.test(data.email)) {
+                 throw new Error('유효한 이메일을 입력하세요');
+             }
+             
+             // 비밀번호 복잡성 검사
+             if (data.password.length < 8) {
+                 throw new Error('비밀번호는 8자 이상이어야 합니다');
+             }
+             
+             // 비밀번호 확인
+             if (data.password !== data.passwordConfirm) {
+                 throw new Error('비밀번호가 일치하지 않습니다');
+             }
+             
+             // 이름 입력 확인
+             if (!data.userName.trim()) {
+                 throw new Error('이름을 입력하세요');
+             }
+         }
+         ```
+         
+         ### 3. 에러 처리
+         ```javascript
+         function handleSignupError(response) {
+             switch(response.code) {
+                 case '409':
+                     alert('이미 사용 중인 이메일입니다.');
+                     break;
+                 case '400':
+                     alert('입력 정보를 확인해주세요.');
+                     break;
+                 default:
+                     alert('회원가입 중 오류가 발생했습니다.');
+             }
+         }
+         ```
+        
+        ### 4. 회원가입 플로우
+        1. **폼 입력** → 유효성 검사
+        2. **API 호출** → 서버 검증
+        3. **성공 시** → 로그인 페이지로 이동
+        4. **실패 시** → 에러 메시지 표시
+        
+        ### 5. 주의사항
+        - 이메일 중복 확인은 실시간으로 할 수 없습니다 (API 호출 시에만 확인)
+        - 비밀번호는 서버에서 안전하게 암호화됩니다
+        - 회원가입 성공 후 자동 로그인되지 않으므로 `/auth/login` API를 별도 호출하세요
         """
     )
     @ApiResponses({
@@ -89,7 +161,7 @@ public class BasicAuthController {
                     value = """
                     {
                         "isSuccess": false,
-                        "code": "4009",
+                        "code": "409",
                         "message": "이미 사용 중인 이메일입니다.",
                         "result": null
                     }
@@ -191,13 +263,13 @@ public class BasicAuthController {
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "401", 
-            description = "❌ 인증 실패 (이메일 또는 비밀번호 불일치)",
+            description = "❌ 인증 실패 (비밀번호 불일치)",
             content = @Content(
                 examples = @ExampleObject(
                     value = """
                     {
                         "isSuccess": false,
-                        "code": "USER400",
+                        "code": "USER401",
                         "message": "비밀번호가 일치하지 않습니다.",
                         "result": null
                     }
@@ -213,7 +285,7 @@ public class BasicAuthController {
                     value = """
                     {
                         "isSuccess": false,
-                        "code": "MEMBER4001",
+                        "code": "MEMBER404",
                         "message": "사용자가 없습니다.",
                         "result": null
                     }

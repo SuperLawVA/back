@@ -142,7 +142,56 @@ public class ChatbotService {
     }
     
     /**
-     * 세션 종료
+     * 새 세션 생성
+     */
+    public ChatSessionEntity createNewSession(User user) {
+        String newSessionId = UUID.randomUUID().toString();
+        ChatSessionEntity newSession = ChatSessionEntity.builder()
+                .sessionId(newSessionId)
+                .user(user)
+                .status(ChatSessionEntity.SessionStatus.active)
+                .build();
+        
+        ChatSessionEntity savedSession = chatSessionRepository.save(newSession);
+        log.info("새 세션 생성됨 - 사용자: {}, 세션: {}", user.getId(), newSessionId);
+        return savedSession;
+    }
+
+    /**
+     * 세션 완전 삭제 (ML 팀 스펙)
+     * 세션과 관련된 모든 메시지를 함께 삭제
+     */
+    public boolean deleteSession(String sessionId, User user) {
+        Optional<ChatSessionEntity> session = chatSessionRepository.findById(sessionId);
+        
+        if (session.isEmpty()) {
+            log.warn("존재하지 않는 세션 {} 삭제 시도 - 사용자: {}", sessionId, user.getId());
+            return false;
+        }
+        
+        if (!session.get().getUser().getId().equals(user.getId())) {
+            log.warn("사용자 {}가 권한 없는 세션 {} 삭제 시도", user.getId(), sessionId);
+            return false;
+        }
+        
+        try {
+            // 1. 해당 세션의 모든 메시지 삭제
+            chatMessageRepository.deleteBySessionSessionId(sessionId);
+            log.info("세션 {}의 모든 메시지 삭제 완료", sessionId);
+            
+            // 2. 세션 삭제
+            chatSessionRepository.delete(session.get());
+            log.info("세션 {} 완전 삭제 완료 - 사용자: {}", sessionId, user.getId());
+            
+            return true;
+        } catch (Exception e) {
+            log.error("세션 {} 삭제 중 오류 발생: {}", sessionId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 세션 종료 (기존 메서드 - 하위 호환성)
      */
     public void closeSession(String sessionId, User user) {
         Optional<ChatSessionEntity> session = chatSessionRepository.findById(sessionId);

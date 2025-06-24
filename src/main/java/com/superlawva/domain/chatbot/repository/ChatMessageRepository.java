@@ -35,4 +35,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessageEntity, 
     // 응답 시간 통계
     @Query("SELECT AVG(m.responseTimeSeconds) FROM ChatMessageEntity m WHERE m.role = 'assistant' AND m.responseTimeSeconds IS NOT NULL")
     Double getAverageResponseTime();
+    
+    // 세션별 메시지 삭제 (ML 팀 스펙용)
+    void deleteBySessionSessionId(String sessionId);
 } 

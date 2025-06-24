@@ -30,4 +30,7 @@ public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, 
     
     // 사용자별 총 세션 수
     Long countByUserId(Long userId);
+    
+    // 상태별 세션 수 (전체 시스템)
+    Integer countByStatus(ChatSessionEntity.SessionStatus status);
 } 
