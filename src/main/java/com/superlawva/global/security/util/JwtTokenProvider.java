@@ -63,18 +63,16 @@ public class JwtTokenProvider {
     }
 
     public String getSubject(String token) {
-        return Jwts.parserBuilder()
+        return Jwts.parser()
                 .setSigningKey(key)
-                .build()
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
     }
 
     public Long getUserId(String token) {
-        return Jwts.parserBuilder()
+        return Jwts.parser()
                 .setSigningKey(key)
-                .build()
                 .parseClaimsJws(token)
                 .getBody()
                 .get("userId", Long.class);
@@ -82,9 +80,8 @@ public class JwtTokenProvider {
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder()
+            Jwts.parser()
                     .setSigningKey(key)
-                    .build()
                     .parseClaimsJws(token);
             return true;
         } catch (JwtException | IllegalArgumentException e) {
@@ -151,9 +148,8 @@ public class JwtTokenProvider {
      */
     public Claims getTempTokenClaims(String tempToken) {
         try {
-            Claims claims = Jwts.parserBuilder()
+            Claims claims = Jwts.parser()
                     .setSigningKey(key)
-                    .build()
                     .parseClaimsJws(tempToken)
                     .getBody();
             

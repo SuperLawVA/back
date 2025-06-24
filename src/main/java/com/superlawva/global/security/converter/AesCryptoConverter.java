@@ -13,7 +13,7 @@ public class AesCryptoConverter implements AttributeConverter<String, String> {
     public String convertToDatabaseColumn(String attribute) {
         // AES 암호화 임시 비활성화 - 값 그대로 저장
         return attribute;
-        
+
         /*
         if (attribute == null) {
             return null;
@@ -31,7 +31,7 @@ public class AesCryptoConverter implements AttributeConverter<String, String> {
     public String convertToEntityAttribute(String dbData) {
         // AES 복호화 임시 비활성화 - 값 그대로 반환
         return dbData;
-        
+
         /*
         if (dbData == null) {
             return null;

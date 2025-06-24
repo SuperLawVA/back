@@ -1,15 +1,9 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DATABASE_URL:jdbc:mysql://localhost:3306/superlawva?autocommit=false&useSSL=false&allowPublicKeyRetrieval=true}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:}
-    hikari:
-      auto-commit: false
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-      maximum-pool-size: 10
+    url: ${DATABASE_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
 
   jpa:
     hibernate:
@@ -19,10 +13,18 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
-        # soft delete 비활성화
-        globally_quoted_identifiers: false
 
+  # 🟢 파일 업로드 설정 (새로 추가)
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 100MB
+      enabled: true
+
+  # 🟢 MongoDB 설정 (새로 추가된 document, words 도메인용)
   data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://admin:password@localhost:27017/superlawva_docs?authSource=admin}
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6380}
@@ -74,11 +76,33 @@ contract:
   api:
     base-url: ${CONTRACT_API_BASE_URL:}
 
-# 챗봇 API 설정
+# 챗봇 API 설정 (기존)
 chatbot:
   api:
     base-url: ${CHATBOT_API_BASE_URL:http://43.201.42.119:8000}
     timeout: ${CHATBOT_API_TIMEOUT:30000}
+
+# ML API 설정 (새로 추가)
+ml:
+  api:
+    base-url: ${ML_API_BASE_URL:http://localhost:8000}
+    connection-timeout: 10000
+    read-timeout: 60000
+
+# 🟢 Google Cloud Document AI 설정 (OCR3용)
+gcp:
+  enabled: ${GCP_ENABLED:false}
+  project-id: ${GCP_PROJECT_ID:your_gcp_project_id}
+  location: ${GCP_LOCATION:us}
+  processor-id: ${GCP_PROCESSOR_ID:your_processor_id}
+  credentials:
+    path: ${GCP_CREDENTIALS_PATH:classpath:service-account-key.json}
+
+# 🚀 Gemini API 설정 (OCR3용)
+gemini:
+  api-key: ${GEMINI_API_KEY:your_gemini_api_key}
+  model-name: ${GEMINI_MODEL_NAME:gemini-2.0-flash-exp}
+  api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com}
 
 jwt:
   secret: ${JWT_SECRET:temporary_jwt_secret_key_for_deployment_min_32_chars}
@@ -113,14 +137,8 @@ aws:
 # 로깅 설정
 logging:
   level:
-    com.superlawva: DEBUG
-    com.superlawva.global.security.filter.JwtAuthFilter: INFO
-    org.apache.coyote.http11.Http11Processor: WARN
+    com.superlawva: INFO
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
-    org.springframework.dao: DEBUG
-    org.springframework.jdbc: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

@@ -10,9 +10,9 @@ import java.time.LocalDateTime;
 @Table(
         name = "users",
         indexes = {
-                @Index(columnList = "kakaoId", unique = true),
-                @Index(columnList = "naverId", unique = true),
-                @Index(columnList = "emailHash", unique = true)
+                @Index(name = "idx_kakao_id", columnList = "kakaoId", unique = true),
+                @Index(name = "idx_naver_id", columnList = "naverId", unique = true),
+                @Index(name = "idx_email_hash", columnList = "emailHash", unique = true)
         }
 )
 @Getter
@@ -27,17 +27,19 @@ public class User {
     private Long id;
 
     /** 소셜 로그인(카카오) 시에만 값 존재 */
-    @Column(unique = true)
+    @Column(name = "kakao_id")
     private Long kakaoId;
 
     /** 소셜 로그인(네이버) 시에만 값 존재 */
-    @Column(unique = true)
+    @Column(name = "naver_id")
     private String naverId;
 
-    @Column(nullable = false, unique = true)
+    /** 해시된 이메일 (검색 및 중복 체크용) */
+    @Column(name = "email_hash", nullable = false, unique = true)
     private String emailHash;
 
-    @Column(nullable = false)
+    /** 평문 이메일 (표시용, 암호화 저장) */
+    @Column(name = "email", nullable = false)
     // @Convert(converter = AesCryptoConverter.class) // AES 암호화 임시 비활성화
     private String email;
 
@@ -57,14 +59,15 @@ public class User {
     public enum Role { USER, ADMIN }
 
     /** 생성-수정 시각 */
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
     /** 이메일 인증 여부 */
     @Builder.Default
-    @Column(nullable = false)
+    @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
     /* ==================== JPA Life-cycle ==================== */

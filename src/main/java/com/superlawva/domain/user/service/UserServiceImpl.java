@@ -38,36 +38,35 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void register(UserRequestDTO userRequestDTO) {
-        log.info("🔍 회원가입 디버그 - nickname = {}, email = {}", userRequestDTO.getNickname(), userRequestDTO.getEmail());
+        log.info("회원가입 처리 시작 - email: {}", userRequestDTO.getEmail());
         
-        // 입력값 null 체크 및 기본값 설정
+        // 입력값 검증
         String nickname = userRequestDTO.getNickname();
         String email = userRequestDTO.getEmail();
         String password = userRequestDTO.getPassword();
         
         if (nickname == null || nickname.trim().isEmpty()) {
-            log.error("❌ 닉네임이 null 또는 빈 값입니다.");
             throw new BaseException(ErrorStatus.NICKNAME_NOT_EXIST);
         }
         
         if (email == null || email.trim().isEmpty()) {
-            log.error("❌ 이메일이 null 또는 빈 값입니다.");
             throw new BaseException(ErrorStatus._BAD_REQUEST);
         }
         
         if (password == null || password.trim().isEmpty()) {
-            log.error("❌ 비밀번호가 null 또는 빈 값입니다.");
             throw new BaseException(ErrorStatus._BAD_REQUEST);
         }
         
+        // 이메일 중복 체크 (해시값으로)
         String emailHash = hashUtil.hash(email);
         if (userRepository.existsByEmailHash(emailHash)) {
             throw new BaseException(ErrorStatus._EMAIL_ALREADY_EXISTS);
         }
+        
+        // 비밀번호 암호화
         String hashedPassword = passwordEncoder.encode(password);
         
-        log.info("🔧 User 엔티티 생성 시작 - nickname: {}, email: {}", nickname, email);
-        
+        // 사용자 생성 및 저장
         User user = User.builder()
                 .email(email)
                 .emailHash(emailHash)
@@ -75,11 +74,11 @@ public class UserServiceImpl implements UserService {
                 .nickname(nickname)
                 .provider("LOCAL")
                 .role(User.Role.USER)
+                .emailVerified(false)
                 .build();
         
-        log.info("🔧 User 엔티티 생성 완료, 저장 시작");
         userRepository.save(user);
-        log.info("✅ 회원가입 성공");
+        log.info("회원가입 완료 - userId: {}", user.getId());
     }
 
     @Override
@@ -93,25 +92,7 @@ public class UserServiceImpl implements UserService {
         }
         
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
-
-        // 실제 데이터베이스에서 정보 가져오기
-        List<Integer> notifications = getNotificationsByUserId(user.getId());
-        List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
-        List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());
-
-        LoginResponseDTO.UserInfo userInfo = new LoginResponseDTO.UserInfo(
-            user.getId(),
-            user.getEmail(),
-            user.getNickname(),
-            notifications,
-            contracts,
-            recentChats
-        );
-
-        return LoginResponseDTO.builder()
-                .token(token)
-                .user(userInfo)
-                .build();
+        return buildLoginResponse(user, token);
     }
 
     private List<Integer> getNotificationsByUserId(Long userId) {
@@ -197,61 +178,54 @@ public class UserServiceImpl implements UserService {
     @Transactional
     public LoginResponseDTO kakaoLogin(KakaoLoginRequestDTO kakaoLoginRequestDTO) {
         String emailHash = hashUtil.hash(kakaoLoginRequestDTO.getEmail());
+        
+        // 기존 사용자 확인 (이메일 해시로)
         User user = userRepository.findByEmailHash(emailHash)
                 .orElseGet(() -> {
-                    String newEmailHash = hashUtil.hash(kakaoLoginRequestDTO.getEmail());
-                    return userRepository.save(User.builder()
+                    // 새 사용자 생성
+                    User newUser = User.builder()
                             .email(kakaoLoginRequestDTO.getEmail())
-                            .emailHash(newEmailHash)
+                            .emailHash(emailHash)
                             .nickname(kakaoLoginRequestDTO.getNickname())
                             .provider("KAKAO")
                             .role(User.Role.USER)
                             .emailVerified(true)
-                            .build());
+                            .build();
+                    return userRepository.save(newUser);
                 });
 
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
-        
-        // 실제 데이터베이스에서 정보 가져오기
-        List<Integer> notifications = getNotificationsByUserId(user.getId());
-        List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
-        List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());
-
-        LoginResponseDTO.UserInfo userInfo = new LoginResponseDTO.UserInfo(
-            user.getId(),
-            user.getEmail(),
-            user.getNickname(),
-            notifications,
-            contracts,
-            recentChats
-        );
-
-        return LoginResponseDTO.builder()
-                .token(token)
-                .user(userInfo)
-                .build();
+        return buildLoginResponse(user, token);
     }
 
     @Override
     @Transactional
     public LoginResponseDTO naverLogin(NaverLoginRequestDTO naverLoginRequestDTO) {
         String emailHash = hashUtil.hash(naverLoginRequestDTO.getEmail());
+        
+        // 기존 사용자 확인 (이메일 해시로)
         User user = userRepository.findByEmailHash(emailHash)
                 .orElseGet(() -> {
-                    String newEmailHash = hashUtil.hash(naverLoginRequestDTO.getEmail());
-                    return userRepository.save(User.builder()
+                    // 새 사용자 생성
+                    User newUser = User.builder()
                             .email(naverLoginRequestDTO.getEmail())
-                            .emailHash(newEmailHash)
+                            .emailHash(emailHash)
                             .nickname(naverLoginRequestDTO.getName())
                             .provider("NAVER")
                             .role(User.Role.USER)
                             .emailVerified(true)
-                            .build());
+                            .build();
+                    return userRepository.save(newUser);
                 });
 
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
-        
-        // 실제 데이터베이스에서 정보 가져오기
+        return buildLoginResponse(user, token);
+    }
+
+    /**
+     * 로그인 응답 객체 생성 (공통 로직)
+     */
+    private LoginResponseDTO buildLoginResponse(User user, String token) {
         List<Integer> notifications = getNotificationsByUserId(user.getId());
         List<LoginResponseDTO.ContractInfo> contracts = getContractsByUserId(user.getId());
         List<LoginResponseDTO.RecentChat> recentChats = getRecentChatsByUserId(user.getId());

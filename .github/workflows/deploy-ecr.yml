@@ -2,7 +2,7 @@ name: Deploy Spring Boot to EC2
 
 on:
   push:
-    branches: [back/production]
+    branches: [back/production, develop]
 
 # 동일한 브랜치에서 새 워크플로우가 시작되면 이전 워크플로우 취소
 concurrency:

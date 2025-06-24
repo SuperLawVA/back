@@ -122,11 +122,11 @@ public class EmailVerificationService {
     public void verifyEmail(EmailVerifyRequestDTO request) {
         String key = "email:verify:" + request.getEmail();
         String storedCode = redisTemplate.opsForValue().get(key); // 평문으로 가져오기
-        
+
         if (storedCode == null) {
             throw new BaseException(ErrorStatus._VERIFICATION_CODE_NOT_FOUND);
         }
-        
+
         try {
             // AES 복호화 비활성화 - 평문 비교
             // String storedCode = aesUtil.decrypt(encryptedStoredCode);

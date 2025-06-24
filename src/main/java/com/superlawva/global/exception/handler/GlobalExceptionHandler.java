@@ -19,9 +19,9 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<Object> handleBaseException(BaseException e) {
         log.error("BaseException occurred: ", e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure(
-            e.getErrorStatus().getCode(), 
-            e.getErrorStatus().getMessage(), 
-            null
+                e.getErrorStatus().getCode(),
+                e.getErrorStatus().getMessage(),
+                null
         );
         return new ResponseEntity<>(responseBody, e.getErrorStatus().getHttpStatus());
     }
