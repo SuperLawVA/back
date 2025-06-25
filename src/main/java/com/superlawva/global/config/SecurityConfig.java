@@ -22,6 +22,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
+import com.superlawva.global.security.service.TokenBlacklistService;
+import com.superlawva.global.security.service.CustomOAuth2UserService;
+import com.superlawva.global.security.handler.OAuth2LoginSuccessHandler;
 
 import java.util.Arrays;
 
@@ -39,6 +44,12 @@ public class SecurityConfig {
     private final UserDetailsService userDetailsService;
     private final BCryptPasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final TokenBlacklistService tokenBlacklistService;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+
+    @Value("${oauth2.enabled:false}")
+    private boolean oauth2Enabled;
 
     @Bean
     public JwtAuthFilter jwtAuthFilter() {
@@ -85,6 +96,17 @@ public class SecurityConfig {
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
+
+        // OAuth2 기능 활성화 여부에 따라 설정 적용
+        if (oauth2Enabled) {
+            http.oauth2Login(oauth2 -> oauth2
+                    .successHandler(oAuth2LoginSuccessHandler)
+                    .userInfoEndpoint(userInfo -> userInfo
+                            .userService(customOAuth2UserService)
+                    )
+            );
+        }
+
         log.info("=== SecurityFilterChain 설정 완료 ===");
         return http.build();
     }

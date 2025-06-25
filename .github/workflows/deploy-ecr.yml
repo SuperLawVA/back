@@ -243,10 +243,10 @@ jobs:
             if [ "${{ secrets.SSL_ENABLED }}" = "true" ]; then
               PROFILES="prod,ssl"
             fi
-            echo "🚀 활성화할 Spring 프로필: $PROFILES"
+            echo "🚀 활성화할 Spring 프로필: $PROFILES (이 값은 .env 파일에 기록됩니다)"
 
-            # 새 컨테이너 시작 (SPRING_PROFILES_ACTIVE 변수를 직접 주입)
-            SPRING_PROFILES_ACTIVE=$PROFILES $COMPOSE_CMD -f docker-compose.prod.yml up -d
+            # 새 컨테이너 시작 (.env 파일을 통해 변수가 주입되므로 명령어 앞의 변수 선언 제거)
+            $COMPOSE_CMD -f docker-compose.prod.yml up -d
 
             # 로그 확인
             echo "=== 배포 완료 - 실시간 로그 확인 ==="

@@ -151,3 +151,12 @@ management:
   endpoint:
     health:
       show-details: always
+
+# OAuth2 소셜 로그인 기능 활성화 여부 (기본: 비활성화)
+oauth2:
+  enabled: false
+
+# 서버 기본 설정
+server:
+  address: 0.0.0.0
+  port: ${SERVER_PORT:8080}
