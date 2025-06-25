@@ -44,10 +44,10 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
             
             // 필수 환경변수 검증
             if (isValidConfiguration()) {
-                initializeS3Client();
-                initializeBuffer();
-                startUploadScheduler();
-                super.start();
+            initializeS3Client();
+            initializeBuffer();
+            startUploadScheduler();
+            super.start();
                 addInfo("S3LogAppender started successfully. Bucket: " + bucketName);
             } else {
                 addWarn("S3LogAppender 시작 실패: AWS 환경변수가 설정되지 않았습니다.");

@@ -144,8 +144,7 @@ public class OpenApiConfig {
                         """);
 
         return new OpenAPI()
-                .addServersItem(new Server().url("http://43.203.127.128:8080").description("운영 서버"))
-                .addServersItem(new Server().url("http://localhost:8080").description("로컬 개발 서버"))
+                .addServersItem(new Server().url("/").description("현재 접속한 서버"))
                 .info(info)
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
