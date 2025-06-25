@@ -2,7 +2,7 @@ name: Deploy Spring Boot to EC2
 
 on:
   push:
-    branches: [back/production, develop]
+    branches: [back/production]
 
 # 동일한 브랜치에서 새 워크플로우가 시작되면 이전 워크플로우 취소
 concurrency:
@@ -104,6 +104,13 @@ jobs:
 
             # 환경변수 파일 생성
             echo "환경변수 설정..."
+
+            # 🚨 GCP 서비스 계정 키 파일 생성
+            # GitHub Secret에 저장된 JSON 내용을 파일로 만듭니다.
+            echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}" > service-account-key.json
+            # 이 파일을 docker-compose.prod.yml이 있는 곳으로 이동
+            mv service-account-key.json /home/ubuntu/
+
             cat > .env << EOF
             # === 데이터베이스 (RDS) ===
             DATABASE_URL=${{ secrets.DATABASE_URL }}

@@ -10,9 +10,10 @@ import java.time.LocalDateTime;
 @Table(
         name = "users",
         indexes = {
-                @Index(name = "idx_kakao_id", columnList = "kakaoId", unique = true),
-                @Index(name = "idx_naver_id", columnList = "naverId", unique = true),
-                @Index(name = "idx_email_hash", columnList = "emailHash", unique = true)
+                @Index(name = "idx_kakao_id", columnList = "kakao_id", unique = true),
+                @Index(name = "idx_naver_id", columnList = "naver_id", unique = true),
+                @Index(name = "idx_email", columnList = "email", unique = true),
+                @Index(name = "idx_provider", columnList = "provider")
         }
 )
 @Getter
@@ -34,13 +35,8 @@ public class User {
     @Column(name = "naver_id")
     private String naverId;
 
-    /** 해시된 이메일 (검색 및 중복 체크용) */
-    @Column(name = "email_hash", nullable = false, unique = true)
-    private String emailHash;
-
-    /** 평문 이메일 (표시용, 암호화 저장) */
-    @Column(name = "email", nullable = false)
-    // @Convert(converter = AesCryptoConverter.class) // AES 암호화 임시 비활성화
+    /** 이메일 (로그인 및 중복 체크용) */
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
     @Column(nullable = true)  // 소셜 로그인 사용자는 password가 null일 수 있음

@@ -57,9 +57,8 @@ public class UserServiceImpl implements UserService {
             throw new BaseException(ErrorStatus._BAD_REQUEST);
         }
         
-        // 이메일 중복 체크 (해시값으로)
-        String emailHash = hashUtil.hash(email);
-        if (userRepository.existsByEmailHash(emailHash)) {
+        // 이메일 중복 체크
+        if (userRepository.existsByEmail(email)) {
             throw new BaseException(ErrorStatus._EMAIL_ALREADY_EXISTS);
         }
         
@@ -69,7 +68,6 @@ public class UserServiceImpl implements UserService {
         // 사용자 생성 및 저장
         User user = User.builder()
                 .email(email)
-                .emailHash(emailHash)
                 .password(hashedPassword)
                 .nickname(nickname)
                 .provider("LOCAL")
@@ -83,8 +81,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
-        String emailHash = hashUtil.hash(loginRequestDTO.getEmail());
-        User user = userRepository.findByEmailHash(emailHash)
+        User user = userRepository.findByEmail(loginRequestDTO.getEmail())
                 .orElseThrow(() -> new BaseException(ErrorStatus.MEMBER_NOT_FOUND));
 
         if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
@@ -177,15 +174,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public LoginResponseDTO kakaoLogin(KakaoLoginRequestDTO kakaoLoginRequestDTO) {
-        String emailHash = hashUtil.hash(kakaoLoginRequestDTO.getEmail());
-        
-        // 기존 사용자 확인 (이메일 해시로)
-        User user = userRepository.findByEmailHash(emailHash)
+        // 기존 사용자 확인 (이메일로)
+        User user = userRepository.findByEmail(kakaoLoginRequestDTO.getEmail())
                 .orElseGet(() -> {
                     // 새 사용자 생성
                     User newUser = User.builder()
                             .email(kakaoLoginRequestDTO.getEmail())
-                            .emailHash(emailHash)
                             .nickname(kakaoLoginRequestDTO.getNickname())
                             .provider("KAKAO")
                             .role(User.Role.USER)
@@ -201,15 +195,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public LoginResponseDTO naverLogin(NaverLoginRequestDTO naverLoginRequestDTO) {
-        String emailHash = hashUtil.hash(naverLoginRequestDTO.getEmail());
-        
-        // 기존 사용자 확인 (이메일 해시로)
-        User user = userRepository.findByEmailHash(emailHash)
+        // 기존 사용자 확인 (이메일로)
+        User user = userRepository.findByEmail(naverLoginRequestDTO.getEmail())
                 .orElseGet(() -> {
                     // 새 사용자 생성
                     User newUser = User.builder()
                             .email(naverLoginRequestDTO.getEmail())
-                            .emailHash(emailHash)
                             .nickname(naverLoginRequestDTO.getName())
                             .provider("NAVER")
                             .role(User.Role.USER)
@@ -247,8 +238,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User findByEmail(String email) {
-        String emailHash = hashUtil.hash(email);
-        return userRepository.findByEmailHash(emailHash)
+        return userRepository.findByEmail(email)
                 .orElseThrow(() -> new BaseException(ErrorStatus.MEMBER_NOT_FOUND));
     }
 

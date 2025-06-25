@@ -4,6 +4,8 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    continue-on-error: true
+    initialization-mode: never
     hikari:
       connection-timeout: 30000
       maximum-pool-size: 5
@@ -23,8 +25,11 @@ spring:
       hibernate:
         format_sql: false
         dialect: org.hibernate.dialect.MySQLDialect
-        connection.provider_disables_autocommit: true
         jdbc.time_zone: UTC
+        # 트랜잭션 안정성 개선
+        jdbc.batch_size: 20
+        order_inserts: true
+        order_updates: true
     defer-datasource-initialization: true
     open-in-view: false
   sql:
@@ -34,10 +39,6 @@ spring:
   # 애플리케이션 시작 시 데이터베이스 연결 검증 비활성화
   jmx:
     enabled: false
-  # 데이터베이스 연결 실패 시에도 애플리케이션 시작 허용
-  datasource:
-    continue-on-error: true
-    initialization-mode: never
 
   # 🟢 운영 환경 MongoDB 설정
   data:
@@ -64,7 +65,7 @@ spring:
           max-idle: 10
           min-idle: 5
         ssl:
-          enabled: ${REDIS_SSL_ENABLED:false}
+          enabled: ${REDIS_SSL_ENABLED:true}
 
   mail:
     host: smtp.gmail.com
@@ -109,16 +110,16 @@ spring:
 
 # 🟢 운영 환경 Google Cloud 설정
 gcp:
-  enabled: ${GCP_ENABLED:false}
-  project-id: ${GCP_PROJECT_ID:dummy-project}
+  enabled: ${GCP_ENABLED:true}
+  project-id: ${GCP_PROJECT_ID}
   location: ${GCP_LOCATION:us}
-  processor-id: ${GCP_PROCESSOR_ID:dummy-processor}
+  processor-id: ${GCP_PROCESSOR_ID}
   credentials:
     path: ${GCP_CREDENTIALS_PATH:classpath:service-account-key.json}
 
 # 🟢 운영 환경 Gemini API 설정
 gemini:
-  api-key: ${GEMINI_API_KEY:dummy-api-key}
+  api-key: ${GEMINI_API_KEY}
   model-name: ${GEMINI_MODEL_NAME:gemini-2.0-flash-exp}
   api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com}
 
@@ -189,6 +190,6 @@ management:
       show-details: when-authorized
   health:
     defaults:
-      enabled: false  # 구동 우선을 위해 기본 헬스체크 비활성화
+      enabled: false # 구동 우선을 위해 기본 헬스체크 비활성화
   server:
     port: 8080

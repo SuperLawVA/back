@@ -18,7 +18,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 @Slf4j
 public class WordsService {
     
@@ -27,6 +26,7 @@ public class WordsService {
     /**
      * 용어 검색 (페이지네이션 + 정확도 정렬)
      */
+    @Transactional(readOnly = true)
     public WordsSearchResponseDto searchWords(WordsSearchRequestDto requestDto) {
         // 요청 데이터 유효성 검사 및 조정
         requestDto.validateAndAdjust();
@@ -59,6 +59,7 @@ public class WordsService {
     /**
      * 인기 검색어 조회
      */
+    @Transactional(readOnly = true)
     public PopularKeywordsResponseDto getPopularKeywords() {
         // 현재는 하드코딩, 추후 검색 로그 기반으로 동적 생성 가능
         List<String> popularKeywords = Arrays.asList(
@@ -100,6 +101,7 @@ public class WordsService {
     /**
      * 용어 상세 조회
      */
+    @Transactional(readOnly = true)
     public WordsDto getWordDetail(String word) {
         Words words = wordsRepository.findById(word)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 용어입니다. 용어명: " + word));
