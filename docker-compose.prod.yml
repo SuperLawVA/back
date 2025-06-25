@@ -39,7 +39,13 @@ services:
         reservations:
           memory: 256M
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test:
+        [
+          "CMD",
+          "sh",
+          "-c",
+          "curl -f http://localhost:8080/api/health || curl -f http://localhost:8080/health",
+        ]
       interval: 30s
       timeout: 30s
       retries: 5

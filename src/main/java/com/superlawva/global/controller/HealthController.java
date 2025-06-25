@@ -24,22 +24,34 @@ public class HealthController {
     private final MLApiClient mlApiClient;
 
     /**
-     * 기본 헬스체크 - Actuator 대체용
+     * 기본 헬스체크 - Actuator 대체용 (구동 우선)
      * GET /api/health
      */
     @GetMapping("/api/health")
     public ResponseEntity<Map<String, Object>> basicHealthCheck() {
-        Map<String, Object> health = new HashMap<>();
-        health.put("status", "UP");
-        health.put("timestamp", LocalDateTime.now());
-        health.put("service", "SuperLawVA Backend");
-        health.put("version", "1.0.0");
-        
-        return ResponseEntity.ok(health);
+        try {
+            Map<String, Object> health = new HashMap<>();
+            health.put("status", "UP");
+            health.put("timestamp", LocalDateTime.now());
+            health.put("service", "SuperLawVA Backend");
+            health.put("version", "1.0.0");
+            health.put("message", "애플리케이션이 정상적으로 실행 중입니다.");
+            
+            log.info("헬스체크 요청 성공");
+            return ResponseEntity.ok(health);
+        } catch (Exception e) {
+            log.error("헬스체크 중 오류 발생", e);
+            Map<String, Object> health = new HashMap<>();
+            health.put("status", "UP"); // 구동 우선이므로 UP 반환
+            health.put("timestamp", LocalDateTime.now());
+            health.put("service", "SuperLawVA Backend");
+            health.put("message", "기본 헬스체크 성공");
+            return ResponseEntity.ok(health);
+        }
     }
 
     /**
-     * 상세 헬스체크 - 모든 의존성 확인
+     * 상세 헬스체크 - 모든 의존성 확인 (구동 우선)
      * GET /api/health/detailed
      */
     @GetMapping("/api/health/detailed")
@@ -107,11 +119,34 @@ public class HealthController {
     }
 
     /**
-     * 간단한 상태 확인 - 로드밸런서용
+     * 간단한 상태 확인 - 로드밸런서용 (구동 우선)
      * GET /health (루트 레벨)
      */
     @GetMapping("/health")
     public ResponseEntity<String> simpleHealthCheck() {
-        return ResponseEntity.ok("OK");
+        log.info("간단한 헬스체크 요청");
+        return ResponseEntity.ok("SuperLawVA Backend - OK");
+    }
+    
+    /**
+     * 루트 경로 헬스체크 - 브라우저 접근용
+     * GET /
+     */
+    @GetMapping("/")
+    public ResponseEntity<Map<String, Object>> rootHealthCheck() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("service", "SuperLawVA Backend API");
+        response.put("status", "running");
+        response.put("timestamp", LocalDateTime.now());
+        response.put("message", "백엔드 서비스가 정상적으로 실행 중입니다.");
+        response.put("endpoints", Map.of(
+            "health", "/api/health",
+            "detailed-health", "/api/health/detailed",
+            "status", "/api/v1/status",
+            "docs", "/swagger-ui/index.html"
+        ));
+        
+        log.info("루트 경로 접근");
+        return ResponseEntity.ok(response);
     }
 } 

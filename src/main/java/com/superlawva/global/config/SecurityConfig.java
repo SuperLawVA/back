@@ -70,11 +70,10 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/", // 루트
-                    "/health", // 간단한 헬스체크
-                    "/actuator/health", "/actuator/info",
+                    "/", "/health", "/error",
+                    "/actuator/**", 
+                    "/api/health/**", "/api/v1/status", "/api/upload/health",
                     "/login/**", "/api/auth/**",
-                    "/api/health", "/api/health/detailed", "/api/v1/status", "/api/upload/health",
                     "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html"
                 ).permitAll()
                 .anyRequest().authenticated()

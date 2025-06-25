@@ -18,15 +18,37 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class BackApplication {
 
     public static void main(String[] args) {
+        System.out.println("🚀 SuperLawVA 백엔드 애플리케이션 시작...");
+        
         // .env 파일을 찾아 시스템 프로퍼티로 로드합니다.
         // Spring Boot는 자동으로 시스템 프로퍼티를 읽어 설정에 사용합니다.
-        Dotenv.configure()
-                .ignoreIfMalformed()
-                .ignoreIfMissing()
-                .systemProperties()
-                .load();
+        try {
+            Dotenv.configure()
+                    .ignoreIfMalformed()
+                    .ignoreIfMissing()
+                    .systemProperties()
+                    .load();
+            System.out.println("✅ 환경변수 로드 완료");
+        } catch (Exception e) {
+            System.out.println("⚠️ .env 파일 로드 실패 (무시됨): " + e.getMessage());
+        }
 
-        SpringApplication.run(BackApplication.class, args);
+        // 중요한 환경변수 확인
+        System.out.println("📋 환경변수 확인:");
+        System.out.println("  - SPRING_PROFILES_ACTIVE: " + System.getProperty("SPRING_PROFILES_ACTIVE", "없음"));
+        System.out.println("  - DATABASE_URL: " + (System.getenv("DATABASE_URL") != null ? "설정됨" : "없음"));
+        System.out.println("  - MONGODB_URI: " + (System.getenv("MONGODB_URI") != null ? "설정됨" : "없음"));
+        System.out.println("  - JWT_SECRET: " + (System.getenv("JWT_SECRET") != null ? "설정됨" : "없음"));
+
+        try {
+            System.out.println("🌱 Spring Boot 애플리케이션 시작 중...");
+            SpringApplication.run(BackApplication.class, args);
+            System.out.println("✅ Spring Boot 애플리케이션 시작 완료!");
+        } catch (Exception e) {
+            System.err.println("❌ Spring Boot 애플리케이션 시작 실패: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     @Bean

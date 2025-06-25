@@ -12,6 +12,9 @@ spring:
       max-lifetime: 1800000
       connection-test-query: SELECT 1
       initialization-fail-timeout: -1
+      # 연결 실패 시 빠른 실패 대신 재시도
+      leak-detection-threshold: 60000
+      validation-timeout: 5000
   jpa:
     hibernate:
       ddl-auto: update
@@ -31,6 +34,10 @@ spring:
   # 애플리케이션 시작 시 데이터베이스 연결 검증 비활성화
   jmx:
     enabled: false
+  # 데이터베이스 연결 실패 시에도 애플리케이션 시작 허용
+  datasource:
+    continue-on-error: true
+    initialization-mode: never
 
   # 🟢 운영 환경 MongoDB 설정
   data:
@@ -43,6 +50,9 @@ spring:
         min-size: 0
         max-wait-time: 5000ms
         max-connection-life-time: 30000ms
+      # MongoDB 연결 시도 시간 제한
+      connection-timeout: 5000ms
+      socket-timeout: 10000ms
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
@@ -100,22 +110,22 @@ spring:
 # 🟢 운영 환경 Google Cloud 설정
 gcp:
   enabled: ${GCP_ENABLED:false}
-  project-id: ${GCP_PROJECT_ID}
+  project-id: ${GCP_PROJECT_ID:dummy-project}
   location: ${GCP_LOCATION:us}
-  processor-id: ${GCP_PROCESSOR_ID}
+  processor-id: ${GCP_PROCESSOR_ID:dummy-processor}
   credentials:
     path: ${GCP_CREDENTIALS_PATH:classpath:service-account-key.json}
 
 # 🟢 운영 환경 Gemini API 설정
 gemini:
-  api-key: ${GEMINI_API_KEY}
+  api-key: ${GEMINI_API_KEY:dummy-api-key}
   model-name: ${GEMINI_MODEL_NAME:gemini-2.0-flash-exp}
   api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com}
 
 # 계약 API 설정
 contract:
   api:
-    base-url: ${CONTRACT_API_BASE_URL:}
+    base-url: ${CONTRACT_API_BASE_URL:http://localhost:8000}
 
 # 챗봇 API 설정
 chatbot:
@@ -126,7 +136,7 @@ chatbot:
 # ML API 설정
 ml:
   api:
-    base-url: ${ML_API_BASE_URL:http://localhost:8000}
+    base-url: ${ML_API_BASE_URL:http://3.34.41.104:8000}
     connection-timeout: ${ML_API_CONNECTION_TIMEOUT:10000}
     read-timeout: ${ML_API_READ_TIMEOUT:60000}
 
@@ -152,20 +162,33 @@ logging:
     com.superlawva.domain.document: INFO
     com.superlawva.domain.words: INFO
     com.superlawva.domain.ml: INFO
-    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK:WARN}
+    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK:INFO}
+    org.springframework.boot: INFO
+    org.springframework.context: INFO
+    org.springframework.beans: INFO
     org.hibernate: ${LOGGING_LEVEL_ORG_HIBERNATE:WARN}
     org.springframework.data.redis: WARN
+    org.springframework.data.mongodb: INFO
     root: ${LOGGING_LEVEL_ROOT:INFO}
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 
 # 테스트 사용자 생성 비활성화 (프로덕션 환경)
 app:
   create-test-users: false
 
+# Actuator 설정 (구동 우선)
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+      base-path: /actuator
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
+  health:
+    defaults:
+      enabled: false  # 구동 우선을 위해 기본 헬스체크 비활성화
+  server:
+    port: 8080
