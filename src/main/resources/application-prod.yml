@@ -153,11 +153,11 @@ server:
   # Nginx 리버스 프록시 사용 시 내부 HTTP 포트
   port: ${SERVER_PORT:8080}
   address: 0.0.0.0
-  
+
   # Nginx를 통한 HTTPS 사용 시 forwarded headers 신뢰
   forward-headers-strategy: framework
   use-forward-headers: true
-  
+
   # 직접 HTTPS 사용 시 (Nginx 없이)
   # ssl:
   #   enabled: ${SSL_ENABLED:false}
@@ -168,16 +168,8 @@ server:
   #   protocol: TLS
   #   enabled-protocols: TLSv1.2,TLSv1.3
 
-# OAuth2 리다이렉트 URL을 HTTPS로 업데이트
-spring:
-  security:
-    oauth2:
-      client:
-        registration:
-          kakao:
-            redirect-uri: ${KAKAO_REDIRECT_URI:https://your-domain.com/login/oauth2/code/kakao}
-          naver:
-            redirect-uri: ${NAVER_REDIRECT_URI:https://your-domain.com/login/oauth2/code/naver}
+# OAuth2 리다이렉트 URL은 이미 첫 번째 spring: 블록에 설정되어 있음
+# (중복 키 제거됨)
 
 # 프로덕션 환경 로깅
 logging:
