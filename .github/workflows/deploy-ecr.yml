@@ -238,8 +238,15 @@ jobs:
             # 새 이미지 풀
             $COMPOSE_CMD -f docker-compose.prod.yml pull app
 
-            # 새 컨테이너 시작
-            $COMPOSE_CMD -f docker-compose.prod.yml up -d
+            # SSL 활성화 여부에 따라 프로필 결정
+            PROFILES="prod"
+            if [ "${{ secrets.SSL_ENABLED }}" = "true" ]; then
+              PROFILES="prod,ssl"
+            fi
+            echo "🚀 활성화할 Spring 프로필: $PROFILES"
+
+            # 새 컨테이너 시작 (SPRING_PROFILES_ACTIVE 변수를 직접 주입)
+            SPRING_PROFILES_ACTIVE=$PROFILES $COMPOSE_CMD -f docker-compose.prod.yml up -d
 
             # 로그 확인
             echo "=== 배포 완료 - 실시간 로그 확인 ==="
