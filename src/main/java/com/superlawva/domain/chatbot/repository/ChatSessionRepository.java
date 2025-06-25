@@ -18,6 +18,9 @@ public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, 
     // 사용자별 세션 조회 (최신순)
     Page<ChatSessionEntity> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
     
+    // 사용자별 세션 조회 (마지막 활동 시간 순)
+    List<ChatSessionEntity> findByUserIdOrderByLastActiveAtDesc(Long userId);
+    
     // 사용자의 활성 세션 조회
     List<ChatSessionEntity> findByUserIdAndStatus(Long userId, ChatSessionEntity.SessionStatus status);
     

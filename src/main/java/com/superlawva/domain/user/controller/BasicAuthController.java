@@ -42,8 +42,7 @@ public class BasicAuthController {
         const signupData = {
             email: "user@example.com",          // 필수: 유효한 이메일 형식
             password: "securePassword123!",     // 필수: 비밀번호
-            passwordConfirm: "securePassword123!", // 필수: 비밀번호 확인
-            userName: "홍길동"                   // 필수: 사용자 이름
+            nickname: "홍길동"                   // 필수: 사용자 닉네임
         };
         
         fetch('/auth/signup', {
@@ -83,9 +82,9 @@ public class BasicAuthController {
                  throw new Error('비밀번호가 일치하지 않습니다');
              }
              
-             // 이름 입력 확인
-             if (!data.userName.trim()) {
-                 throw new Error('이름을 입력하세요');
+             // 닉네임 입력 확인
+             if (!data.nickname.trim()) {
+                 throw new Error('닉네임을 입력하세요');
              }
          }
          ```
@@ -250,7 +249,7 @@ public class BasicAuthController {
                             "user": {
                                 "id": 1,
                                 "email": "user@example.com",
-                                "userName": "사용자",
+                                "nickname": "사용자",
                                 "notification": [0, 1, 2],
                                 "contractArray": [],
                                 "recentChat": []

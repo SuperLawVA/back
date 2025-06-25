@@ -8,7 +8,13 @@ import java.util.List;
 @Schema(description = "법령/판례 검색 응답 (ML 팀 API 스펙)")
 public record SearchResponseDTO(
         
-        @Schema(description = "검색된 문서 목록")
+        @Schema(description = "법령 검색 결과")
+        List<DocumentResult> laws,
+        
+        @Schema(description = "판례 검색 결과")
+        List<DocumentResult> cases,
+        
+        @Schema(description = "전체 검색된 문서 목록")
         List<DocumentResult> documents,
         
         @Schema(description = "검색 처리 시간(초)", example = "0.245")
@@ -49,6 +55,9 @@ public record SearchResponseDTO(
             String section,
             
             @Schema(description = "URL 또는 참조", example = "https://...")
-            String url
+            String url,
+            
+            @Schema(description = "판례 고유 ID (판례인 경우만)", example = "2023다12345")
+            String caseId
     ) {}
 } 

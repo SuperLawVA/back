@@ -157,6 +157,10 @@ jobs:
             ML_API_CONNECTION_TIMEOUT=10000
             ML_API_READ_TIMEOUT=60000
 
+            # === 챗봇 API 설정 ===
+            CHATBOT_API_BASE_URL=http://43.201.42.119:8000
+            CHATBOT_API_TIMEOUT=30000
+
             # === 기타 설정 ===
             FRONTEND_URL=https://super-lawva.vercel.app
             SERVER_PORT=8080

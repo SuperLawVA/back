@@ -70,8 +70,5 @@ public class ChatSessionEntity {
         this.totalMessages++;
     }
     
-    public void closeSession() {
-        this.status = SessionStatus.closed;
-        this.lastActiveAt = LocalDateTime.now();
-    }
+
 } 

@@ -37,6 +37,7 @@ public class SearchController {
         description = """
         ## 📖 API 설명
         ML 팀의 벡터 검색 엔진을 사용하여 법령과 판례를 검색합니다.
+        검색 결과는 **유사도(similarity) 기준 내림차순**으로 정렬되어 반환됩니다.
         
         ## 🎯 프론트엔드 구현 가이드
         
@@ -48,7 +49,7 @@ public class SearchController {
             k: 10                          // 선택: 결과 개수 1-20 (기본값: 10)
         };
         
-        fetch('/api/v1/search', {
+        fetch('/search/search', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -63,14 +64,40 @@ public class SearchController {
         - **`case`**: 판례만 검색 (대법원, 고등법원 판결문)
         - **`both`**: 법령 + 판례 모두 검색 (추천)
         
-        ### 3. 응답 데이터 활용
+        ### 3. 응답 데이터 활용 (법령/판례 구분)
         ```javascript
-        response.documents.forEach(doc => {
-            console.log('제목:', doc.title);
-            console.log('내용:', doc.content);
-            console.log('유사도:', doc.similarity);  // 0.0 ~ 1.0
-            console.log('문서타입:', doc.metadata.type);
-        });
+        // 검색 결과가 있는 경우
+        if (response.total_results > 0) {
+                                        // 법령 결과 처리 (유사도 높은 순으로 정렬됨)
+                            if (response.laws.length > 0) {
+                                console.log('=== 법령 결과 (유사도 내림차순) ===');
+                                response.laws.forEach((law, index) => {
+                                    console.log(`${index + 1}. 법령:`, law.title);
+                                    console.log('   내용:', law.content);
+                                    console.log('   유사도:', law.similarity);
+                                });
+                            }
+                            
+                            // 판례 결과 처리 (유사도 높은 순으로 정렬됨)
+                            if (response.cases.length > 0) {
+                                console.log('=== 판례 결과 (유사도 내림차순) ===');
+                                response.cases.forEach((caseDoc, index) => {
+                                    console.log(`${index + 1}. 판례:`, caseDoc.title);
+                                    console.log('   내용:', caseDoc.content);
+                                    console.log('   유사도:', caseDoc.similarity);
+                                    console.log('   판례ID:', caseDoc.metadata.caseId);
+                                });
+                            }
+            
+            // 전체 결과 처리 (하위 호환)
+            response.documents.forEach(doc => {
+                console.log('문서타입:', doc.metadata.type);
+            });
+        } else {
+            // 검색 결과가 없는 경우
+            console.log('검색 결과가 없습니다.');
+            showNoResultsMessage();
+        }
         ```
         
         ### 4. 에러 처리
@@ -84,39 +111,83 @@ public class SearchController {
             responseCode = "200", 
             description = "✅ 검색 성공",
             content = @Content(
-                examples = @ExampleObject(
-                    name = "성공 응답 예시",
-                    value = """
-                    {
-                        "documents": [
-                            {
-                                "title": "주택임대차보호법 제3조 (보증금의 반환 등)",
-                                "content": "임대차가 종료한 때에는 임대인은 임차인에게 보증금을 반환하여야 한다. 다만, 임차인이 차임 또는 그 밖의 임대차에 관한 채무를 지급하지 아니한 때에는 임대인은 보증금에서 이를 공제할 수 있다.",
-                                "similarity": 0.892,
-                                "metadata": {
-                                    "type": "law",
-                                    "source": "주택임대차보호법",
-                                    "section": "제3조",
-                                    "url": "https://law.go.kr/법령/주택임대차보호법"
+                examples = {
+                    @ExampleObject(
+                        name = "검색 결과 있음 (유사도 내림차순 정렬)",
+                        value = """
+                        {
+                            "laws": [
+                                {
+                                    "title": "주택임대차보호법 제3조 (보증금의 반환 등)",
+                                    "content": "임대차가 종료한 때에는 임대인은 임차인에게 보증금을 반환하여야 한다. 다만, 임차인이 차임 또는 그 밖의 임대차에 관한 채무를 지급하지 아니한 때에는 임대인은 보증금에서 이를 공제할 수 있다.",
+                                    "similarity": 0.892,
+                                    "metadata": {
+                                        "type": "law",
+                                        "source": "주택임대차보호법",
+                                        "section": "제3조",
+                                        "url": "https://law.go.kr/법령/주택임대차보호법",
+                                        "caseId": null
+                                    }
                                 }
-                            },
-                            {
-                                "title": "2023다12345 보증금반환 청구의 소",
-                                "content": "임대차 계약이 종료되었음에도 불구하고 임대인이 보증금을 반환하지 않는 경우 임차인은 민사소송을 통해 보증금 반환을 청구할 수 있다.",
-                                "similarity": 0.756,
-                                "metadata": {
-                                    "type": "case",
-                                    "source": "대법원",
-                                    "section": "2023.12.15",
-                                    "url": "https://casenote.kr/case/2023다12345"
+                            ],
+                            "cases": [
+                                {
+                                    "title": "2023다12345 보증금반환 청구의 소",
+                                    "content": "임대차 계약이 종료되었음에도 불구하고 임대인이 보증금을 반환하지 않는 경우 임차인은 민사소송을 통해 보증금 반환을 청구할 수 있다.",
+                                    "similarity": 0.756,
+                                    "metadata": {
+                                        "type": "case",
+                                        "source": "대법원",
+                                        "section": "2023.12.15",
+                                        "url": "https://casenote.kr/case/2023다12345",
+                                        "caseId": "2023다12345"
+                                    }
                                 }
-                            }
-                        ],
-                        "search_time_seconds": 0.245,
-                        "total_results": 15
-                    }
-                    """
-                )
+                            ],
+                            "documents": [
+                                {
+                                    "title": "주택임대차보호법 제3조 (보증금의 반환 등)",
+                                    "content": "임대차가 종료한 때에는 임대인은 임차인에게 보증금을 반환하여야 한다. 다만, 임차인이 차임 또는 그 밖의 임대차에 관한 채무를 지급하지 아니한 때에는 임대인은 보증금에서 이를 공제할 수 있다.",
+                                    "similarity": 0.892,
+                                    "metadata": {
+                                        "type": "law",
+                                        "source": "주택임대차보호법",
+                                        "section": "제3조",
+                                        "url": "https://law.go.kr/법령/주택임대차보호법",
+                                        "caseId": null
+                                    }
+                                },
+                                {
+                                    "title": "2023다12345 보증금반환 청구의 소",
+                                    "content": "임대차 계약이 종료되었음에도 불구하고 임대인이 보증금을 반환하지 않는 경우 임차인은 민사소송을 통해 보증금 반환을 청구할 수 있다.",
+                                    "similarity": 0.756,
+                                    "metadata": {
+                                        "type": "case",
+                                        "source": "대법원",
+                                        "section": "2023.12.15",
+                                        "url": "https://casenote.kr/case/2023다12345",
+                                        "caseId": "2023다12345"
+                                    }
+                                }
+                            ],
+                            "search_time_seconds": 0.245,
+                            "total_results": 2
+                        }
+                        """
+                    ),
+                    @ExampleObject(
+                        name = "검색 결과 없음",
+                        value = """
+                        {
+                            "laws": [],
+                            "cases": [],
+                            "documents": [],
+                            "search_time_seconds": 0.123,
+                            "total_results": 0
+                        }
+                        """
+                    )
+                }
             )
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(

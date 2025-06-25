@@ -2,6 +2,7 @@ package com.superlawva.domain.chatbot.service;
 
 import com.superlawva.domain.chatbot.dto.ChatbotRequestDTO;
 import com.superlawva.domain.chatbot.dto.ChatbotResponseDTO;
+import com.superlawva.domain.chatbot.dto.SessionListResponseDTO;
 import com.superlawva.domain.chatbot.entity.ChatSessionEntity;
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
 import com.superlawva.domain.chatbot.repository.ChatSessionRepository;
@@ -18,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -133,12 +135,79 @@ public class ChatbotService {
     }
     
     /**
-     * 사용자별 세션 목록 조회
+     * 사용자별 세션 목록 조회 (기존)
      */
     @Transactional(readOnly = true)
     public Page<ChatSessionEntity> getUserSessions(User user, Pageable pageable) {
         log.info("사용자 {}의 세션 목록 조회", user.getId());
         return chatSessionRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
+    }
+    
+    /**
+     * 사용자별 세션 목록 조회 (간소화된 응답)
+     */
+    @Transactional(readOnly = true)
+    public List<SessionListResponseDTO> getUserSessionList(Long userId) {
+        log.info("사용자 {}의 간소화된 세션 목록 조회", userId);
+        
+        List<ChatSessionEntity> sessions = chatSessionRepository.findByUserIdOrderByLastActiveAtDesc(userId);
+        
+        return sessions.stream()
+                .map(this::convertToSessionListResponse)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * ChatSessionEntity를 SessionListResponseDTO로 변환
+     */
+    private SessionListResponseDTO convertToSessionListResponse(ChatSessionEntity session) {
+        // 세션 제목 생성 (첫 번째 사용자 메시지 기반)
+        String title = generateSessionTitle(session);
+        
+        return new SessionListResponseDTO(
+                session.getSessionId(),
+                title,
+                session.getLastActiveAt()
+        );
+    }
+    
+    /**
+     * 세션 제목 생성
+     */
+    private String generateSessionTitle(ChatSessionEntity session) {
+        try {
+            // 첫 번째 사용자 메시지를 세션 제목으로 사용
+            Optional<ChatMessageEntity> firstUserMessage = chatMessageRepository
+                    .findFirstBySessionSessionIdAndRoleOrderByCreatedAtAsc(
+                            session.getSessionId(), 
+                            ChatMessageEntity.MessageRole.user
+                    );
+            
+            if (firstUserMessage.isPresent()) {
+                String content = firstUserMessage.get().getContent();
+                // 제목이 너무 길면 축약
+                if (content.length() > 30) {
+                    return content.substring(0, 30) + "...";
+                }
+                return content;
+            }
+            
+            // 첫 번째 메시지가 없으면 질문 유형 기반으로 제목 생성
+            if (session.getLastQuestionType() != null) {
+                return switch (session.getLastQuestionType()) {
+                    case "legal_rag" -> "법률 상담";
+                    case "case_rag" -> "판례 상담";
+                    case "first_chat" -> "새로운 상담";
+                    default -> "챗봇 상담";
+                };
+            }
+            
+            return "새로운 대화";
+            
+        } catch (Exception e) {
+            log.warn("세션 {} 제목 생성 중 오류: {}", session.getSessionId(), e.getMessage());
+            return "챗봇 상담";
+        }
     }
     
     /**
@@ -190,15 +259,5 @@ public class ChatbotService {
         }
     }
 
-    /**
-     * 세션 종료 (기존 메서드 - 하위 호환성)
-     */
-    public void closeSession(String sessionId, User user) {
-        Optional<ChatSessionEntity> session = chatSessionRepository.findById(sessionId);
-        if (session.isPresent() && session.get().getUser().getId().equals(user.getId())) {
-            session.get().closeSession();
-            chatSessionRepository.save(session.get());
-            log.info("세션 {} 종료됨", sessionId);
-        }
-    }
+
 } 

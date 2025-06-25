@@ -34,7 +34,7 @@ public class StatusController {
         
         ### 1. 요청 방법
         ```javascript
-        fetch('/api/v1/status', {
+        fetch('/status/status', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'

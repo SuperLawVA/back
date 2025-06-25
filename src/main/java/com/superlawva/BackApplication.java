@@ -58,11 +58,11 @@ public class BackApplication {
             try {
                 System.out.println("🚀 테스트 사용자 생성 시작...");
                 
-                // 테스트용 사용자가 없으면 생성
+                // 테스트용 사용자가 없으면 생성 (평문 비밀번호)
                 if (!userRepository.existsByEmail("test@example.com")) {
                     User testUser = User.builder()
                             .email("test@example.com")
-                            .password(passwordEncoder.encode("password123"))
+                            .password("password123")  // 평문으로 저장
                             .nickname("테스트사용자")
                             .provider("LOCAL")
                             .role(User.Role.USER)
@@ -77,7 +77,7 @@ public class BackApplication {
                 if (!userRepository.existsByEmail("admin@example.com")) {
                     User adminUser = User.builder()
                             .email("admin@example.com")
-                            .password(passwordEncoder.encode("admin123"))
+                            .password("admin123")  // 평문으로 저장
                             .nickname("관리자")
                             .provider("LOCAL")
                             .role(User.Role.ADMIN)
@@ -92,7 +92,7 @@ public class BackApplication {
                 if (!userRepository.existsByEmail("demo@example.com")) {
                     User demoUser = User.builder()
                             .email("demo@example.com")
-                            .password(passwordEncoder.encode("demo123"))
+                            .password("demo123")  // 평문으로 저장
                             .nickname("데모사용자")
                             .provider("LOCAL")
                             .role(User.Role.USER)

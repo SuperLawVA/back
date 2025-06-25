@@ -62,13 +62,13 @@ public class UserServiceImpl implements UserService {
             throw new BaseException(ErrorStatus._EMAIL_ALREADY_EXISTS);
         }
         
-        // 비밀번호 암호화
-        String hashedPassword = passwordEncoder.encode(password);
+        // 비밀번호 평문 저장 (임시)
+        // String hashedPassword = passwordEncoder.encode(password);
         
         // 사용자 생성 및 저장
         User user = User.builder()
                 .email(email)
-                .password(hashedPassword)
+                .password(password)  // 평문으로 저장
                 .nickname(nickname)
                 .provider("LOCAL")
                 .role(User.Role.USER)
@@ -84,7 +84,8 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findByEmail(loginRequestDTO.getEmail())
                 .orElseThrow(() -> new BaseException(ErrorStatus.MEMBER_NOT_FOUND));
 
-        if (!passwordEncoder.matches(loginRequestDTO.getPassword(), user.getPassword())) {
+        // 평문 비밀번호 비교 (임시)
+        if (!loginRequestDTO.getPassword().equals(user.getPassword())) {
             throw new BaseException(ErrorStatus._PASSWORD_NOT_MATCH);
         }
         
@@ -245,13 +246,15 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void changePassword(User user, PasswordChangeRequestDTO request) {
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+        // 평문 비밀번호 비교 (임시)
+        if (!request.getCurrentPassword().equals(user.getPassword())) {
             throw new BaseException(ErrorStatus._PASSWORD_NOT_MATCH);
         }
         if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
             throw new BaseException(ErrorStatus._PASSWORD_CONFIRM_NOT_MATCH);
         }
-        user.changePassword(passwordEncoder.encode(request.getNewPassword()));
+        // 평문으로 저장 (임시)
+        user.changePassword(request.getNewPassword());
         userRepository.save(user);
     }
 

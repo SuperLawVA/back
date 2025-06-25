@@ -1,6 +1,7 @@
 package com.superlawva.domain.chatbot.repository;
 
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
+import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -38,4 +39,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessageEntity, 
     
     // 세션별 메시지 삭제 (ML 팀 스펙용)
     void deleteBySessionSessionId(String sessionId);
+    
+    // 세션의 첫 번째 사용자 메시지 조회 (제목 생성용)
+    Optional<ChatMessageEntity> findFirstBySessionSessionIdAndRoleOrderByCreatedAtAsc(String sessionId, ChatMessageEntity.MessageRole role);
 } 
