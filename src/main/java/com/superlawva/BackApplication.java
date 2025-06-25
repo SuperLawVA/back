@@ -13,7 +13,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {
+        org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration.class,
+        org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration.class
+})
 @EnableScheduling
 public class BackApplication {
 
@@ -35,7 +38,7 @@ public class BackApplication {
         return args -> {
             try {
                 System.out.println("🚀 테스트 사용자 생성 시작...");
-                
+
                 // 테스트용 사용자가 없으면 생성
                 String testEmailHash = hashUtil.hash("test@example.com");
                 if (!userRepository.existsByEmailHash(testEmailHash)) {
@@ -87,7 +90,7 @@ public class BackApplication {
                 } else {
                     System.out.println("ℹ️ 데모 사용자 이미 존재: demo@example.com");
                 }
-                
+
                 System.out.println("🎉 테스트 사용자 생성 과정 완료");
             } catch (Exception e) {
                 System.err.println("⚠️ 테스트 사용자 생성 중 오류 발생: " + e.getMessage());

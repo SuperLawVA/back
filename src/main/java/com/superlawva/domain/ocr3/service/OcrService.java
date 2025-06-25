@@ -57,9 +57,6 @@ public class OcrService {
     public OcrResponse processContract(MultipartFile file) throws Exception {
         log.info("Starting OCR processing for file: {}", file.getOriginalFilename());
         
-        // 🔍 MongoDB 연결 정보 디버깅
-        log.info("📊 MongoDB Debug - Database: {}", contractDataRepository.getClass().getSimpleName());
-        
         // Step 1: Extract text using Document AI
         String extractedText = extractTextFromImage(file);
         log.info("Text extraction completed");
@@ -86,10 +83,9 @@ public class OcrService {
         metadata.setVersion("v3.1.0");
         contractData.setContractMetadata(metadata);
         
-        // Step 4: Save to MongoDB with debug info
-        log.info("🔍 Saving contract to MongoDB...");
+        // Step 4: Save to MongoDB
         ContractData savedContract = contractDataRepository.save(contractData);
-        log.info("✅ Contract saved with ID: {} | Database should be: superlawva_docs", savedContract.getId());
+        log.info("Contract saved with ID: {}", savedContract.get_id());
         
         // Step 5: Return response
         return OcrResponse.builder()
@@ -130,7 +126,7 @@ public class OcrService {
         
         // Step 4: Save to MongoDB with userId
         ContractData savedContract = contractDataRepository.save(contractData);
-        log.info("Contract saved with ID: {} for userId: {}", savedContract.getId(), userId);
+        log.info("Contract saved with ID: {} for userId: {}", savedContract.get_id(), userId);
         
         // Step 5: Return response
         return OcrResponse.builder()
@@ -265,10 +261,12 @@ public class OcrService {
         """;
     }
     
-    // 🟢 MongoDB 저장된 모든 계약서 조회
+    // 모든 계약서 조회
     public List<ContractData> getAllContracts() {
         log.info("Retrieving all contracts from MongoDB");
-        return contractDataRepository.findAll();
+        List<ContractData> contracts = contractDataRepository.findAll();
+        log.info("Found {} contracts", contracts.size());
+        return contracts;
     }
     
     // 🟢 특정 ID로 계약서 조회
@@ -282,4 +280,6 @@ public class OcrService {
         log.info("Retrieving contracts for user: {}", userId);
         return contractDataRepository.findByUserId(userId);
     }
+    
+
 }

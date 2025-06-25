@@ -20,9 +20,9 @@ import jakarta.validation.constraints.Min;
 @Slf4j
 @CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}) // 프론트엔드 CORS 설정
 public class WordsController {
-    
+
     private final WordsService wordsService;
-    
+
     /**
      * 용어 검색 API
      * GET /api/terms/search?keyword=검색어&page=1&pageSize=10
@@ -32,20 +32,20 @@ public class WordsController {
             @RequestParam(value = "keyword", defaultValue = "") String keyword,
             @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
             @RequestParam(value = "pageSize", defaultValue = "50") @Min(1) int pageSize) {
-        
+
         // DTO 생성
         WordsSearchRequestDto requestDto = WordsSearchRequestDto.builder()
                 .keyword(keyword)
                 .page(page)
                 .pageSize(Math.min(pageSize, 1000)) // 최대 1000개로 제한
                 .build();
-        
+
         // 서비스 호출
         WordsSearchResponseDto responseDto = wordsService.searchWords(requestDto);
-        
+
         return ResponseEntity.ok(responseDto);
     }
-    
+
     /**
      * 인기 검색어 API
      * GET /api/search-keywords/popular
@@ -55,7 +55,7 @@ public class WordsController {
         PopularKeywordsResponseDto responseDto = wordsService.getPopularKeywords();
         return ResponseEntity.ok(responseDto);
     }
-    
+
     /**
      * 용어 등록 API
      * POST /api/upload/words
@@ -70,7 +70,7 @@ public class WordsController {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(null);
         }
     }
-    
+
     /**
      * 용어 상세 조회 API
      * GET /api/terms/{word}
@@ -85,7 +85,36 @@ public class WordsController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
-    
+
+    /**
+     * 간단한 데이터베이스 연결 테스트 API
+     * GET /api/words/test
+     */
+    @GetMapping("/words/test")
+    public ResponseEntity<?> testDatabaseConnection() {
+        try {
+            // 간단한 카운트만 확인
+            long count = wordsService.getAllWordsCount();
+
+            java.util.Map<String, Object> result = java.util.Map.of(
+                    "status", "success",
+                    "total_count", count,
+                    "database_connected", true
+            );
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            java.util.Map<String, Object> error = java.util.Map.of(
+                    "status", "error",
+                    "error_message", e.getMessage(),
+                    "database_connected", false
+            );
+
+            return ResponseEntity.status(500).body(error);
+        }
+    }
+
     /**
      * 헬스 체크 API
      * GET /api/health

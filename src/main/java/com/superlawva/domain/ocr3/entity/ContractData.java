@@ -13,7 +13,7 @@ import java.util.Map;
 @Document(collection = "contract")
 public class ContractData {
     @Id
-    private String id;
+    private String _id;
     
     @Field("user_id")
     private String userId;

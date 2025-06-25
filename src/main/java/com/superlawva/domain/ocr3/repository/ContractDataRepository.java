@@ -23,5 +23,5 @@ public interface ContractDataRepository extends MongoRepository<ContractData, St
     List<ContractData> findByLesseeName(String lesseeName);
     
     // Find by ID and user ID (for security)
-    Optional<ContractData> findByIdAndUserId(String id, String userId);
+    Optional<ContractData> findBy_idAndUserId(String id, String userId);
 }

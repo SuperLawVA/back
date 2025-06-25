@@ -51,28 +51,28 @@ public class OAuth2Controller {
     private final HashUtil hashUtil;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${spring.security.oauth2.client.registration.kakao.client-id}")
+    @Value("${kakao.client-id}")
     private String kakaoClientId;
 
-    @Value("${spring.security.oauth2.client.registration.kakao.client-secret}")
+    @Value("${kakao.client-secret}")
     private String kakaoClientSecret;
 
-    @Value("${spring.security.oauth2.client.registration.kakao.redirect-uri}")
+    @Value("${kakao.redirect-uri}")
     private String kakaoRedirectUri;
 
-    @Value("${spring.security.oauth2.client.registration.naver.client-id}")
+    @Value("${naver.client-id}")
     private String naverClientId;
 
-    @Value("${spring.security.oauth2.client.registration.naver.client-secret}")
+    @Value("${naver.client-secret}")
     private String naverClientSecret;
 
-    @Value("${spring.security.oauth2.client.registration.naver.redirect-uri}")
+    @Value("${naver.redirect-uri}")
     private String naverRedirectUri;
 
     @PostMapping("/login/kakao")
     @Operation(
-        summary = "📱 카카오 소셜 로그인 (인가 코드 방식)", 
-        description = """
+            summary = "📱 카카오 소셜 로그인 (인가 코드 방식)",
+            description = """
         카카오 인가 코드를 받아 로그인 처리 후 JWT 토큰을 발급합니다.
         
         **사용법:**
@@ -87,8 +87,8 @@ public class OAuth2Controller {
 
     @PostMapping("/login/naver")
     @Operation(
-        summary = "📱 네이버 소셜 로그인 (인가 코드 방식)", 
-        description = """
+            summary = "📱 네이버 소셜 로그인 (인가 코드 방식)",
+            description = """
         네이버 인가 코드를 받아 로그인 처리 후 JWT 토큰을 발급합니다.
         
         **사용법:**
@@ -103,8 +103,8 @@ public class OAuth2Controller {
 
     @GetMapping("/kakao")
     @Operation(
-        summary = "🔗 카카오 OAuth2 인증 URL 생성", 
-        description = """
+            summary = "🔗 카카오 OAuth2 인증 URL 생성",
+            description = """
         카카오 OAuth2 인증을 위한 URL을 생성합니다.
         
         **사용법:**
@@ -126,7 +126,7 @@ public class OAuth2Controller {
 
             Map<String, String> result = new HashMap<>();
             result.put("authUrl", authUrl);
-            
+
             return ApiResponse.onSuccess(result);
         } catch (Exception e) {
             log.error("카카오 인증 URL 생성 실패", e);
@@ -136,8 +136,8 @@ public class OAuth2Controller {
 
     @GetMapping("/naver")
     @Operation(
-        summary = "🔗 네이버 OAuth2 인증 URL 생성", 
-        description = """
+            summary = "🔗 네이버 OAuth2 인증 URL 생성",
+            description = """
         네이버 OAuth2 인증을 위한 URL을 생성합니다.
         
         **사용법:**
@@ -152,7 +152,7 @@ public class OAuth2Controller {
             if (state == null || state.isEmpty()) {
                 state = java.util.UUID.randomUUID().toString();
             }
-            
+
             String authUrl = UriComponentsBuilder
                     .fromUriString("https://nid.naver.com/oauth2.0/authorize")
                     .queryParam("client_id", naverClientId)
@@ -165,7 +165,7 @@ public class OAuth2Controller {
             Map<String, String> result = new HashMap<>();
             result.put("authUrl", authUrl);
             result.put("state", state);
-            
+
             return ApiResponse.onSuccess(result);
         } catch (Exception e) {
             log.error("네이버 인증 URL 생성 실패", e);
@@ -175,8 +175,8 @@ public class OAuth2Controller {
 
     @GetMapping("/callback/kakao")
     @Operation(
-        summary = "🔄 카카오 OAuth2 콜백 처리", 
-        description = """
+            summary = "🔄 카카오 OAuth2 콜백 처리",
+            description = """
         카카오 OAuth2 인증 후 콜백을 처리합니다.
         
         **동작 과정:**
@@ -187,13 +187,13 @@ public class OAuth2Controller {
         """
     )
     @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", 
-            description = "⏳ 이메일 입력 필요 (임시 토큰 발급)",
-            content = @Content(
-                schema = @Schema(implementation = SocialLoginTempDTO.class),
-                examples = @ExampleObject(
-                    value = """
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "⏳ 이메일 입력 필요 (임시 토큰 발급)",
+                    content = @Content(
+                            schema = @Schema(implementation = SocialLoginTempDTO.class),
+                            examples = @ExampleObject(
+                                    value = """
                     {
                         "isSuccess": true,
                         "code": "200",
@@ -207,49 +207,49 @@ public class OAuth2Controller {
                         }
                     }
                     """
-                )
+                            )
+                    )
             )
-        )
     })
     public ApiResponse<Object> kakaoCallback(@RequestParam String code) {
         try {
             // 1. 인가 코드로 액세스 토큰 요청
             String tokenUrl = "https://kauth.kakao.com/oauth/token";
-            
+
             HttpHeaders tokenHeaders = new HttpHeaders();
             tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            
+
             String tokenBody = String.format(
-                "grant_type=authorization_code&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
-                kakaoClientId, kakaoClientSecret, kakaoRedirectUri, code
+                    "grant_type=authorization_code&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
+                    kakaoClientId, kakaoClientSecret, kakaoRedirectUri, code
             );
-            
+
             HttpEntity<String> tokenRequest = new HttpEntity<>(tokenBody, tokenHeaders);
             ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUrl, tokenRequest, Map.class);
-            
+
             String accessToken = (String) tokenResponse.getBody().get("access_token");
             if (accessToken == null) {
                 throw new RuntimeException("카카오 액세스 토큰을 받지 못했습니다.");
             }
-            
+
             // 2. 액세스 토큰으로 사용자 정보 조회
             String userInfoUrl = "https://kapi.kakao.com/v2/user/me";
-            
+
             HttpHeaders userHeaders = new HttpHeaders();
             userHeaders.setBearerAuth(accessToken);
-            
+
             HttpEntity<String> userRequest = new HttpEntity<>(userHeaders);
             ResponseEntity<Map> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userRequest, Map.class);
-            
+
             Map<String, Object> userInfo = userResponse.getBody();
             Long kakaoId = ((Number) userInfo.get("id")).longValue();
-            
+
             Map<String, Object> properties = (Map<String, Object>) userInfo.get("properties");
             String nickname = (String) properties.get("nickname");
-            
+
             // 3. 임시 토큰 생성 (이메일 입력 필요)
             String tempToken = jwtTokenProvider.createTempToken(kakaoId.toString(), "KAKAO", nickname);
-            
+
             SocialLoginTempDTO result = SocialLoginTempDTO.builder()
                     .tempToken(tempToken)
                     .nickname(nickname)
@@ -257,9 +257,9 @@ public class OAuth2Controller {
                     .needEmail(true)
                     .message("카카오 로그인이 완료되었습니다. 이메일을 입력해주세요.")
                     .build();
-            
+
             return ApiResponse.onSuccess(result);
-            
+
         } catch (Exception e) {
             log.error("카카오 콜백 처리 실패", e);
             throw new RuntimeException("카카오 로그인 처리 중 오류가 발생했습니다.", e);
@@ -268,8 +268,8 @@ public class OAuth2Controller {
 
     @GetMapping("/callback/naver")
     @Operation(
-        summary = "🔄 네이버 OAuth2 콜백 처리", 
-        description = """
+            summary = "🔄 네이버 OAuth2 콜백 처리",
+            description = """
         네이버 OAuth2 인증 후 콜백을 처리하고 JWT 토큰을 발급합니다.
         
         **동작 과정:**
@@ -291,29 +291,29 @@ public class OAuth2Controller {
                     .queryParam("state", state)
                     .build()
                     .toUriString();
-            
+
             ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUrl, null, Map.class);
             String accessToken = (String) tokenResponse.getBody().get("access_token");
-            
+
             if (accessToken == null) {
                 throw new RuntimeException("네이버 액세스 토큰을 받지 못했습니다.");
             }
-            
+
             // 2. 액세스 토큰으로 사용자 정보 조회
             String userInfoUrl = "https://openapi.naver.com/v1/nid/me";
-            
+
             HttpHeaders userHeaders = new HttpHeaders();
             userHeaders.setBearerAuth(accessToken);
-            
+
             HttpEntity<String> userRequest = new HttpEntity<>(userHeaders);
             ResponseEntity<Map> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userRequest, Map.class);
-            
+
             Map<String, Object> userInfo = userResponse.getBody();
             Map<String, Object> response = (Map<String, Object>) userInfo.get("response");
-            
+
             String email = (String) response.get("email");
             String name = (String) response.get("name");
-            
+
             // 3. 사용자 정보로 JWT 토큰 생성
             String emailHash = hashUtil.hash(email);
             User user = userRepository.findByEmailHash(emailHash)
@@ -328,26 +328,26 @@ public class OAuth2Controller {
                                 .emailVerified(true)
                                 .build());
                     });
-            
+
             String jwtToken = jwtTokenProvider.createToken(user.getEmail(), user.getId());
-            
+
             // 사용자 정보 구성
             LoginResponseDTO.UserInfo userInfoDto = new LoginResponseDTO.UserInfo(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                List.of(), // 알림 - 빈 배열
-                List.of(), // 계약 - 빈 배열  
-                List.of()  // 최근 채팅 - 빈 배열
+                    user.getId(),
+                    user.getEmail(),
+                    user.getNickname(),
+                    List.of(), // 알림 - 빈 배열
+                    List.of(), // 계약 - 빈 배열
+                    List.of()  // 최근 채팅 - 빈 배열
             );
-            
+
             LoginResponseDTO loginResponse = LoginResponseDTO.builder()
                     .token(jwtToken)
                     .user(userInfoDto)
                     .build();
-            
+
             return ApiResponse.onSuccess(loginResponse);
-            
+
         } catch (Exception e) {
             log.error("네이버 콜백 처리 실패", e);
             throw new RuntimeException("네이버 로그인 처리 중 오류가 발생했습니다.", e);
