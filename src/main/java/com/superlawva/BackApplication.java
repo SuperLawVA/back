@@ -18,23 +18,14 @@ public class BackApplication {
 
     public static void main(String[] args) {
         System.out.println("🚀 SuperLawVA 백엔드 애플리케이션 시작...");
-        
-        // .env 파일을 찾아 시스템 프로퍼티로 로드합니다.
-        // Spring Boot는 자동으로 시스템 프로퍼티를 읽어 설정에 사용합니다.
-        try {
-            Dotenv.configure()
-                    .ignoreIfMalformed()
-                    .ignoreIfMissing()
-                    .systemProperties()
-                    .load();
-            System.out.println("✅ 환경변수 로드 완료");
-        } catch (Exception e) {
-            System.out.println("⚠️ .env 파일 로드 실패 (무시됨): " + e.getMessage());
-        }
 
-        // 중요한 환경변수 확인
+        // Docker/컨테이너 환경에서는 Docker Compose가 .env 파일을 환경변수로 주입해주므로,
+        // Dotenv 라이브러리를 통한 수동 로드는 불필요하며 문제를 일으킬 수 있어 제거합니다.
+        // Spring Boot가 자동으로 환경변수를 인식합니다.
+
+        // 중요한 환경변수 확인 (System.getenv로 통일)
         System.out.println("📋 환경변수 확인:");
-        System.out.println("  - SPRING_PROFILES_ACTIVE: " + System.getProperty("SPRING_PROFILES_ACTIVE", "없음"));
+        System.out.println("  - SPRING_PROFILES_ACTIVE: " + System.getenv("SPRING_PROFILES_ACTIVE"));
         System.out.println("  - DATABASE_URL: " + (System.getenv("DATABASE_URL") != null ? "설정됨" : "없음"));
         System.out.println("  - MONGODB_URI: " + (System.getenv("MONGODB_URI") != null ? "설정됨" : "없음"));
         System.out.println("  - JWT_SECRET: " + (System.getenv("JWT_SECRET") != null ? "설정됨" : "없음"));
