@@ -21,9 +21,9 @@ services:
     env_file: .env
     ports:
       - "8080:8080"
+      - "8443:8443"
     networks: [app-network]
     environment:
-      - SPRING_PROFILES_ACTIVE=prod
       - REDIS_HOST=redis
       - REDIS_PORT=6379 # 내부 네트워크에서는 6379 사용
       - JAVA_OPTS=-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0
