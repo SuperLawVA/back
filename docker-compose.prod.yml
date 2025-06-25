@@ -23,6 +23,10 @@ services:
       - "8080:8080"
       - "8443:8443"
     networks: [app-network]
+    volumes:
+      # SSL 키스토어 파일을 호스트에서 컨테이너로 마운트합니다.
+      # docker-compose는 .env 파일의 변수를 읽어서 이 경로를 설정합니다.
+      - ${SERVER_SSL_KEY_STORE}:${SERVER_SSL_KEY_STORE}:ro
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379 # 내부 네트워크에서는 6379 사용
