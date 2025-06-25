@@ -48,31 +48,12 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean bootJar -x test
 
-      # 5. AWS 자격증명 설정
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      # 6. ECR 로그인
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-
-      # 7. Docker 이미지 빌드 및 ECR 푸시
-      - name: Build & Push Docker image to ECR
+      # 5. Docker 이미지 빌드, 태깅, 푸시
+      - name: Docker 이미지 빌드, 태깅, 푸시
         run: |
-          echo "Building Docker image..."
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-
-          echo "Pushing to ECR..."
+          docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-          echo "✅ Image pushed successfully"
-          echo "Image URI: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "✅ Docker 이미지 푸시 완료: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
       # 8. docker-compose.prod.yml 파일 EC2에 복사
       - name: Copy docker-compose.prod.yml to EC2
@@ -91,16 +72,15 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          envs: ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,AWS_REGION
+          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,${{ join(secrets.*, ',') }}
           script: |
             set -e
 
             echo "=== 환경 준비 ==="
             cd /home/ubuntu
 
-            # ECR 로그인
-            echo "ECR 로그인..."
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+            # ECR 로그인 (가장 안전한 방식)
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
 
             # 환경변수 파일 생성
             echo "환경변수 설정..."
@@ -144,11 +124,13 @@ jobs:
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
 
-            # === SSL/HTTPS 설정 ===
-            SSL_ENABLED=${{ secrets.SSL_ENABLED || 'false' }}
-            SSL_KEYSTORE_PATH=/home/ubuntu/keystore.p12
-            SSL_KEYSTORE_PASSWORD=${{ secrets.SSL_KEYSTORE_PASSWORD || 'superlawva123!' }}
-            SSL_KEY_ALIAS=${{ secrets.SSL_KEY_ALIAS || 'superlawva' }}
+            # === SSL/HTTPS 설정 (Spring Boot 표준 형식으로 매핑) ===
+            # GitHub Secrets의 SSL_* 키를 Spring Boot가 읽는 SERVER_SSL_* 키로 변환해줍니다.
+            SERVER_PORT=8443
+            SERVER_SSL_ENABLED=${{ secrets.SSL_ENABLED }}
+            SERVER_SSL_KEY_STORE=file:/home/ubuntu/keystore.p12
+            SERVER_SSL_KEY_STORE_PASSWORD=${{ secrets.SSL_KEYSTORE_PASSWORD }}
+            SERVER_SSL_KEY_ALIAS=${{ secrets.SSL_KEY_ALIAS }}
 
             # === OAuth2 소셜 로그인 ===
             KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
@@ -186,7 +168,6 @@ jobs:
 
             # === 기타 설정 ===
             FRONTEND_URL=https://super-lawva.vercel.app
-            SERVER_PORT=${{ secrets.SSL_ENABLED == 'true' && '8443' || '8080' }}
             SPRING_PROFILES_ACTIVE=${{ secrets.SSL_ENABLED == 'true' && 'prod,ssl' || 'prod' }}
 
             # === Docker 이미지 정보 ===
@@ -194,9 +175,15 @@ jobs:
             IMAGE_TAG=$IMAGE_TAG
             EOF
 
-            # .env 파일 확인 (비밀번호는 마스킹)
-            echo "=== .env 파일 생성 완료 ==="
-            sed -e 's/PASSWORD=.*/PASSWORD=****/' -e 's/SECRET=.*/SECRET=****/' .env
+            # .env 파일 확인 (보안을 위해 각 시크릿의 길이만 출력)
+            echo "=== .env 파일 생성 완료 (길이 검증 모드) ==="
+            echo "각 환경 변수의 글자 수를 확인하여 값이 올바르게 전달되었는지 검증합니다."
+            echo "--------------------------------------------------------"
+            while IFS='=' read -r key value; do
+              # 실제 값을 출력하는 대신 글자 수를 셉니다.
+              printf "%-35s: %s 글자\n" "$key" "${#value}"
+            done < .env
+            echo "--------------------------------------------------------"
 
             echo "=== Docker Compose 배포 ==="
             # 포트 정리 (SSL 사용 시 8443, HTTP 사용 시 8080)
