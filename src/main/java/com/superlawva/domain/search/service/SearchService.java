@@ -133,6 +133,21 @@ public class SearchService {
                 if (caseEntity.isPresent()) {
                     Cases cases = caseEntity.get();
                     
+                    // 더 상세한 제목 생성 (사건번호 + 사건명)
+                    String enhancedTitle = String.format("%s - %s", 
+                        cases.getCaseNumber() != null ? cases.getCaseNumber() : "사건번호 미상",
+                        cases.getCaseTitle() != null ? cases.getCaseTitle() : caseDoc.title()
+                    );
+                    
+                    // 더 풍부한 콘텐츠 생성 (기존 + DB 정보)
+                    StringBuilder enhancedContent = new StringBuilder();
+                    enhancedContent.append("**사건정보**\n");
+                    enhancedContent.append("- 사건번호: ").append(cases.getCaseNumber()).append("\n");
+                    enhancedContent.append("- 사건유형: ").append(cases.getCaseType()).append("\n");
+                    enhancedContent.append("- 판결일: ").append(cases.getDecisionDate()).append("\n\n");
+                    enhancedContent.append("**판결내용**\n");
+                    enhancedContent.append(caseDoc.content());
+                    
                     // RDS 정보로 메타데이터 보강
                     SearchResponseDTO.DocumentMetadata enrichedMetadata = new SearchResponseDTO.DocumentMetadata(
                             caseDoc.metadata().type(),
@@ -142,12 +157,9 @@ public class SearchService {
                             cases.getCaseId()
                     );
                     
-                    // 제목도 DB에서 가져온 정보로 업데이트 (더 정확할 수 있음)
-                    String title = cases.getCaseTitle() != null ? cases.getCaseTitle() : caseDoc.title();
-                    
                     return new SearchResponseDTO.DocumentResult(
-                            title,
-                            caseDoc.content(),
+                            enhancedTitle,
+                            enhancedContent.toString(),
                             caseDoc.similarity(),
                             enrichedMetadata
                     );

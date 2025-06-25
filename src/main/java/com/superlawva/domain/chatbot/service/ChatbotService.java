@@ -62,6 +62,20 @@ public class ChatbotService {
                 apiResponse.responseTimeSeconds() != null ? 
                     BigDecimal.valueOf(apiResponse.responseTimeSeconds()) : null
         );
+        
+        // ML API에서 토큰 사용량 정보가 있으면 저장
+        if (apiResponse.tokenUsage() != null) {
+            botMessage = ChatMessageEntity.builder()
+                    .session(session)
+                    .role(ChatMessageEntity.MessageRole.assistant)
+                    .content(botAnswer)
+                    .questionType(apiResponse.questionType())
+                    .responseTimeSeconds(apiResponse.responseTimeSeconds() != null ? 
+                        BigDecimal.valueOf(apiResponse.responseTimeSeconds()) : null)
+                    .tokenUsage(apiResponse.tokenUsage())
+                    .build();
+        }
+        
         chatMessageRepository.save(botMessage);
         
         // 5. 세션 활동 업데이트

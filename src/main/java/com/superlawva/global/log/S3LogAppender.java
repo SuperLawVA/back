@@ -3,7 +3,6 @@ package com.superlawva.global.log;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -24,16 +23,10 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public class S3LogAppender extends AppenderBase<ILoggingEvent> {
 
-    @Value("${aws.s3.bucket-name:superlawva-logs}")
+    // 환경변수에서 직접 읽기 (Spring @Value 대신)
     private String bucketName;
-
-    @Value("${aws.s3.region:ap-northeast-2}")
     private String region;
-
-    @Value("${aws.access-key-id}")
     private String accessKeyId;
-
-    @Value("${aws.secret-access-key}")
     private String secretAccessKey;
 
     private S3Client s3Client;
@@ -46,11 +39,46 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
     @Override
     public void start() {
         if (!isStarted()) {
-            initializeS3Client();
-            initializeBuffer();
-            startUploadScheduler();
-            super.start();
+            // 환경변수 읽기
+            loadEnvironmentVariables();
+            
+            // 필수 환경변수 검증
+            if (isValidConfiguration()) {
+                initializeS3Client();
+                initializeBuffer();
+                startUploadScheduler();
+                super.start();
+                addInfo("S3LogAppender started successfully. Bucket: " + bucketName);
+            } else {
+                addWarn("S3LogAppender 시작 실패: AWS 환경변수가 설정되지 않았습니다.");
+            }
         }
+    }
+
+    private void loadEnvironmentVariables() {
+        bucketName = getEnvOrDefault("AWS_S3_BUCKET_NAME", "superlawva-logs");
+        region = getEnvOrDefault("AWS_REGION", "ap-northeast-2");
+        accessKeyId = System.getenv("AWS_ACCESS_KEY_ID");
+        secretAccessKey = System.getenv("AWS_SECRET_ACCESS_KEY");
+        
+        addInfo("S3LogAppender 설정 로드됨 - Bucket: " + bucketName + ", Region: " + region);
+    }
+
+    private String getEnvOrDefault(String key, String defaultValue) {
+        String value = System.getenv(key);
+        return value != null ? value : defaultValue;
+    }
+
+    private boolean isValidConfiguration() {
+        if (accessKeyId == null || accessKeyId.trim().isEmpty()) {
+            addWarn("AWS_ACCESS_KEY_ID 환경변수가 설정되지 않았습니다.");
+            return false;
+        }
+        if (secretAccessKey == null || secretAccessKey.trim().isEmpty()) {
+            addWarn("AWS_SECRET_ACCESS_KEY 환경변수가 설정되지 않았습니다.");
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -74,8 +102,9 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
                     .region(Region.of(region))
                     .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
                     .build();
+            addInfo("S3 클라이언트 초기화 성공 - Region: " + region);
         } catch (Exception e) {
-            addError("Failed to initialize S3 client", e);
+            addError("S3 클라이언트 초기화 실패", e);
         }
     }
 

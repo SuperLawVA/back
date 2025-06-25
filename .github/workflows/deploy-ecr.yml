@@ -161,6 +161,12 @@ jobs:
             CHATBOT_API_BASE_URL=http://43.201.42.119:8000
             CHATBOT_API_TIMEOUT=30000
 
+            # === AWS 설정 ===
+            AWS_REGION=ap-northeast-2
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_S3_BUCKET_NAME=superlawva-logs
+
             # === 기타 설정 ===
             FRONTEND_URL=https://super-lawva.vercel.app
             SERVER_PORT=8080

@@ -72,6 +72,7 @@ public class ChatbotApiService {
                         (String) responseBody.get("session_id"),
                         (String) responseBody.get("question_type"),
                         processingTimeSeconds,
+                        (String) responseBody.get("token_usage"),
                         null
                 );
             } else {
@@ -81,6 +82,7 @@ public class ChatbotApiService {
                         finalSessionId,
                         null,
                         processingTimeSeconds,
+                        null,
                         "ML API 응답이 비어있습니다."
                 );
             }
@@ -93,6 +95,7 @@ public class ChatbotApiService {
                     sessionId,
                     null,
                     0.0,
+                    null,
                     "API 호출 실패: " + e.getMessage()
             );
         }
@@ -114,6 +117,7 @@ public class ChatbotApiService {
             String sessionId,
             String questionType,
             Double responseTimeSeconds,
+            String tokenUsage,
             String error
     ) {}
 } 

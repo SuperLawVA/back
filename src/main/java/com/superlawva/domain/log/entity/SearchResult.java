@@ -46,12 +46,30 @@ public class SearchResult {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
     
+    /**
+     * 검색 타입 enum (DB: 'law', 'case', 'both')
+     * Java에서는 'case'가 예약어이므로 'case_'로 처리하고 toString()에서 변환
+     */
     public enum SearchType {
-        law, case_, both;
+        law,
+        case_,  // DB에는 'case'로 저장됨
+        both;
         
         @Override
         public String toString() {
             return this == case_ ? "case" : name();
+        }
+        
+        /**
+         * DB 값으로부터 enum 값 생성
+         */
+        public static SearchType fromDbValue(String dbValue) {
+            return switch (dbValue) {
+                case "law" -> law;
+                case "case" -> case_;
+                case "both" -> both;
+                default -> throw new IllegalArgumentException("Unknown search type: " + dbValue);
+            };
         }
     }
     

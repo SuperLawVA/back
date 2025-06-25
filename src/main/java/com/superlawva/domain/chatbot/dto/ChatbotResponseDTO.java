@@ -24,7 +24,14 @@ public record ChatbotResponseDTO(
         
         @Schema(description = "질문 유형", example = "first_chat")
         @JsonProperty("question_type")
-        String questionType
+        String questionType,
+        
+        @Schema(description = "토큰 사용량 정보", example = "{\"input_tokens\": 25, \"output_tokens\": 150}")
+        @JsonProperty("token_usage")
+        String tokenUsage,
+        
+        @Schema(description = "응답 성공 여부", example = "true")
+        Boolean success
 ) {
     
     public static ChatbotResponseDTO from(String answer, String sessionId, String questionType, Double responseTimeSeconds) {
@@ -33,7 +40,21 @@ public record ChatbotResponseDTO(
                 sessionId,
                 LocalDateTime.now(),
                 responseTimeSeconds,
-                questionType
+                questionType,
+                null, // tokenUsage - ML API에서 제공시 설정
+                true  // success
+        );
+    }
+    
+    public static ChatbotResponseDTO error(String errorMessage, String sessionId) {
+        return new ChatbotResponseDTO(
+                errorMessage,
+                sessionId,
+                LocalDateTime.now(),
+                null,
+                "error",
+                null,
+                false
         );
     }
 } 

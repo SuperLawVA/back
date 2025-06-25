@@ -2,7 +2,6 @@ package com.superlawva.global.verification.service;
 
 import com.superlawva.global.mail.MailService;
 // import com.superlawva.global.security.util.AESUtil;
-import com.superlawva.global.security.util.HashUtil;
 import com.superlawva.global.exception.BaseException;
 import com.superlawva.global.response.status.ErrorStatus;
 import com.superlawva.domain.user.repository.UserRepository;
@@ -24,7 +23,6 @@ public class EmailVerificationService {
     private final RedisTemplate<String, String> redisTemplate;
     // private final AESUtil aesUtil; // AES 임시 비활성화
     private final UserRepository userRepository;
-    private final HashUtil hashUtil;
 
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;

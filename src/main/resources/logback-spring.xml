@@ -63,10 +63,23 @@
         </encoder>
     </appender>
 
+    <!-- 🚀 S3 로그 업로드 (운영환경 전용) -->
+    <springProfile name="prod">
+        <appender name="S3_APPENDER" class="com.superlawva.global.log.S3LogAppender">
+            <encoder>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
     <!-- 로그 레벨별 설정 -->
     <logger name="com.superlawva" level="INFO" additivity="false">
         <appender-ref ref="FILE" />
         <appender-ref ref="ERROR_FILE" />
+        <!-- 운영환경에서만 S3 업로드 -->
+        <springProfile name="prod">
+            <appender-ref ref="S3_APPENDER" />
+        </springProfile>
     </logger>
 
     <!-- SQL 로그 설정 (개발 환경에서만) -->
@@ -90,6 +103,10 @@
     <root level="INFO">
         <appender-ref ref="FILE" />
         <appender-ref ref="ERROR_FILE" />
+        <!-- 운영환경에서만 S3 업로드 -->
+        <springProfile name="prod">
+            <appender-ref ref="S3_APPENDER" />
+        </springProfile>
         <!-- 개발 환경에서만 콘솔 출력 -->
         <springProfile name="local,dev">
             <appender-ref ref="CONSOLE" />

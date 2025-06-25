@@ -13,8 +13,9 @@ public interface SearchResultRepository extends JpaRepository<SearchResult, Long
     
     /**
      * 특정 메시지의 검색 결과 조회
+     * search_logs.msg_id = chatbot_messages.msg_id 관계
      */
-    List<SearchResult> findByMessageMsgIdOrderByCreatedAtAsc(Long msgId);
+    List<SearchResult> findByMessageIdOrderByCreatedAtAsc(Long messageId);
     
     /**
      * 특정 세션의 모든 검색 결과 조회
