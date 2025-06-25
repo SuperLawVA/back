@@ -48,8 +48,24 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean bootJar -x test
 
-      # 5. Docker 이미지 빌드, 태깅, 푸시
+      # 5. AWS 인증 및 ECR 로그인을 다시 추가합니다.
+      - name: AWS 자격 증명 구성
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Amazon ECR 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 6. Docker 이미지 빌드, 태깅, 푸시
       - name: Docker 이미지 빌드, 태깅, 푸시
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -124,13 +140,12 @@ jobs:
             MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
             MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
 
-            # === SSL/HTTPS 설정 (Spring Boot 표준 형식으로 매핑) ===
-            # GitHub Secrets의 SSL_* 키를 Spring Boot가 읽는 SERVER_SSL_* 키로 변환해줍니다.
+            # === SSL/HTTPS 설정 (Spring Boot 표준 형식) ===
             SERVER_PORT=8443
-            SERVER_SSL_ENABLED=${{ secrets.SSL_ENABLED }}
+            SERVER_SSL_ENABLED=${{ secrets.SERVER_SSL_ENABLED }}
             SERVER_SSL_KEY_STORE=file:/home/ubuntu/keystore.p12
-            SERVER_SSL_KEY_STORE_PASSWORD=${{ secrets.SSL_KEYSTORE_PASSWORD }}
-            SERVER_SSL_KEY_ALIAS=${{ secrets.SSL_KEY_ALIAS }}
+            SERVER_SSL_KEY_STORE_PASSWORD=${{ secrets.SERVER_SSL_KEY_STORE_PASSWORD }}
+            SERVER_SSL_KEY_ALIAS=${{ secrets.SERVER_SSL_KEY_ALIAS }}
 
             # === OAuth2 소셜 로그인 ===
             KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
@@ -168,7 +183,7 @@ jobs:
 
             # === 기타 설정 ===
             FRONTEND_URL=https://super-lawva.vercel.app
-            SPRING_PROFILES_ACTIVE=${{ secrets.SSL_ENABLED == 'true' && 'prod,ssl' || 'prod' }}
+            SPRING_PROFILES_ACTIVE=${{ secrets.SERVER_SSL_ENABLED == 'true' && 'prod,ssl' || 'prod' }}
 
             # === Docker 이미지 정보 ===
             ECR_REGISTRY=$ECR_REGISTRY
