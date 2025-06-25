@@ -29,7 +29,7 @@ public class MLApiClient {
     private int readTimeout;
 
     /**
-     * 계약서 분석 요청 (실제 ML API 엔드포인트: /api/v1/analyze-contract)
+     * 계약서 분석 요청 (실제 ML API 엔드포인트: /analyze-contract)
      */
     public Map<String, Object> analyzeContract(Map<String, Object> contractData) {
         log.info("🤖 ML API 계약서 분석 요청 시작 - Contract ID: {}", contractData.get("contract_id"));
@@ -61,9 +61,7 @@ public class MLApiClient {
         }
     }
 
-    /**
-     * 내용증명서 생성 요청 (실제 ML API 엔드포인트: /api/v1/generate-letter)
-     */
+   
     public Map<String, Object> generateProofDocument(Map<String, Object> contractData) {
         log.info("📝 ML API 내용증명서 생성 요청 시작 - Contract ID: {}", contractData.get("contract_id"));
 
@@ -94,9 +92,7 @@ public class MLApiClient {
         }
     }
 
-    /**
-     * 특약사항 생성 요청 (실제 ML API 엔드포인트: /api/v1/contract/generate-special-terms)
-     */
+    
     public Map<String, Object> generateSpecialTerms(Map<String, Object> contractData) {
         log.info("⚖️ ML API 특약사항 생성 요청 시작 - Contract ID: {}", contractData.get("contract_id"));
 

@@ -10,7 +10,7 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 @Configuration
 public class OcrConfiguration {
-    
+
     /**
      * OCR3 도메인 전용 ObjectMapper
      * Snake case 네이밍 전략과 Java 8 시간 모듈을 포함
