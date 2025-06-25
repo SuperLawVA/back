@@ -107,9 +107,7 @@ jobs:
 
             # 🚨 GCP 서비스 계정 키 파일 생성
             # GitHub Secret에 저장된 JSON 내용을 파일로 만듭니다.
-            echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}" > service-account-key.json
-            # 이 파일을 docker-compose.prod.yml이 있는 곳으로 이동
-            mv service-account-key.json /home/ubuntu/
+            echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}" > /home/ubuntu/service-account-key.json
 
             cat > .env << EOF
             # === 데이터베이스 (RDS) ===
