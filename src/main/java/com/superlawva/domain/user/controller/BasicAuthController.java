@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "🔐 Authentication · Basic", description = "기본 인증 (회원가입, 로그인)")
+@Tag(name = "🔐 Authentication", description = "기본 인증 API")
 public class BasicAuthController {
 
     private final UserService userService;

@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "🔐 Authentication · Session", description = "세션 관리 (토큰 검증, 로그아웃)")
+@Tag(name = "🔐 Authentication", description = "세션 관리 API")
 public class SessionController {
 
     private final UserService userService;

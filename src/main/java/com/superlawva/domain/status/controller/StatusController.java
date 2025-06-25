@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/status")
 @RequiredArgsConstructor
-@Tag(name = "📊 Status API", description = "ML 서비스 상태 확인 API")
+@Tag(name = "📊 System Status", description = "시스템 상태 및 모니터링 API")
 public class StatusController {
     
     private final StatusService statusService;

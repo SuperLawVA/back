@@ -13,10 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@Tag(name = "📊 User Action Logs", description = "사용자 행동 로그 수집 API (세션, 페이지뷰, 이벤트)")
 @RestController
 @RequestMapping("/log")
 @RequiredArgsConstructor
+@Tag(name = "📊 User Behavior Logging", description = "사용자 행동 로깅 API")
 public class ActionLogController {
 
     private final LogService logService;

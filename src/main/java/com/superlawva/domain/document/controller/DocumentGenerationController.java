@@ -26,12 +26,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Tag(name = "🤖 AI Document Generation API", description = "AI 기반 문서 생성 관련 API")
-@Slf4j
 @RestController
-@RequestMapping("/api/generate")
+@RequestMapping("/generate")
 @RequiredArgsConstructor
+@Tag(name = "📝 Document Generation", description = "문서 생성 API")
 @SecurityRequirement(name = "Bearer Authentication")
+@Slf4j
 public class DocumentGenerationController {
 
     private final ContractGenerationService contractGenerationService;

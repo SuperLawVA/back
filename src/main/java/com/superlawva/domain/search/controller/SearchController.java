@@ -25,9 +25,9 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/search")
 @RequiredArgsConstructor
-@Tag(name = "🔍 Search API", description = "독립형 법령/판례 검색 API (🔒인증 필요)")
+@Tag(name = "🔍 Search API", description = "통합 검색 API")
 public class SearchController {
     
     private final SearchService searchService;

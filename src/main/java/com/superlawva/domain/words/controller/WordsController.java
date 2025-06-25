@@ -9,16 +9,18 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/words")
 @RequiredArgsConstructor
 @Validated
 @Slf4j
 @CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}) // 프론트엔드 CORS 설정
+@Tag(name = "📚 Legal Terms", description = "법률 용어 검색 API")
 public class WordsController {
     
     private final WordsService wordsService;
@@ -27,7 +29,7 @@ public class WordsController {
      * 용어 검색 API
      * GET /api/terms/search?keyword=검색어&page=1&pageSize=10
      */
-    @GetMapping("/terms/search")
+    @GetMapping("/search")
     public ResponseEntity<WordsSearchResponseDto> searchTerms(
             @RequestParam(value = "keyword", defaultValue = "") String keyword,
             @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,
@@ -47,20 +49,21 @@ public class WordsController {
     }
     
     /**
-     * 인기 검색어 API
-     * GET /api/search-keywords/popular
+     * 인기 키워드 조회
+     * GET /words/popular
      */
-    @GetMapping("/search-keywords/popular")
+    @GetMapping("/popular")
     public ResponseEntity<PopularKeywordsResponseDto> getPopularKeywords() {
-        PopularKeywordsResponseDto responseDto = wordsService.getPopularKeywords();
-        return ResponseEntity.ok(responseDto);
+        log.info("인기 키워드 조회 요청");
+        PopularKeywordsResponseDto response = wordsService.getPopularKeywords();
+        return ResponseEntity.ok(response);
     }
     
     /**
-     * 용어 등록 API
-     * POST /api/upload/words
+     * 용어 업로드 (관리자용)
+     * POST /words/upload
      */
-    @PostMapping("/upload/words")
+    @PostMapping("/upload")
     public ResponseEntity<WordsDto> uploadWords(@Valid @RequestBody WordsUploadRequestDto requestDto) {
         try {
             WordsDto responseDto = wordsService.uploadWord(requestDto);
@@ -72,25 +75,21 @@ public class WordsController {
     }
     
     /**
-     * 용어 상세 조회 API
-     * GET /api/terms/{word}
+     * 특정 용어 상세 조회
+     * GET /words/{word}
      */
-    @GetMapping("/terms/{word}")
-    public ResponseEntity<WordsDto> getTermDetail(@PathVariable String word) {
-        try {
-            WordsDto responseDto = wordsService.getWordDetail(word);
-            return ResponseEntity.ok(responseDto);
-        } catch (IllegalArgumentException e) {
-            log.warn("용어 조회 실패: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
+    @GetMapping("/{word}")
+    public ResponseEntity<WordsDto> getWordDetail(@PathVariable String word) {
+        log.info("특정 용어 조회 요청 - 단어: {}", word);
+        WordsDto wordDetail = wordsService.getWordDetail(word);
+        return ResponseEntity.ok(wordDetail);
     }
     
     /**
-     * Words 서비스 헬스 체크 API
-     * GET /api/words/health
+     * 용어 서비스 헬스체크
+     * GET /words/health
      */
-    @GetMapping("/words/health")
+    @GetMapping("/health")
     public ResponseEntity<String> wordsHealthCheck() {
         return ResponseEntity.ok("Words API is running!");
     }

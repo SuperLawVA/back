@@ -30,9 +30,9 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/chatbot")
 @RequiredArgsConstructor
-@Tag(name = "🤖 Chatbot API", description = "ML 팀 연동 챗봇 API (🔒인증 필요)")
+@Tag(name = "🤖 Chatbot API", description = "AI 챗봇 대화 API")
 public class ChatbotController {
     
     private final ChatbotService chatbotService;

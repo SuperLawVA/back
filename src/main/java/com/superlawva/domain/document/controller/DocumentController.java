@@ -23,12 +23,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Tag(name = "Document API", description = "문서 관리 관련 API")
-@Slf4j
 @RestController
-@RequestMapping("/api/documents")
+@RequestMapping("/documents")
 @RequiredArgsConstructor
+@Tag(name = "📄 Document Management", description = "문서 관리 API")
 @SecurityRequirement(name = "Bearer Authentication")
+@Slf4j
 public class DocumentController {
 
     private final DocumentService documentService;

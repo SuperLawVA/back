@@ -29,9 +29,9 @@ public class HealthController {
 
     /**
      * 기본 헬스체크 - Actuator 대체용 (구동 우선)
-     * GET /api/health
+     * GET /health
      */
-    @GetMapping("/api/health")
+    @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> basicHealthCheck() {
         try {
             Map<String, Object> health = new HashMap<>();
@@ -56,9 +56,9 @@ public class HealthController {
 
     /**
      * 상세 헬스체크 - 모든 의존성 확인 (구동 우선)
-     * GET /api/health/detailed
+     * GET /health/detailed
      */
-    @GetMapping("/api/health/detailed")
+    @GetMapping("/health/detailed")
     public ResponseEntity<Map<String, Object>> detailedHealthCheck() {
         Map<String, Object> health = new HashMap<>();
         Map<String, Object> components = new HashMap<>();
@@ -125,16 +125,6 @@ public class HealthController {
         
         return ResponseEntity.ok(health);
     }
-
-    /**
-     * 간단한 상태 확인 - 로드밸런서용 (구동 우선)
-     * GET /health (루트 레벨)
-     */
-    @GetMapping("/health")
-    public ResponseEntity<String> simpleHealthCheck() {
-        log.info("간단한 헬스체크 요청");
-        return ResponseEntity.ok("SuperLawVA Backend - OK");
-    }
     
     /**
      * 루트 경로 헬스체크 - 브라우저 접근용
@@ -148,9 +138,9 @@ public class HealthController {
         response.put("timestamp", LocalDateTime.now());
         response.put("message", "백엔드 서비스가 정상적으로 실행 중입니다.");
         response.put("endpoints", Map.of(
-            "health", "/api/health",
-            "detailed-health", "/api/health/detailed",
-            "status", "/api/v1/status",
+            "health", "/health",
+            "detailed-health", "/health/detailed",
+            "status", "/status",
             "docs", "/swagger-ui/index.html"
         ));
         

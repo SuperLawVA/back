@@ -14,12 +14,15 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @Slf4j
 @RestController
-@RequestMapping("/api/upload")
+@RequestMapping("/ocr")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*") // Configure based on your requirements
 // @ConditionalOnProperty(name = "gcp.enabled", havingValue = "true")
+@Tag(name = "📷 OCR Processing", description = "OCR 문서 처리 API")
 public class OcrController {
     
     private final OcrService ocrService;

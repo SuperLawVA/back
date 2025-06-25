@@ -23,7 +23,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/alarms")
 @RequiredArgsConstructor
-@Tag(name = "🔔 Alarm Management", description = "계약 알림 관리 API (🔒인증 필요)")
+@Tag(name = "🔔 Alarm Management", description = "알림 관리 API")
 public class AlarmController {
     private final AlarmService alarmService;
 

@@ -28,7 +28,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/auth/social")
 @RequiredArgsConstructor
-@Tag(name = "✅ Authentication · Social Complete", description = "소셜 로그인 완료 처리")
+@Tag(name = "🔐 Social Authentication", description = "소셜 로그인 완료 API")
 public class SocialCompleteController {
 
     private final UserRepository userRepository;

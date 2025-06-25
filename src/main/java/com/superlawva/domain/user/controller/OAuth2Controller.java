@@ -42,7 +42,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/auth/oauth2")
 @RequiredArgsConstructor
-@Tag(name = "🔗 Authentication · OAuth2", description = "OAuth2 소셜 로그인 (카카오, 네이버)")
+@Tag(name = "🔐 OAuth2 Authentication", description = "소셜 로그인 API")
 public class OAuth2Controller {
 
     private final UserService userService;

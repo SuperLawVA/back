@@ -27,9 +27,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/users")
-@Tag(name = "👤 User Management", description = "사용자 정보 조회 및 관리 (🔒인증 필요)")
+@RequiredArgsConstructor
+@Tag(name = "👤 User Management", description = "사용자 관리 API")
 public class UserController {
 
     private final UserService userService;

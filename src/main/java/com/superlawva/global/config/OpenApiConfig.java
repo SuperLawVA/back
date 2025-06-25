@@ -60,10 +60,10 @@ public class OpenApiConfig {
 
                         ### 3. 소셜 로그인 (SDK 방식)
                         **카카오 SDK 사용:**
-                        - 카카오 SDK로 인가 코드를 받은 후 `POST /auth/login/kakao` API로 전송
+                        - 카카오 SDK로 인가 코드를 받은 후 `POST /auth/oauth2/login/kakao` API로 전송
 
                         **네이버 SDK 사용:**
-                        - 네이버 SDK로 인가 코드를 받은 후 `POST /auth/login/naver` API로 전송
+                        - 네이버 SDK로 인가 코드를 받은 후 `POST /auth/oauth2/login/naver` API로 전송
 
                         ---
 
@@ -87,7 +87,7 @@ public class OpenApiConfig {
                         // 카카오 SDK
                         Kakao.Auth.login({
                             success: function(authObj) {
-                                fetch('/auth/login/kakao', {
+                                fetch('/auth/oauth2/login/kakao', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
@@ -104,7 +104,7 @@ public class OpenApiConfig {
                         // 네이버 SDK
                         naverLogin.getLoginStatus(function(status) {
                             if (status) {
-                                fetch('/auth/login/naver', {
+                                fetch('/auth/oauth2/login/naver', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({
