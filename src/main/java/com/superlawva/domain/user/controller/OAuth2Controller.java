@@ -315,13 +315,10 @@ public class OAuth2Controller {
             String name = (String) response.get("name");
             
             // 3. 사용자 정보로 JWT 토큰 생성
-            String emailHash = hashUtil.hash(email);
-            User user = userRepository.findByEmailHash(emailHash)
+            User user = userRepository.findByEmail(email)
                     .orElseGet(() -> {
-                        String newEmailHash = hashUtil.hash(email);
                         return userRepository.save(User.builder()
                                 .email(email)
-                                .emailHash(newEmailHash)
                                 .nickname(name)
                                 .provider("NAVER")
                                 .role(User.Role.USER)

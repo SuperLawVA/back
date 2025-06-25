@@ -112,8 +112,7 @@ public class EmailVerificationService {
 
     public void sendVerificationEmail(String email) {
         // 이미 가입된 이메일인지 확인
-        String emailHash = hashUtil.hash(email);
-        if (userRepository.existsByEmailHash(emailHash)) {
+        if (userRepository.existsByEmail(email)) {
             throw new BaseException(ErrorStatus._EMAIL_ALREADY_EXISTS);
         }
         sendVerification(email);

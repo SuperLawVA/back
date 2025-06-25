@@ -87,13 +87,10 @@ public class SocialCompleteController {
             String nickname = tempClaims.get("nickname", String.class);
             
             // 2. 사용자 등록 또는 조회
-            String emailHash = hashUtil.hash(request.getEmail());
-            User user = userRepository.findByEmailHash(emailHash)
+            User user = userRepository.findByEmail(request.getEmail())
                     .orElseGet(() -> {
-                        String newEmailHash = hashUtil.hash(request.getEmail());
                         User.UserBuilder userBuilder = User.builder()
                                 .email(request.getEmail())
-                                .emailHash(newEmailHash)
                                 .nickname(nickname)
                                 .provider(provider)
                                 .role(User.Role.USER)

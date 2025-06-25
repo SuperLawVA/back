@@ -3,6 +3,7 @@ package com.superlawva.global.controller;
 import com.superlawva.domain.ml.client.MLApiClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +21,11 @@ import java.util.Map;
 public class HealthController {
 
     private final DataSource dataSource;
-    private final RedisTemplate<String, Object> redisTemplate;
     private final MLApiClient mlApiClient;
+    
+    // Redis는 선택적 의존성으로 변경
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
 
     /**
      * 기본 헬스체크 - Actuator 대체용 (구동 우선)
@@ -78,19 +82,23 @@ public class HealthController {
         }
         
         // Redis 상태 확인
-        try {
-            redisTemplate.opsForValue().set("health:check", "ok");
-            String result = (String) redisTemplate.opsForValue().get("health:check");
-            if ("ok".equals(result)) {
-                components.put("redis", Map.of("status", "UP", "details", "Redis connection successful"));
-            } else {
-                components.put("redis", Map.of("status", "DOWN", "details", "Redis connection test failed"));
+        if (redisTemplate != null) {
+            try {
+                redisTemplate.opsForValue().set("health:check", "ok");
+                String result = (String) redisTemplate.opsForValue().get("health:check");
+                if ("ok".equals(result)) {
+                    components.put("redis", Map.of("status", "UP", "details", "Redis connection successful"));
+                } else {
+                    components.put("redis", Map.of("status", "DOWN", "details", "Redis connection test failed"));
+                    allHealthy = false;
+                }
+            } catch (Exception e) {
+                components.put("redis", Map.of("status", "DOWN", "details", "Redis connection failed: " + e.getMessage()));
                 allHealthy = false;
+                log.warn("Redis health check failed", e);
             }
-        } catch (Exception e) {
-            components.put("redis", Map.of("status", "DOWN", "details", "Redis connection failed: " + e.getMessage()));
-            allHealthy = false;
-            log.warn("Redis health check failed", e);
+        } else {
+            components.put("redis", Map.of("status", "N/A", "details", "Redis not configured"));
         }
         
         // ML API 상태 확인

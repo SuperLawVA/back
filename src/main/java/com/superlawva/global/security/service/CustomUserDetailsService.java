@@ -15,8 +15,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email) {
-        String emailHash = hashUtil.hash(email);
-        User u = userRepo.findByEmailHash(emailHash)
+        User u = userRepo.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자 없음"));
         return org.springframework.security.core.userdetails.User
                 .withUsername(u.getEmail())

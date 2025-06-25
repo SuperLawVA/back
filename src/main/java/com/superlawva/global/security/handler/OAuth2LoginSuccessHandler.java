@@ -35,8 +35,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
                                         Authentication auth) throws IOException {
         OAuth2User oAuth2User = (OAuth2User) auth.getPrincipal();
         String email = (String) oAuth2User.getAttributes().get("email");
-        String emailHash = hashUtil.hash(email);
-        User user = userRepository.findByEmailHash(emailHash)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
 
         String token = jwtTokenProvider.createToken(email, user.getId());

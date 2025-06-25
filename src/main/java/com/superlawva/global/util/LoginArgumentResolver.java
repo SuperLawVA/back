@@ -44,16 +44,15 @@ public class LoginArgumentResolver implements HandlerMethodArgumentResolver {
         }
 
         String email = (String) auth.getPrincipal();
-        String emailHash = hashUtil.hash(email);
 
         // ✅ @LoginUser User
         if (param.getParameterType().equals(User.class)) {
-            return userRepository.findByEmailHash(emailHash).orElse(null);
+            return userRepository.findByEmail(email).orElse(null);
         }
 
         // ✅ @LoginUser Long
         if (param.getParameterType().equals(Long.class)) {
-            User user = userRepository.findByEmailHash(emailHash).orElse(null);
+            User user = userRepository.findByEmail(email).orElse(null);
             return user != null ? user.getId() : null;
         }
 

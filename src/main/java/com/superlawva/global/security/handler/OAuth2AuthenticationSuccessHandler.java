@@ -36,8 +36,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         String email = extractEmail(registrationId, oauthUser);
         
-        String emailHash = hashUtil.hash(email);
-        User user = userRepository.findByEmailHash(emailHash)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         // 토큰 생성
