@@ -82,7 +82,7 @@ spring:
           kakao:
             client-id: ${KAKAO_CLIENT_ID}
             client-secret: ${KAKAO_CLIENT_SECRET}
-            redirect-uri: ${KAKAO_REDIRECT_URI}
+            redirect-uri: ${KAKAO_REDIRECT_URI:https://your-domain.com/login/oauth2/code/kakao}
             authorization-grant-type: authorization_code
             scope:
               - profile_nickname
@@ -90,7 +90,7 @@ spring:
           naver:
             client-id: ${NAVER_CLIENT_ID}
             client-secret: ${NAVER_CLIENT_SECRET}
-            redirect-uri: "http://43.203.127.128:8080/login/oauth2/code/naver"
+            redirect-uri: ${NAVER_REDIRECT_URI:https://your-domain.com/login/oauth2/code/naver}
             authorization-grant-type: authorization_code
             scope:
               - name
@@ -150,20 +150,44 @@ aes:
   secret-key: ${AES_SECRET_KEY}
 
 server:
-  address: 0.0.0.0
+  # Nginx 리버스 프록시 사용 시 내부 HTTP 포트
   port: ${SERVER_PORT:8080}
+  address: 0.0.0.0
+  
+  # Nginx를 통한 HTTPS 사용 시 forwarded headers 신뢰
+  forward-headers-strategy: framework
+  use-forward-headers: true
+  
+  # 직접 HTTPS 사용 시 (Nginx 없이)
+  # ssl:
+  #   enabled: ${SSL_ENABLED:false}
+  #   key-store: ${SSL_KEYSTORE_PATH:classpath:keystore.p12}
+  #   key-store-type: ${SSL_KEYSTORE_TYPE:PKCS12}
+  #   key-store-password: ${SSL_KEYSTORE_PASSWORD:}
+  #   key-alias: ${SSL_KEY_ALIAS:superlawva}
+  #   protocol: TLS
+  #   enabled-protocols: TLSv1.2,TLSv1.3
 
-frontend:
-  url: ${FRONTEND_URL:http://localhost:3000}
+# OAuth2 리다이렉트 URL을 HTTPS로 업데이트
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            redirect-uri: ${KAKAO_REDIRECT_URI:https://your-domain.com/login/oauth2/code/kakao}
+          naver:
+            redirect-uri: ${NAVER_REDIRECT_URI:https://your-domain.com/login/oauth2/code/naver}
 
+# 프로덕션 환경 로깅
 logging:
   level:
-    com.superlawva: ${LOGGING_LEVEL_COM_SUPERLAWVA:INFO}
+    com.superlawva: INFO
     com.superlawva.domain.ocr3: INFO
     com.superlawva.domain.document: INFO
     com.superlawva.domain.words: INFO
     com.superlawva.domain.ml: INFO
-    org.springframework.security: ${LOGGING_LEVEL_ORG_SPRINGFRAMEWORK:INFO}
+    org.springframework.security: WARN
     org.springframework.boot: INFO
     org.springframework.context: INFO
     org.springframework.beans: INFO
@@ -172,7 +196,7 @@ logging:
     org.springframework.data.mongodb: INFO
     root: ${LOGGING_LEVEL_ROOT:INFO}
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
 # 테스트 사용자 생성 비활성화 (프로덕션 환경)
 app:
@@ -193,3 +217,6 @@ management:
       enabled: false # 구동 우선을 위해 기본 헬스체크 비활성화
   server:
     port: 8080
+
+frontend:
+  url: ${FRONTEND_URL:http://localhost:3000}

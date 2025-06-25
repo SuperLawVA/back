@@ -1,5 +1,6 @@
 package com.superlawva.domain.log.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,6 +20,7 @@ public class SearchResult {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "msg_id", nullable = false)
+    @JsonIgnore  // JSON 응답에서 메시지 정보 제외 (순환 참조 방지)
     private ChatMessageEntity message;
     
     @Column(name = "search_query", columnDefinition = "TEXT")

@@ -1,5 +1,6 @@
 package com.superlawva.domain.chatbot.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,6 +25,7 @@ public class ChatMessageEntity {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "session_id")
+    @JsonIgnore  // JSON 응답에서 세션 정보 제외 (순환 참조 방지)
     private ChatSessionEntity session;
     
     @Enumerated(EnumType.STRING)

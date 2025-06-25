@@ -1,5 +1,6 @@
 package com.superlawva.domain.chatbot.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.superlawva.domain.user.entity.User;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -47,6 +48,7 @@ public class ChatSessionEntity {
     
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL)
     @Builder.Default
+    @JsonIgnore  // JSON 응답에서 메시지 목록 제외 (순환 참조 방지)
     private List<ChatMessageEntity> messages = new ArrayList<>();
     
     public enum SessionStatus {

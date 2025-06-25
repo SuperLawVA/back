@@ -68,6 +68,18 @@ public class SecurityConfig {
             .cors(withDefaults())
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // HTTPS 강제 설정 (프로덕션 환경에서만)
+            .requiresChannel(channel -> 
+                channel.requestMatchers(request -> 
+                    request.getHeader("X-Forwarded-Proto") != null)
+                    .requiresSecure())
+            .headers(headers -> headers
+                .frameOptions().deny()
+                .contentTypeOptions().and()
+                .httpStrictTransportSecurity(hstsConfig -> hstsConfig
+                    .maxAgeInSeconds(31536000)
+                    .includeSubDomains(true))
+            )
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll()
             )
@@ -83,7 +95,13 @@ public class SecurityConfig {
         // CORS 문제 해결: allowCredentials와 allowedOrigins "*" 동시 사용 불가
         configuration.setAllowedOriginPatterns(Arrays.asList("*")); // setAllowedOrigins 대신 사용
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setAllowedHeaders(Arrays.asList(
+            "Authorization", 
+            "Content-Type", 
+            "Accept",
+            "X-Requested-With",
+            "X-Forwarded-Proto"
+        ));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(Arrays.asList("Authorization")); // JWT 헤더 노출
 
