@@ -74,7 +74,8 @@ public class SecurityConfig {
                     "/actuator/**", 
                     "/api/health/**", "/api/v1/status", "/api/upload/health",
                     "/login/**", "/api/auth/**",
-                    "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html"
+                    "/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html",
+                    "/email/send"
                 ).permitAll()
                 .anyRequest().authenticated()
             )
