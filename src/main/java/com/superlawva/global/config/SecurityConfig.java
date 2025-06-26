@@ -111,7 +111,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 // 헬스체크 및 상태 확인 API 명시적 허용
-                .requestMatchers("/health", "/api/health", "/api/v1/status").permitAll()
+                .requestMatchers("/actuator/**", "/health", "/api/health", "/api/v1/status").permitAll()
                 // Swagger UI 관련 리소스 허용
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                 // 기본 API 경로 패턴 (필요에 따라 추가)

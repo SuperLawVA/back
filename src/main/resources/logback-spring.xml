@@ -97,6 +97,7 @@
     <!-- [ prod ] 환경 로거 설정 -->
     <springProfile name="prod">
         <logger name="com.superlawva" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
             <appender-ref ref="FILE" />
             <appender-ref ref="ERROR_FILE" />
             <appender-ref ref="S3_APPENDER" />
@@ -104,12 +105,14 @@
 
         <!-- Spring Security 로그 -->
         <logger name="org.springframework.security" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
             <appender-ref ref="FILE" />
             <appender-ref ref="ERROR_FILE" />
             <appender-ref ref="S3_APPENDER" />
         </logger>
         
         <root level="INFO">
+            <appender-ref ref="CONSOLE" />
             <appender-ref ref="FILE" />
             <appender-ref ref="ERROR_FILE" />
             <appender-ref ref="S3_APPENDER" />
