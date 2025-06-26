@@ -267,50 +267,70 @@ jobs:
             echo "컨테이너 상태 확인:"
             $COMPOSE_CMD -f docker-compose.prod.yml ps
 
-            echo "더 많은 로그 확인:"
-            $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=100 app
-
-            # SSL 설정에 따른 헬스체크 URL 결정
-            if [ "${{ secrets.SSL_ENABLED }}" = "true" ]; then
-              HEALTH_URL="https://localhost:8443"
-              HEALTH_PORT="8443"
-            else
-              HEALTH_URL="http://localhost:8080"
-              HEALTH_PORT="8080"
+            # .env 파일에서 환경 변수 로드 (헬스체크를 위해)
+            if [ -f .env ]; then
+              export $(grep -v '^#' .env | xargs)
             fi
 
-            # 헬스체크 - 여러 엔드포인트 시도
+            # SSL 설정에 따른 헬스체크 URL 결정
+            if [ "${SERVER_SSL_ENABLED}" = "true" ]; then
+              HEALTH_PORT=${SERVER_PORT:-8443} # .env에 포트가 없을 경우 기본값
+              HEALTH_URL_BASE="https://localhost:${HEALTH_PORT}"
+            else
+              HEALTH_PORT=${SERVER_PORT:-8080} # .env에 포트가 없을 경우 기본값
+              HEALTH_URL_BASE="http://localhost:${HEALTH_PORT}"
+            fi
+
+            # jq 설치 (JSON 파싱을 위해)
+            if ! command -v jq &> /dev/null; then
+              echo "jq가 설치되어 있지 않습니다. 설치를 시도합니다..."
+              sudo apt-get update && sudo apt-get install -y jq || true # 실패해도 스크립트가 중단되지 않도록
+            fi
+
+            echo "Actuator 헬스체크를 시작합니다... (최대 2회 시도)"
             for i in {1..2}; do
-              echo "헬스체크 시도 $i/2... (포트: $HEALTH_PORT)"
-              
-              # 1. 커스텀 헬스체크 API 시도
-              if curl -f -m 120 -k $HEALTH_URL/api/health; then
-                echo "✅ 커스텀 헬스체크 성공!"
+              echo "헬스체크 시도 $i/2... (URL: $HEALTH_URL_BASE/actuator/health)"
+
+              # Actuator의 상세 헬스 정보를 curl로 요청하고 HTTP 상태 코드를 저장
+              HTTP_STATUS=$(curl -s -o /tmp/health_check.json -w "%{http_code}" -m 120 -k "$HEALTH_URL_BASE/actuator/health")
+
+              # jq가 설치되어 있고, HTTP 상태 코드가 200이며, JSON 응답 내용의 status가 "UP"인지 확인
+              if command -v jq &> /dev/null && [ "$HTTP_STATUS" -eq 200 ] && [ "$(jq -r '.status' /tmp/health_check.json 2>/dev/null)" = "UP" ]; then
+                echo "✅ Actuator 헬스체크 성공! 애플리케이션이 정상적으로 시작되었습니다."
+                echo "--- 상세 정보 ---"
+                jq . /tmp/health_check.json
+                echo "-----------------"
                 break
-              fi
-              
-              # 2. 간단한 헬스체크 시도
-              if curl -f -m 120 -k $HEALTH_URL/health; then
-                echo "✅ 간단한 헬스체크 성공!"
+              # jq가 없거나, HTTP 상태가 200이 아닌 경우 (단순 성공/실패만 확인)
+              elif ! command -v jq &> /dev/null && [ "$HTTP_STATUS" -eq 200 ]; then
+                echo "✅ Actuator 헬스체크 성공! (기본 응답)"
+                cat /tmp/health_check.json
                 break
+              else
+                echo "❌ 헬스체크 실패 (HTTP Status: $HTTP_STATUS)"
+                echo "--- 실패 시 상세 응답 ---"
+                # 응답이 JSON 형식이면 예쁘게 출력하고, 아니면 그냥 출력
+                if command -v jq &> /dev/null && jq . /tmp/health_check.json > /dev/null 2>&1; then
+                  jq . /tmp/health_check.json
+                else
+                  cat /tmp/health_check.json
+                fi
+                echo "-----------------------"
+                
+                if [ $i -lt 2 ]; then
+                  echo "⏳ 20초 후 재시도합니다..."
+                  sleep 20
+                else
+                  echo "🔥 최종 헬스체크에 실패했습니다. 배포를 중단합니다."
+                  echo "더 많은 컨테이너 로그를 확인하려면 GitHub Actions 로그를 참조하세요."
+                  $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=300 app
+                  exit 1
+                fi
               fi
-              
-              # 3. 상태 API 시도
-              if curl -f -m 120 -k $HEALTH_URL/api/v1/status; then
-                echo "✅ 상태 API 헬스체크 성공!"
-                break
-              fi
-              
-              echo "⏳ 애플리케이션 시작 대기 중... ($i/2)"
-              if [ $i -eq 1 ]; then
-                echo "=== 중간 로그 확인 ($i) ==="
-                $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=300 app
-              fi
-              sleep 20
             done
 
             # SSL 설정 정보 출력
-            if [ "${{ secrets.SSL_ENABLED }}" = "true" ]; then
+            if [ "${SERVER_SSL_ENABLED}" = "true" ]; then
               echo "🔐 HTTPS 설정으로 배포 완료!"
               echo "📍 접속 URL: https://your-domain.com"
               echo "📋 Swagger UI: https://your-domain.com/swagger-ui/index.html"

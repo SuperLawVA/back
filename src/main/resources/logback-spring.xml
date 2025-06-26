@@ -1,38 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- 환경별 로그 경로 설정 -->
-    <springProfile name="local">
+    <!-- 1. 환경별 변수 설정 -->
+    <springProfile name="local,dev">
         <property name="LOG_PATH" value="logs" />
     </springProfile>
-    
-    <springProfile name="dev">
-        <property name="LOG_PATH" value="/home/ubuntu/logs/superlawva" />
-    </springProfile>
-    
     <springProfile name="prod">
-        <property name="LOG_PATH" value="/var/log/superlawva" />
-    </springProfile>
-    
-    <!-- 기본값 (프로필이 없을 때) -->
-    <springProfile name="!local,!dev,!prod">
+        <!-- 컨테이너 내부에서는 상대 경로 'logs' 사용이 더 안전합니다 -->
         <property name="LOG_PATH" value="logs" />
     </springProfile>
 
-    <!-- 로그 파일명 설정 -->
-    <property name="LOG_FILE" value="${LOG_PATH}/application.log" />
-    <property name="ERROR_LOG_FILE" value="${LOG_PATH}/error.log" />
 
-    <!-- 콘솔 출력 (개발 환경용) -->
+    <!-- 2. Appender(로그 출력 방식) 정의 -->
+
+    <!-- 콘솔 Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
 
-    <!-- 일반 로그 파일 출력 -->
+    <!-- 파일 Appender (공통) -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_FILE}</file>
+        <file>${LOG_PATH}/application.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_PATH}/application-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>50MB</maxFileSize>
@@ -44,9 +34,9 @@
         </encoder>
     </appender>
 
-    <!-- 에러 로그 파일 출력 -->
+    <!-- 에러 파일 Appender (공통) -->
     <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${ERROR_LOG_FILE}</file>
+        <file>${LOG_PATH}/error.log</file>
         <filter class="ch.qos.logback.classic.filter.LevelFilter">
             <level>ERROR</level>
             <onMatch>ACCEPT</onMatch>
@@ -63,51 +53,67 @@
         </encoder>
     </appender>
 
-    <!-- 🚀 S3 로그 업로드 (운영환경 전용) -->
+    <!-- S3 Appender (prod 프로필 전용) -->
     <springProfile name="prod">
         <appender name="S3_APPENDER" class="com.superlawva.global.log.S3LogAppender">
         </appender>
     </springProfile>
 
-    <!-- 로그 레벨별 설정 -->
-    <logger name="com.superlawva" level="INFO" additivity="false">
-        <appender-ref ref="FILE" />
-        <appender-ref ref="ERROR_FILE" />
-        <!-- 운영환경에서만 S3 업로드 -->
-        <springProfile name="prod">
-            <appender-ref ref="S3_APPENDER" />
-        </springProfile>
-    </logger>
 
-    <!-- SQL 로그 설정 (개발 환경에서만) -->
+    <!-- 3. Logger 및 Root(전역 로거) 설정 (프로필별로 분리) -->
+
+    <!-- [ local, dev ] 환경 로거 설정 -->
     <springProfile name="local,dev">
+        <logger name="com.superlawva" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FILE" />
+            <appender-ref ref="ERROR_FILE" />
+        </logger>
+
+        <!-- SQL 로그 설정 -->
         <logger name="org.hibernate.SQL" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE" />
             <appender-ref ref="FILE" />
         </logger>
-        
         <logger name="org.hibernate.type.descriptor.sql.BasicBinder" level="TRACE" additivity="false">
+            <appender-ref ref="CONSOLE" />
             <appender-ref ref="FILE" />
         </logger>
+
+        <!-- Spring Security 로그 -->
+        <logger name="org.springframework.security" level="INFO" additivity="false">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FILE" />
+            <appender-ref ref="ERROR_FILE" />
+        </logger>
+
+        <root level="INFO">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="FILE" />
+            <appender-ref ref="ERROR_FILE" />
+        </root>
     </springProfile>
 
-    <!-- Spring Security 로그 -->
-    <logger name="org.springframework.security" level="INFO" additivity="false">
-        <appender-ref ref="FILE" />
-        <appender-ref ref="ERROR_FILE" />
-    </logger>
-
-    <!-- 루트 로그 설정 -->
-    <root level="INFO">
-        <appender-ref ref="FILE" />
-        <appender-ref ref="ERROR_FILE" />
-        <!-- 운영환경에서만 S3 업로드 -->
-        <springProfile name="prod">
+    <!-- [ prod ] 환경 로거 설정 -->
+    <springProfile name="prod">
+        <logger name="com.superlawva" level="INFO" additivity="false">
+            <appender-ref ref="FILE" />
+            <appender-ref ref="ERROR_FILE" />
             <appender-ref ref="S3_APPENDER" />
-        </springProfile>
-        <!-- 개발 환경에서만 콘솔 출력 -->
-        <springProfile name="local,dev">
-            <appender-ref ref="CONSOLE" />
-        </springProfile>
-    </root>
+        </logger>
+
+        <!-- Spring Security 로그 -->
+        <logger name="org.springframework.security" level="INFO" additivity="false">
+            <appender-ref ref="FILE" />
+            <appender-ref ref="ERROR_FILE" />
+            <appender-ref ref="S3_APPENDER" />
+        </logger>
+        
+        <root level="INFO">
+            <appender-ref ref="FILE" />
+            <appender-ref ref="ERROR_FILE" />
+            <appender-ref ref="S3_APPENDER" />
+        </root>
+    </springProfile>
 
 </configuration>
