@@ -10,8 +10,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-@Profile("ssl")
 @Configuration
+@Profile("ssl")
 public class HttpRedirectConfig {
 
     @Bean
@@ -37,7 +37,7 @@ public class HttpRedirectConfig {
         connector.setScheme("http");
         connector.setSecure(false);
         connector.setPort(8080);
-        connector.setRedirectPort(8443); // HTTPS 포트
+        connector.setRedirectPort(8443);
         return connector;
     }
 } 
