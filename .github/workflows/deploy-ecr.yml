@@ -237,6 +237,10 @@ jobs:
             # 기존 컨테이너 중지
             $COMPOSE_CMD -f docker-compose.prod.yml down || true
 
+            # 🔥 새 이미지를 받기 전에 Docker 시스템을 정리하여 공간 확보 (중요!)
+            echo "🧹 Clearing up docker resources to free up space..."
+            docker system prune -af || true
+
             # 새 이미지 풀
             $COMPOSE_CMD -f docker-compose.prod.yml pull app
 
