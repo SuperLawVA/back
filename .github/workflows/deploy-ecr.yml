@@ -280,33 +280,33 @@ jobs:
             fi
 
             # 헬스체크 - 여러 엔드포인트 시도
-            for i in {1..3}; do
-              echo "헬스체크 시도 $i/3... (포트: $HEALTH_PORT)"
+            for i in {1..2}; do
+              echo "헬스체크 시도 $i/2... (포트: $HEALTH_PORT)"
               
               # 1. 커스텀 헬스체크 API 시도
-              if curl -f -m 30 -k $HEALTH_URL/api/health; then
+              if curl -f -m 120 -k $HEALTH_URL/api/health; then
                 echo "✅ 커스텀 헬스체크 성공!"
                 break
               fi
               
               # 2. 간단한 헬스체크 시도
-              if curl -f -m 30 -k $HEALTH_URL/health; then
+              if curl -f -m 120 -k $HEALTH_URL/health; then
                 echo "✅ 간단한 헬스체크 성공!"
                 break
               fi
               
               # 3. 상태 API 시도
-              if curl -f -m 30 -k $HEALTH_URL/api/v1/status; then
+              if curl -f -m 120 -k $HEALTH_URL/api/v1/status; then
                 echo "✅ 상태 API 헬스체크 성공!"
                 break
               fi
               
-              echo "⏳ 애플리케이션 시작 대기 중... ($i/3)"
+              echo "⏳ 애플리케이션 시작 대기 중... ($i/2)"
               if [ $i -eq 1 ]; then
                 echo "=== 중간 로그 확인 ($i) ==="
                 $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=300 app
               fi
-              sleep 30
+              sleep 20
             done
 
             # SSL 설정 정보 출력
