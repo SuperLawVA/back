@@ -4,9 +4,9 @@ on:
   push:
     branches: [back/production]
 
-# 동일한 브랜치에서 새 워크플로우가 시작되면 이전 워크플로우 취소
+# 브랜치/태그 이름으로 동시성 그룹을 설정 (슬래시 문제 방지)
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -47,13 +47,13 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean bootJar -x test
 
-      # 5. AWS 인증 및 ECR 로그인
+      # 5. AWS 인증 (env.AWS_REGION 참조로 변경)
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -78,47 +78,64 @@ jobs:
           source: "docker-compose.prod.yml"
           target: "/home/ubuntu/"
 
-      # 8. EC2에 배포
+      # 8. EC2에 배포 (SSH 액션의 env 기능을 사용하여 변수 주입)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          # 스크립트에서 사용할 모든 변수들을 이 곳에 정의합니다.
+          # 이렇게 하면 스크립트 내에서 secrets을 직접 참조할 필요가 없어집니다.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AES_SECRET_KEY: ${{ secrets.AES_SECRET_KEY }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          NAVER_REDIRECT_URI: ${{ secrets.NAVER_REDIRECT_URI }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ML_API_BASE_URL: ${{ secrets.ML_API_BASE_URL }}
+          CHATBOT_API_BASE_URL: ${{ secrets.CHATBOT_API_BASE_URL }}
+          GCP_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+          GCP_ENABLED: ${{ secrets.GCP_ENABLED }}
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROCESSOR_ID: ${{ secrets.GCP_PROCESSOR_ID }}
+          AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          envs: ${{ toJSON(secrets) }} # 모든 시크릿을 안전하게 전달
+          # 위 `env` 블록에 정의된 변수들의 '이름'만 쉼표로 구분하여 전달합니다.
+          envs: DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,ML_API_BASE_URL,CHATBOT_API_BASE_URL,GCP_SERVICE_ACCOUNT_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,AWS_S3_BUCKET_NAME,FRONTEND_URL
           script: |
-            set -e # 스크립트 실패 시 즉시 중단
-            set -o pipefail # 파이프라인 실패 시 중단
+            set -e
+            set -o pipefail
 
-            export ECR_REGISTRY=${{ env.ECR_REGISTRY }}
-            export IMAGE_TAG=${{ env.IMAGE_TAG }}
-            export AWS_REGION=${{ env.AWS_REGION }}
+            # 워크플로우의 env 값을 스크립트 내에서 사용하기 위해 export
+            export ECR_REGISTRY="${{ env.ECR_REGISTRY }}"
+            export IMAGE_TAG="${{ env.IMAGE_TAG }}"
+            export AWS_REGION="${{ env.AWS_REGION }}"
 
-            echo "======> Deployment started on EC2"
+            echo "======> Deployment started on EC2 (HTTP Only)"
             cd /home/ubuntu
 
             echo "======> 1. Preparing environment"
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
             echo "======> 2. Creating .env file"
-            # GCP 서비스 계정 키 파일 생성
+            # GCP 키 파일 생성 (변수는 action의 envs를 통해 전달됨)
             if [ -n "$GCP_SERVICE_ACCOUNT_KEY_JSON" ]; then
               echo "$GCP_SERVICE_ACCOUNT_KEY_JSON" > /home/ubuntu/service-account-key.json
               echo "✅ GCP service account key created."
-            else
-              echo "⚠️ GCP service account key not found."
             fi
 
-            # SSL 키스토어 파일 복원
-            if [ -n "$SSL_KEYSTORE_BASE64" ]; then
-              echo "$SSL_KEYSTORE_BASE64" | base64 -d > /home/ubuntu/keystore.p12
-              chmod 600 /home/ubuntu/keystore.p12
-              echo "✅ SSL keystore restored."
-            else
-              echo "⚠️ SSL keystore not found. Running in HTTP mode."
-            fi
-
-            # .env 파일 생성
+            # .env 파일 생성 (HTTP 전용 설정)
             cat > .env << EOF
             # --- Database ---
             DATABASE_URL=$DATABASE_URL
@@ -131,18 +148,14 @@ jobs:
             REDIS_PORT=6379
             # --- JWT ---
             JWT_SECRET=$JWT_SECRET
-            JWT_ACCESS_TOKEN_VALIDITY=43200000
             # --- AES ---
             AES_SECRET_KEY=$AES_SECRET_KEY
             # --- Mail ---
             MAIL_USERNAME=$MAIL_USERNAME
             MAIL_PASSWORD=$MAIL_PASSWORD
-            # --- SSL/HTTPS ---
-            SERVER_PORT=${SERVER_PORT:-8080}
-            SERVER_SSL_ENABLED=${SERVER_SSL_ENABLED:-false}
-            SERVER_SSL_KEY_STORE=$SERVER_SSL_KEY_STORE
-            SERVER_SSL_KEY_STORE_PASSWORD=$SERVER_SSL_KEY_STORE_PASSWORD
-            SERVER_SSL_KEY_ALIAS=$SERVER_SSL_KEY_ALIAS
+            # --- Server (HTTP Only) ---
+            SERVER_PORT=8080
+            SERVER_SSL_ENABLED=false
             # --- OAuth2 ---
             KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
             KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
@@ -150,58 +163,31 @@ jobs:
             NAVER_CLIENT_ID=$NAVER_CLIENT_ID
             NAVER_CLIENT_SECRET=$NAVER_CLIENT_SECRET
             NAVER_REDIRECT_URI=$NAVER_REDIRECT_URI
-            # --- AI Services ---
+            # --- AI / ML / Chatbot ---
             GEMINI_API_KEY=$GEMINI_API_KEY
-            GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-gemini-pro}
-            GEMINI_API_URL=${GEMINI_API_URL:-https://generativelanguage.googleapis.com}
+            ML_API_BASE_URL=$ML_API_BASE_URL
+            CHATBOT_API_BASE_URL=$CHATBOT_API_BASE_URL
             # --- GCP ---
             GCP_ENABLED=${GCP_ENABLED:-false}
             GCP_PROJECT_ID=$GCP_PROJECT_ID
-            GCP_LOCATION=${GCP_LOCATION:-us}
             GCP_PROCESSOR_ID=$GCP_PROCESSOR_ID
-            # --- ML API ---
-            ML_API_BASE_URL=$ML_API_BASE_URL
-            ML_API_CONNECTION_TIMEOUT=${ML_API_CONNECTION_TIMEOUT:-10000}
-            ML_API_READ_TIMEOUT=${ML_API_READ_TIMEOUT:-60000}
-            # --- Chatbot API ---
-            CHATBOT_API_BASE_URL=$CHATBOT_API_BASE_URL
-            CHATBOT_API_TIMEOUT=${CHATBOT_API_TIMEOUT:-30000}
-            # --- AWS ---
-            AWS_REGION=$AWS_REGION
-            AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+            # --- AWS S3 ---
             AWS_S3_BUCKET_NAME=$AWS_S3_BUCKET_NAME
             # --- General ---
             FRONTEND_URL=$FRONTEND_URL
-            SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
-            # --- Docker Image Info ---
+            SPRING_PROFILES_ACTIVE=prod
+            # --- Docker Image Info (from workflow env) ---
             ECR_REGISTRY=$ECR_REGISTRY
             IMAGE_TAG=$IMAGE_TAG
             EOF
-            echo "✅ .env file created."
+            echo "✅ .env file created for HTTP environment."
 
             echo "======> 3. Cleaning up old resources"
-            # 포트 정리
-            PORTS_TO_FREE="6379 6380 8080 8443"
-            for PORT in $PORTS_TO_FREE; do
-              echo "Clearing port $PORT..."
-              sudo fuser -k ${PORT}/tcp || true
-              sudo lsof -ti:${PORT} | xargs -r sudo kill -9 || true
-            done
-
-            # Docker Compose 명령어 결정
-            if command -v docker-compose &>/dev/null; then
-              COMPOSE_CMD="docker-compose"
-            elif docker compose version &>/dev/null; then
-              COMPOSE_CMD="docker compose"
-            else
-              echo "Error: docker-compose or docker compose not found." >&2
-              exit 1
-            fi
+            if command -v docker-compose &>/dev/null; then COMPOSE_CMD="docker-compose"; else COMPOSE_CMD="docker compose"; fi
             echo "Using '$COMPOSE_CMD' for Docker Compose."
 
             $COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans || true
-            echo "🧹 Clearing up docker resources to free up space..."
+            echo "🧹 Clearing up docker resources..."
             docker system prune -af
 
             echo "======> 4. Starting new containers"
@@ -209,32 +195,33 @@ jobs:
             $COMPOSE_CMD -f docker-compose.prod.yml up -d --force-recreate
             echo "✅ Docker Compose 'up' command executed."
 
-            echo "======> 5. Health check"
-            # SSL 활성화 여부에 따라 헬스체크 URL 및 포트 결정
-            if [ "$SERVER_SSL_ENABLED" = "true" ]; then
-              HEALTH_CHECK_URL="https://localhost:8443/actuator/health"
-              CURL_OPTS="--insecure" # 로컬에서 자체 서명 인증서 사용 시 필요
-            else
-              HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
-              CURL_OPTS=""
-            fi
-
+            echo "======> 5. Health check (HTTP)"
+            HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
             echo "Health checking at: $HEALTH_CHECK_URL"
 
-            # 10초 간격으로 12번 (총 2분) 헬스체크 시도
+            # 10초 간격으로 12번 (총 2분) 헬스체크
             for i in {1..12}; do
-              # curl의 --fail 옵션은 HTTP 상태 코드가 2xx가 아니면 실패로 처리
-              # -s: silent, -f: fail, -v: verbose
-              if curl -sf $CURL_OPTS $HEALTH_CHECK_URL; then
-                echo "✅ Health check PASSED on attempt $i."
-                docker ps
+              HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL)
+              if [ "$HTTP_CODE" -eq 200 ]; then
+                echo "✅ Health check PASSED on attempt $i with status $HTTP_CODE."
+                $COMPOSE_CMD -f docker-compose.prod.yml ps
                 exit 0
               fi
-              echo "Attempt $i: Health check failed. Retrying in 10 seconds..."
+              echo "Attempt $i: Health check failed with HTTP status $HTTP_CODE. Retrying in 10 seconds..."
               sleep 10
             done
 
             echo "🚨 Health check FAILED after multiple attempts."
-            echo "======> Container logs:"
-            $COMPOSE_CMD logs --tail="100" app
+            echo "======> Final container status:"
+            $COMPOSE_CMD -f docker-compose.prod.yml ps -a
+
+            # app 서비스 컨테이너의 ID를 정확히 찾아 로그 출력
+            APP_CONTAINER_ID=$($COMPOSE_CMD -f docker-compose.prod.yml ps -q app)
+            if [ -n "$APP_CONTAINER_ID" ]; then
+              echo "======> Displaying last 200 lines of logs for container 'app' ($APP_CONTAINER_ID):"
+              docker logs --tail 200 "$APP_CONTAINER_ID"
+            else
+              echo "⚠️ Could not find the 'app' container to display logs."
+            fi
+
             exit 1
