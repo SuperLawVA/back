@@ -31,7 +31,11 @@ public class ContractData {
     private Broker broker1;
     private Broker broker2;
     
-    private boolean generated;
+    private Boolean generated;
+    private java.util.List<com.superlawva.domain.ml.dto.ContractResponse.RecommendedAgreementDto> recommendedAgreements;
+    private java.util.List<com.superlawva.domain.ml.dto.ContractResponse.LegalBasisDto> legalBasis;
+    private java.util.List<com.superlawva.domain.ml.dto.ContractResponse.CaseBasisDto> caseBasis;
+    private com.superlawva.domain.ml.dto.ContractResponse.AnalysisMetadataDto analysisMetadata;
     
     @Field("file_url")
     private String fileUrl;

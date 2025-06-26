@@ -16,6 +16,8 @@ import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,7 +30,7 @@ public class MLAnalysisService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 계약서 분석 및 결과 저장 (Document 패키지 제거 버전)
+     * 계약서 분석 및 결과 저장 (기존 메서드)
      */
     @Transactional
     public Map<String, Object> analyzeContract(String contractId, String userId) {
@@ -45,24 +47,26 @@ public class MLAnalysisService {
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.analyzeContract(mlRequest);
 
-            // 4. 분석 결과를 ContractData에 업데이트 (Document 패키지 대신)
-            updateContractWithAnalysis(contractData, mlResponse, userId);
+            // 4. 분석 결과를 MongoDB analysis 컬렉션에 저장
+            MLAnalysisResult savedAnalysis = saveAnalysisResult(contractData, mlResponse, userId);
 
-            log.info("✅ 계약서 분석 완료 - Contract ID: {}", contractId);
-            
+            log.info("✅ 계약서 분석 완료 - Contract ID: {}, Analysis ID: {}", contractId, savedAnalysis.getId());
+
             // 5. 분석 결과 반환 (프론트엔드에서 바로 사용 가능)
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("contractId", contractId);
+            result.put("analysisId", savedAnalysis.getId());
             result.put("userId", userId);
-            result.put("analysisResult", mlResponse);
+            result.put("analysisResult", savedAnalysis);
+            result.put("mlResponse", mlResponse);
             result.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-            
+
             return result;
 
         } catch (Exception e) {
             log.error("❌ 계약서 분석 실패 - Contract ID: {}", contractId, e);
-            
+
             // 실패 결과 반환
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
@@ -70,86 +74,136 @@ public class MLAnalysisService {
             errorResult.put("userId", userId);
             errorResult.put("error", e.getMessage());
             errorResult.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-            
+
             return errorResult;
         }
     }
 
     /**
-     * 내용증명서 생성 (Document 패키지 제거 버전)
+     * READ - 분석 ID로 개별 조회
      */
-    @Transactional
-    public Map<String, Object> generateProofDocument(String contractId, String userId) {
-        log.info("📝 내용증명서 생성 시작 - Contract ID: {}, User ID: {}", contractId, userId);
+    public MLAnalysisResult getAnalysisById(String analysisId) {
+        log.info("🔍 분석 결과 조회 - Analysis ID: {}", analysisId);
 
-        try {
-            ContractData contractData = contractDataRepository.findById(contractId)
-                    .orElseThrow(() -> new RuntimeException("계약서를 찾을 수 없습니다: " + contractId));
+        Optional<MLAnalysisResult> result = mlAnalysisResultRepository.findById(analysisId);
 
-            Map<String, Object> mlRequest = buildProofGenerationRequest(contractData, userId);
-            Map<String, Object> mlResponse = mlApiClient.generateProofDocument(mlRequest);
-
-            log.info("✅ 내용증명서 생성 완료 - Contract ID: {}", contractId);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("contractId", contractId);
-            result.put("userId", userId);
-            result.put("proofDocument", mlResponse);
-            result.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-            
-            return result;
-
-        } catch (Exception e) {
-            log.error("❌ 내용증명서 생성 실패 - Contract ID: {}", contractId, e);
-            
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("success", false);
-            errorResult.put("contractId", contractId);
-            errorResult.put("userId", userId);
-            errorResult.put("error", e.getMessage());
-            errorResult.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-            
-            return errorResult;
+        if (result.isPresent()) {
+            log.info("✅ 분석 결과 조회 성공 - Analysis ID: {}", analysisId);
+            return result.get();
+        } else {
+            log.warn("⚠️ 분석 결과를 찾을 수 없음 - Analysis ID: {}", analysisId);
+            return null;
         }
     }
 
     /**
-     * 특약사항 생성 (Document 패키지 제거 버전)
+     * READ - 사용자별 분석 결과 전체 조회
+     * 참고: userId는 raw_ml_response에서 추출해야 함
+     */
+    public List<MLAnalysisResult> getAnalysesByUserId(String userId) {
+        log.info("👤 사용자별 분석 결과 조회 - User ID: {}", userId);
+
+        // 모든 분석 결과를 가져와서 raw_ml_response에서 user_id로 필터링
+        List<MLAnalysisResult> allResults = mlAnalysisResultRepository.findAll();
+        List<MLAnalysisResult> filteredResults = allResults.stream()
+                .filter(result -> {
+                    String analysisUserId = getAnalysisUserId(result);
+                    return analysisUserId.equals(userId);
+                })
+                .collect(Collectors.toList());
+
+        log.info("✅ {}개의 분석 결과 조회됨 - User ID: {}", filteredResults.size(), userId);
+        return filteredResults;
+    }
+
+
+
+    /**
+     * DELETE - 분석 결과 삭제 (보안: userId 검증)
      */
     @Transactional
-    public Map<String, Object> generateSpecialTerms(String contractId, String userId) {
-        log.info("⚖️ 특약사항 생성 시작 - Contract ID: {}, User ID: {}", contractId, userId);
+    public boolean deleteAnalysis(String analysisId, String userId) {
+        log.info("🗑️ 분석 결과 삭제 시도 - Analysis ID: {}, User ID: {}", analysisId, userId);
 
         try {
-            ContractData contractData = contractDataRepository.findById(contractId)
-                    .orElseThrow(() -> new RuntimeException("계약서를 찾을 수 없습니다: " + contractId));
+            Optional<MLAnalysisResult> analysisOpt = mlAnalysisResultRepository.findById(analysisId);
 
-            Map<String, Object> mlRequest = buildSpecialTermsRequest(contractData, userId);
-            Map<String, Object> mlResponse = mlApiClient.generateSpecialTerms(mlRequest);
+            if (analysisOpt.isPresent()) {
+                MLAnalysisResult analysis = analysisOpt.get();
 
-            log.info("✅ 특약사항 생성 완료 - Contract ID: {}", contractId);
-            
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("contractId", contractId);
-            result.put("userId", userId);
-            result.put("specialTerms", mlResponse);
-            result.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-            
-            return result;
+                // 보안 검증: 요청한 사용자가 분석의 소유자인지 확인 (raw_ml_response에서 확인)
+                String analysisUserId = getAnalysisUserId(analysis);
+                if (!analysisUserId.equals(userId)) {
+                    log.error("❌ 권한 없음 - 요청 User ID: {}, 분석 소유자 ID: {}", userId, analysisUserId);
+                    throw new RuntimeException("해당 분석 결과를 삭제할 권한이 없습니다.");
+                }
+
+                mlAnalysisResultRepository.deleteById(analysisId);
+                log.info("✅ 분석 결과 삭제 성공 - Analysis ID: {}", analysisId);
+                return true;
+
+            } else {
+                log.warn("⚠️ 삭제할 분석 결과를 찾을 수 없음 - Analysis ID: {}", analysisId);
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("❌ 분석 결과 삭제 실패", e);
+            throw e;
+        }
+    }
+
+
+
+    /**
+     * ML 분석 결과를 MongoDB analysis 컬렉션에 저장 (간소화된 버전)
+     */
+    private MLAnalysisResult saveAnalysisResult(ContractData contractData, Map<String, Object> mlResponse, String userId) {
+        try {
+            log.info("💾 ML 분석 결과를 MongoDB analysis 컬렉션에 저장 시작");
+
+            // MLAnalysisResult Entity 생성
+            MLAnalysisResult analysisResult = new MLAnalysisResult();
+
+            // 기본 정보 설정
+            analysisResult.setContractId(contractData.get_id());
+            analysisResult.setAnalysisType("CONTRACT_ANALYSIS");
+            analysisResult.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
+            analysisResult.setStatus("SUCCESS");
+
+            // 원본 ML 응답 전체 저장 (모든 데이터 포함)
+            analysisResult.setRawMlResponse(mlResponse);
+
+            // MongoDB에 저장
+            MLAnalysisResult savedResult = mlAnalysisResultRepository.save(analysisResult);
+
+            log.info("✅ ML 분석 결과 저장 완료:");
+            log.info("   🆔 저장된 ID: {}", savedResult.getId());
+            log.info("   📋 Contract ID: {}", savedResult.getContractId());
+            log.info("   📅 생성일: {}", savedResult.getCreatedDate());
+
+            return savedResult;
 
         } catch (Exception e) {
-            log.error("❌ 특약사항 생성 실패 - Contract ID: {}", contractId, e);
-            
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("success", false);
-            errorResult.put("contractId", contractId);
-            errorResult.put("userId", userId);
-            errorResult.put("error", e.getMessage());
-            errorResult.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-            
-            return errorResult;
+            log.error("❌ ML 분석 결과 저장 실패", e);
+            log.error("   📋 Contract ID: {}", contractData.get_id());
+            log.error("   💬 오류 메시지: {}", e.getMessage());
+
+            // 실패한 경우에도 기록을 남김
+            try {
+                MLAnalysisResult failedResult = new MLAnalysisResult();
+                failedResult.setContractId(contractData.get_id());
+                failedResult.setAnalysisType("CONTRACT_ANALYSIS");
+                failedResult.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
+                failedResult.setStatus("FAILED");
+                failedResult.setErrorMessage(e.getMessage());
+                failedResult.setRawMlResponse(mlResponse);
+
+                return mlAnalysisResultRepository.save(failedResult);
+
+            } catch (Exception saveError) {
+                log.error("❌ 실패 기록 저장도 실패", saveError);
+                throw saveError;
+            }
         }
     }
 
@@ -160,7 +214,7 @@ public class MLAnalysisService {
         Map<String, Object> request = new HashMap<>();
         request.put("contract_id", contractData.get_id());
         request.put("user_id", userId);
-        
+
         // ⭐ contract_type을 ML API가 인식할 수 있는 형식으로 변환
         String normalizedContractType = normalizeContractType(contractData.getContractType());
         request.put("contract_type", normalizedContractType);
@@ -170,43 +224,43 @@ public class MLAnalysisService {
         contractInfo.put("id", contractData.get_id());
         contractInfo.put("user_id", userId);
         contractInfo.put("contract_type", normalizedContractType);
-        
+
         // Dates 변환
         contractInfo.put("dates", convertDates(contractData.getDates()));
-        
+
         // Property 변환
         contractInfo.put("property", convertProperty(contractData.getProperty()));
-        
+
         // Payment 변환
         contractInfo.put("payment", convertPayment(contractData.getPayment()));
-        
+
         // Lessor/Lessee 변환
         contractInfo.put("lessor", convertParty(contractData.getLessor()));
         contractInfo.put("lessee", convertParty(contractData.getLessee()));
-        
+
         // Brokers 변환
         contractInfo.put("broker1", convertBroker(contractData.getBroker1()));
         contractInfo.put("broker2", convertBroker(contractData.getBroker2()));
-        
+
         // Articles/Agreements (이미 String 배열이므로 그대로 사용)
         contractInfo.put("articles", contractData.getArticles());
         contractInfo.put("agreements", contractData.getAgreements());
-        
+
         // 추가 필드들
-        contractInfo.put("generated", contractData.isGenerated());
+        contractInfo.put("generated", contractData.getGenerated());
         contractInfo.put("file_url", contractData.getFileUrl());
-        
+
         // LocalDateTime을 문자열로 변환
         contractInfo.put("created_date", convertDateTime(contractData.getCreatedDate()));
         contractInfo.put("modified_date", convertDateTime(contractData.getModifiedDate()));
-        
+
         // Contract Metadata 변환
         contractInfo.put("contract_metadata", convertContractMetadata(contractData.getContractMetadata()));
 
         request.put("contract_data", contractInfo);
         request.put("debug_mode", false);
 
-        log.info("📤 ML API 요청 데이터 구성 완료 - Contract Type: {} -> {}", 
+        log.info("📤 ML API 요청 데이터 구성 완료 - Contract Type: {} -> {}",
                 contractData.getContractType(), normalizedContractType);
 
         return request;
@@ -217,7 +271,7 @@ public class MLAnalysisService {
      */
     private Map<String, Object> convertDates(ContractData.Dates dates) {
         if (dates == null) return null;
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("contract_date", dates.getContractDate());
         result.put("start_date", dates.getStartDate());
@@ -230,13 +284,13 @@ public class MLAnalysisService {
      */
     private Map<String, Object> convertProperty(ContractData.Property property) {
         if (property == null) return null;
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("address", property.getAddress());
         result.put("detail_address", property.getDetailAddress());
         result.put("rent_section", property.getRentSection());
         result.put("rent_area", property.getRentArea());
-        
+
         // Land 변환
         if (property.getLand() != null) {
             Map<String, Object> land = new HashMap<>();
@@ -246,13 +300,13 @@ public class MLAnalysisService {
             land.put("land_area", property.getLand().getLandArea());
             result.put("land", land);
         }
-        
+
         // Building 변환
         if (property.getBuilding() != null) {
             Map<String, Object> building = new HashMap<>();
             building.put("building_constructure", property.getBuilding().getBuildingConstructure());
             building.put("building_type", property.getBuilding().getBuildingType());
-            
+
             // 문자열인 building_area를 숫자로 변환 시도
             String buildingArea = property.getBuilding().getBuildingArea();
             if (buildingArea != null) {
@@ -266,7 +320,7 @@ public class MLAnalysisService {
             }
             result.put("building", building);
         }
-        
+
         return result;
     }
 
@@ -275,7 +329,7 @@ public class MLAnalysisService {
      */
     private Map<String, Object> convertPayment(ContractData.Payment payment) {
         if (payment == null) return null;
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("deposit", payment.getDeposit());
         result.put("deposit_kr", payment.getDepositKr());
@@ -298,7 +352,7 @@ public class MLAnalysisService {
      */
     private Map<String, Object> convertParty(ContractData.Party party) {
         if (party == null) return new HashMap<>();
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("name", party.getName());
         result.put("id_number", party.getIdNumber());
@@ -306,14 +360,14 @@ public class MLAnalysisService {
         result.put("detail_address", party.getDetailAddress());
         result.put("phone_number", party.getPhoneNumber());
         result.put("mobile_number", party.getMobileNumber());
-        
+
         // Agent 변환
         Map<String, Object> agent = new HashMap<>();
         if (party.getAgent() != null) {
             agent.put("name", party.getAgent().getName());
         }
         result.put("agent", agent);
-        
+
         return result;
     }
 
@@ -322,7 +376,7 @@ public class MLAnalysisService {
      */
     private Map<String, Object> convertBroker(ContractData.Broker broker) {
         if (broker == null) return new HashMap<>();
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("office", broker.getOffice());
         result.put("license_number", broker.getLicenseNumber());
@@ -337,7 +391,7 @@ public class MLAnalysisService {
      */
     private Map<String, Object> convertContractMetadata(ContractData.ContractMetadata metadata) {
         if (metadata == null) return null;
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("model", metadata.getModel());
         result.put("generation_time", metadata.getGenerationTime());
@@ -351,7 +405,7 @@ public class MLAnalysisService {
      */
     private String convertDateTime(LocalDateTime dateTime) {
         if (dateTime == null) return null;
-        
+
         // LocalDateTime을 ISO 문자열로 변환
         return dateTime.toString();
     }
@@ -363,7 +417,7 @@ public class MLAnalysisService {
         if (contractType == null) {
             return "전세"; // 기본값
         }
-        
+
         // ML API가 인식하는 형식으로 변환
         switch (contractType.trim()) {
             case "월세":
@@ -371,7 +425,7 @@ public class MLAnalysisService {
             case "monthly_rent":
                 return "월세";
             case "전세":
-            case "전세계약": 
+            case "전세계약":
             case "jeonse":
                 return "전세";
             default:
@@ -381,182 +435,14 @@ public class MLAnalysisService {
     }
 
     /**
-     * 내용증명서 생성용 ML 요청 데이터 구성
+     * MLAnalysisResult에서 userId 추출 (raw_ml_response에서)
      */
-    private Map<String, Object> buildProofGenerationRequest(ContractData contractData, String userId) {
-        Map<String, Object> request = new HashMap<>();
-        request.put("contract_id", contractData.get_id());
-        request.put("user_id", userId);
-        request.put("contract_type", normalizeContractType(contractData.getContractType()));
-        request.put("request_type", "PROOF_GENERATION");
-
-        Map<String, Object> contractInfo = new HashMap<>();
-        contractInfo.put("dates", contractData.getDates());
-        contractInfo.put("property", contractData.getProperty());
-        contractInfo.put("payment", contractData.getPayment());
-        contractInfo.put("lessor", contractData.getLessor());
-        contractInfo.put("lessee", contractData.getLessee());
-        contractInfo.put("articles", contractData.getArticles());
-        contractInfo.put("agreements", contractData.getAgreements());
-
-        request.put("contract_data", contractInfo);
-        return request;
-    }
-
-    /**
-     * 특약사항 생성용 ML 요청 데이터 구성
-     */
-    private Map<String, Object> buildSpecialTermsRequest(ContractData contractData, String userId) {
-        Map<String, Object> request = new HashMap<>();
-        request.put("contract_id", contractData.get_id());
-        request.put("user_id", userId);
-        request.put("contract_type", normalizeContractType(contractData.getContractType()));
-        request.put("request_type", "SPECIAL_TERMS");
-
-        Map<String, Object> contractInfo = new HashMap<>();
-        contractInfo.put("property", contractData.getProperty());
-        contractInfo.put("payment", contractData.getPayment());
-        contractInfo.put("lessor", contractData.getLessor());
-        contractInfo.put("lessee", contractData.getLessee());
-
-        request.put("contract_data", contractInfo);
-        return request;
-    }
-
-    /**
-     * ML 분석 결과를 MongoDB generated_documents 컬렉션에 저장
-     */
-    private void updateContractWithAnalysis(ContractData contractData, Map<String, Object> mlResponse, String userId) {
-        try {
-            log.info("💾 ML 분석 결과를 MongoDB에 저장 시작");
-            
-            // MLAnalysisResult Entity 생성
-            MLAnalysisResult analysisResult = new MLAnalysisResult();
-            
-            // 기본 정보 설정
-            analysisResult.setContractId(contractData.get_id());
-            analysisResult.setUserId(userId);
-            analysisResult.setAnalysisType("CONTRACT_ANALYSIS");
-            analysisResult.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
-            analysisResult.setStatus("SUCCESS");
-            
-            // ML API 응답 데이터 매핑
-            if (mlResponse.get("id") instanceof Number) {
-                analysisResult.setMlAnalysisId(((Number) mlResponse.get("id")).intValue());
-            }
-            analysisResult.setMlCreatedDate((String) mlResponse.get("created_date"));
-            
-            // 분석된 조항들 저장
-            if (mlResponse.containsKey("articles") && mlResponse.get("articles") instanceof List) {
-                List<Map<String, Object>> articles = (List<Map<String, Object>>) mlResponse.get("articles");
-                List<MLAnalysisResult.AnalyzedArticle> analyzedArticles = articles.stream()
-                        .map(this::convertToAnalyzedArticle)
-                        .toList();
-                analysisResult.setArticles(analyzedArticles);
-                
-                log.info("   📄 저장된 조항 수: {}", analyzedArticles.size());
-            }
-            
-            // 분석된 특약사항들 저장
-            if (mlResponse.containsKey("agreements") && mlResponse.get("agreements") instanceof List) {
-                List<Map<String, Object>> agreements = (List<Map<String, Object>>) mlResponse.get("agreements");
-                List<MLAnalysisResult.AnalyzedAgreement> analyzedAgreements = agreements.stream()
-                        .map(this::convertToAnalyzedAgreement)
-                        .toList();
-                analysisResult.setAgreements(analyzedAgreements);
-                
-                log.info("   📋 저장된 특약 수: {}", analyzedAgreements.size());
-            }
-            
-            // 메타데이터 저장
-            if (mlResponse.containsKey("analysis_metadata")) {
-                Map<String, Object> metadata = (Map<String, Object>) mlResponse.get("analysis_metadata");
-                analysisResult.setAnalysisMetadata(convertToAnalysisMetadata(metadata));
-            }
-            
-            // 원본 ML 응답 전체 저장 (디버깅용)
-            analysisResult.setRawMlResponse(mlResponse);
-            
-            // MongoDB에 저장
-            MLAnalysisResult savedResult = mlAnalysisResultRepository.save(analysisResult);
-            
-            log.info("✅ ML 분석 결과 저장 완료:");
-            log.info("   🆔 저장된 ID: {}", savedResult.getId());
-            log.info("   📋 Contract ID: {}", savedResult.getContractId());
-            log.info("   👤 User ID: {}", savedResult.getUserId());
-            log.info("   🤖 ML Analysis ID: {}", savedResult.getMlAnalysisId());
-            log.info("   📅 생성일: {}", savedResult.getCreatedDate());
-            
-        } catch (Exception e) {
-            log.error("❌ ML 분석 결과 저장 실패", e);
-            log.error("   📋 Contract ID: {}", contractData.get_id());
-            log.error("   👤 User ID: {}", userId);
-            log.error("   💬 오류 메시지: {}", e.getMessage());
-            
-            // 실패한 경우에도 기록을 남김
-            try {
-                MLAnalysisResult failedResult = new MLAnalysisResult();
-                failedResult.setContractId(contractData.get_id());
-                failedResult.setUserId(userId);
-                failedResult.setAnalysisType("CONTRACT_ANALYSIS");
-                failedResult.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
-                failedResult.setStatus("FAILED");
-                failedResult.setErrorMessage(e.getMessage());
-                failedResult.setRawMlResponse(mlResponse);
-                
-                mlAnalysisResultRepository.save(failedResult);
-                log.info("📝 실패 기록 저장 완료");
-                
-            } catch (Exception saveError) {
-                log.error("❌ 실패 기록 저장도 실패", saveError);
-            }
+    private String getAnalysisUserId(MLAnalysisResult analysis) {
+        if (analysis.getRawMlResponse() != null && analysis.getRawMlResponse().containsKey("user_id")) {
+            Object userId = analysis.getRawMlResponse().get("user_id");
+            return userId != null ? userId.toString() : "";
         }
-    }
-
-    /**
-     * ML API 응답의 Article을 AnalyzedArticle로 변환
-     */
-    private MLAnalysisResult.AnalyzedArticle convertToAnalyzedArticle(Map<String, Object> articleMap) {
-        MLAnalysisResult.AnalyzedArticle article = new MLAnalysisResult.AnalyzedArticle();
-        article.setResult((Boolean) articleMap.get("result"));
-        article.setContent((String) articleMap.get("content"));
-        article.setReason((String) articleMap.get("reason"));
-        article.setSuggestedRevision((String) articleMap.get("suggested_revision"));
-        article.setNegotiationPoints((String) articleMap.get("negotiation_points"));
-        return article;
-    }
-
-    /**
-     * ML API 응답의 Agreement를 AnalyzedAgreement로 변환
-     */
-    private MLAnalysisResult.AnalyzedAgreement convertToAnalyzedAgreement(Map<String, Object> agreementMap) {
-        MLAnalysisResult.AnalyzedAgreement agreement = new MLAnalysisResult.AnalyzedAgreement();
-        agreement.setResult((Boolean) agreementMap.get("result"));
-        agreement.setContent((String) agreementMap.get("content"));
-        agreement.setReason((String) agreementMap.get("reason"));
-        agreement.setSuggestedRevision((String) agreementMap.get("suggested_revision"));
-        agreement.setNegotiationPoints((String) agreementMap.get("negotiation_points"));
-        return agreement;
-    }
-
-    /**
-     * ML API 응답의 메타데이터를 AnalysisMetadata로 변환
-     */
-    private MLAnalysisResult.AnalysisMetadata convertToAnalysisMetadata(Map<String, Object> metadataMap) {
-        MLAnalysisResult.AnalysisMetadata metadata = new MLAnalysisResult.AnalysisMetadata();
-        metadata.setModel((String) metadataMap.get("model"));
-        
-        if (metadataMap.get("generation_time") instanceof Number) {
-            metadata.setGenerationTime(((Number) metadataMap.get("generation_time")).doubleValue());
-        }
-        
-        metadata.setVersion((String) metadataMap.get("version"));
-        
-        if (metadataMap.get("processing_steps") instanceof List) {
-            metadata.setProcessingSteps((List<String>) metadataMap.get("processing_steps"));
-        }
-        
-        return metadata;
+        return "";
     }
 
     /**
@@ -564,18 +450,18 @@ public class MLAnalysisService {
      */
     public Map<String, Object> testMLApiConnection() {
         log.info("🔍 ML API 연결 상태 테스트 시작");
-        
+
         Map<String, Object> result = new HashMap<>();
         result.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-        
+
         try {
             // ML API 클라이언트의 헬스 체크 기능 사용
             boolean isHealthy = mlApiClient.isHealthy();
-            
+
             result.put("success", isHealthy);
             result.put("mlApiUrl", "http://3.34.41.104:8000");
             result.put("status", isHealthy ? "Connected" : "Connection Failed");
-            
+
             if (isHealthy) {
                 log.info("✅ ML API 서버 연결 성공");
                 result.put("message", "ML API 서버에 정상적으로 연결되었습니다.");
@@ -583,7 +469,7 @@ public class MLAnalysisService {
                 log.warn("❌ ML API 서버 연결 실패");
                 result.put("message", "ML API 서버에 연결할 수 없습니다.");
             }
-            
+
         } catch (Exception e) {
             log.error("ML API 연결 테스트 중 오류 발생", e);
             result.put("success", false);
@@ -591,7 +477,7 @@ public class MLAnalysisService {
             result.put("error", e.getMessage());
             result.put("message", "ML API 연결 테스트 중 오류가 발생했습니다.");
         }
-        
+
         return result;
     }
 
@@ -602,96 +488,96 @@ public class MLAnalysisService {
         log.info("🧪 계약서 분석 테스트 시작");
         log.info("   📋 Contract ID: {}", contractId);
         log.info("   👤 User ID: {}", userId);
-        
+
         Map<String, Object> testResult = new HashMap<>();
         testResult.put("contractId", contractId);
         testResult.put("userId", userId);
         testResult.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
-        
+
         try {
             // 1단계: MongoDB에서 계약서 데이터 조회
             log.info("📊 1단계: MongoDB에서 계약서 데이터 조회 중...");
             ContractData contractData = contractDataRepository.findById(contractId)
                     .orElseThrow(() -> new RuntimeException("계약서를 찾을 수 없습니다: " + contractId));
-            
+
             log.info("✅ 계약서 데이터 조회 성공:");
             log.info("   - ID: {}", contractData.get_id());
             log.info("   - User ID: {}", contractData.getUserId());
             log.info("   - Contract Type: {}", contractData.getContractType());
             log.info("   - Created Date: {}", contractData.getCreatedDate());
-            
+
             testResult.put("step1_mongodbQuery", "SUCCESS");
             testResult.put("contractData", Map.of(
-                "id", contractData.get_id(),
-                "userId", contractData.getUserId(),
-                "contractType", contractData.getContractType(),
-                "hasArticles", contractData.getArticles() != null,
-                "hasAgreements", contractData.getAgreements() != null
+                    "id", contractData.get_id(),
+                    "userId", contractData.getUserId(),
+                    "contractType", contractData.getContractType(),
+                    "hasArticles", contractData.getArticles() != null,
+                    "hasAgreements", contractData.getAgreements() != null
             ));
 
             // 2단계: ML API 요청 데이터 구성
             log.info("📦 2단계: ML API 요청 데이터 구성 중...");
             Map<String, Object> mlRequest = buildContractAnalysisRequest(contractData, userId);
-            
+
             log.info("✅ ML API 요청 데이터 구성 완료:");
             log.info("   - contract_id: {}", mlRequest.get("contract_id"));
             log.info("   - contract_type: {}", mlRequest.get("contract_type"));
             log.info("   - user_id: {}", mlRequest.get("user_id"));
-            
+
             testResult.put("step2_requestBuild", "SUCCESS");
             testResult.put("mlRequestData", Map.of(
-                "contract_id", mlRequest.get("contract_id"),
-                "contract_type", mlRequest.get("contract_type"),
-                "user_id", mlRequest.get("user_id"),
-                "hasContractData", mlRequest.containsKey("contract_data")
+                    "contract_id", mlRequest.get("contract_id"),
+                    "contract_type", mlRequest.get("contract_type"),
+                    "user_id", mlRequest.get("user_id"),
+                    "hasContractData", mlRequest.containsKey("contract_data")
             ));
 
             // 3단계: ML API 호출 시도
             log.info("🤖 3단계: ML API 호출 시도 중...");
-            
+
             try {
                 Map<String, Object> mlResponse = mlApiClient.analyzeContract(mlRequest);
-                
+
                 log.info("✅ ML API 호출 성공!");
                 log.info("   - Response ID: {}", mlResponse.get("id"));
                 log.info("   - Created Date: {}", mlResponse.get("created_date"));
-                
+
                 testResult.put("step3_mlApiCall", "SUCCESS");
                 testResult.put("mlResponse", Map.of(
-                    "id", mlResponse.get("id"),
-                    "created_date", mlResponse.get("created_date"),
-                    "hasArticles", mlResponse.containsKey("articles"),
-                    "hasAgreements", mlResponse.containsKey("agreements")
+                        "id", mlResponse.get("id"),
+                        "created_date", mlResponse.get("created_date"),
+                        "hasArticles", mlResponse.containsKey("articles"),
+                        "hasAgreements", mlResponse.containsKey("agreements")
                 ));
-                
+
                 testResult.put("success", true);
                 testResult.put("message", "모든 단계가 성공적으로 완료되었습니다.");
-                
+
             } catch (Exception mlApiError) {
                 log.error("❌ ML API 호출 실패:");
                 log.error("   - 오류 클래스: {}", mlApiError.getClass().getSimpleName());
                 log.error("   - 오류 메시지: {}", mlApiError.getMessage());
-                
+
                 testResult.put("step3_mlApiCall", "FAILED");
                 testResult.put("mlApiError", Map.of(
-                    "errorClass", mlApiError.getClass().getSimpleName(),
-                    "errorMessage", mlApiError.getMessage(),
-                    "isConnectionError", mlApiError.getMessage().contains("Connection refused"),
-                    "isTimeoutError", mlApiError.getMessage().contains("timeout"),
-                    "is500Error", mlApiError.getMessage().contains("500")
+                        "errorClass", mlApiError.getClass().getSimpleName(),
+                        "errorMessage", mlApiError.getMessage(),
+                        "isConnectionError", mlApiError.getMessage().contains("Connection refused"),
+                        "isTimeoutError", mlApiError.getMessage().contains("timeout"),
+                        "is500Error", mlApiError.getMessage().contains("500")
                 ));
-                
+
                 testResult.put("success", false);
                 testResult.put("message", "ML API 호출 단계에서 실패했습니다.");
             }
-            
+
         } catch (Exception e) {
             log.error("❌ 계약서 분석 테스트 실패", e);
             testResult.put("success", false);
             testResult.put("error", e.getMessage());
             testResult.put("message", "테스트 중 오류가 발생했습니다.");
         }
-        
+
         return testResult;
     }
 }
