@@ -88,14 +88,14 @@ public class SearchService {
                             String newTitle = String.format("%s %s", dbCase.getCaseNumber(), dbCase.getCaseTitle());
                             return new SearchResponseDTO.DocumentResult(
                                     newTitle,
-                                    dbCase.getSummary(), // 내용은 DB 요약 정보로 교체
+                                    dbCase.getSummary(),
                                     doc.similarity(),
                                     doc.metadata()
                             );
                         })
-                        .orElse(doc); // DB에 정보가 없으면 원본 반환
+                        .orElse(doc);
             }
         }
-        return doc; // 판례가 아니면 원본 반환
+        return doc;
     }
 } 

@@ -137,9 +137,11 @@ public class LogService {
      */
     @Transactional
     public void logSearch(User user, String query, int resultCount) {
-        // @AllArgsConstructor를 사용한 객체 생성 (ID는 null, 나머지는 값 전달)
+        /*
+        // TODO: SearchResult 엔티티 구조 변경에 따라 로깅 로직 재설계 필요
         SearchResult searchLog = new SearchResult(null, user, query, resultCount, LocalDateTime.now());
         searchResultRepo.save(searchLog);
         log.info("검색 로그 기록 - 사용자: {}, 검색어: '{}', 결과: {}개", user.getId(), query, resultCount);
+        */
     }
 }
