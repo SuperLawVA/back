@@ -108,19 +108,12 @@ public class SecurityConfig {
         // 요청 인증/인가 및 필터
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
-                // 헬스체크 및 상태 확인 API 명시적 허용
-                .requestMatchers("/actuator/**", "/health", "/api/health", "/api/v1/status").permitAll()
-                // Swagger UI 관련 리소스 허용
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
-                // 검색 API 공개
-                .requestMatchers("/search/**").permitAll()
-                // 인증/인가 API 공개
-                .requestMatchers("/auth/**", "/verification/**").permitAll()
-                // 기본 API 경로 패턴 (필요에 따라 추가)
-                .requestMatchers("/api/v1/auth/**").permitAll()
-                // 나머지 요청은 인증 필요
-                .anyRequest().authenticated()
+                // 필수 인증 경로 (로그아웃, 사용자 정보 조회 등)
+                .requestMatchers(POST, "/auth/logout").authenticated()
+                .requestMatchers("/user/me").authenticated()
+                
+                // 그 외 모든 요청은 인증 없이 허용
+                .anyRequest().permitAll()
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
