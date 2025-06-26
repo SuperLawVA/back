@@ -82,7 +82,6 @@ jobs:
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
-          # 스크립트에서 사용할 모든 변수들을 이 곳에 정의합니다.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -98,7 +97,6 @@ jobs:
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           NAVER_REDIRECT_URI: ${{ secrets.NAVER_REDIRECT_URI }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          ML_API_BASE_URL: ${{ secrets.ML_API_BASE_URL }}
           CHATBOT_API_BASE_URL: ${{ secrets.CHATBOT_API_BASE_URL }}
           GCP_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
           GCP_ENABLED: ${{ secrets.GCP_ENABLED }}
@@ -110,30 +108,22 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          # 위 `env` 블록에 정의된 변수들의 '이름'만 쉼표로 구분하여 전달합니다.
-          envs: DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,ML_API_BASE_URL,CHATBOT_API_BASE_URL,GCP_SERVICE_ACCOUNT_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,AWS_S3_BUCKET_NAME,FRONTEND_URL
+          envs: DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,CHATBOT_API_BASE_URL,GCP_SERVICE_ACCOUNT_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,AWS_S3_BUCKET_NAME,FRONTEND_URL
           script: |
             set -e
             set -o pipefail
 
-            # 워크플로우의 env 값을 스크립트 내에서 사용하기 위해 export
             export ECR_REGISTRY="${{ env.ECR_REGISTRY }}"
             export IMAGE_TAG="${{ env.IMAGE_TAG }}"
             export AWS_REGION="${{ env.AWS_REGION }}"
 
-            echo "======> Deployment started on EC2 (HTTP Only)"
+            echo "======> Deployment started on EC2"
             cd /home/ubuntu
 
             echo "======> 1. Preparing environment"
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
             echo "======> 2. Creating .env file"
-            if [ -n "$GCP_SERVICE_ACCOUNT_KEY_JSON" ]; then
-              echo "$GCP_SERVICE_ACCOUNT_KEY_JSON" > /home/ubuntu/service-account-key.json
-              echo "✅ GCP service account key created."
-            fi
-
-            # .env 파일 생성 (HTTP 전용 설정)
             cat > .env << EOF
             # --- Database ---
             DATABASE_URL=$DATABASE_URL
@@ -151,9 +141,8 @@ jobs:
             # --- Mail ---
             MAIL_USERNAME=$MAIL_USERNAME
             MAIL_PASSWORD=$MAIL_PASSWORD
-            # --- Server (HTTP Only) ---
+            # --- Server ---
             SERVER_PORT=8080
-            SERVER_SSL_ENABLED=false
             # --- OAuth2 ---
             KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
             KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
@@ -163,7 +152,6 @@ jobs:
             NAVER_REDIRECT_URI=$NAVER_REDIRECT_URI
             # --- AI / ML / Chatbot ---
             GEMINI_API_KEY=$GEMINI_API_KEY
-            ML_API_BASE_URL=$ML_API_BASE_URL
             CHATBOT_API_BASE_URL=$CHATBOT_API_BASE_URL
             # --- GCP ---
             GCP_ENABLED=${GCP_ENABLED:-false}
@@ -178,32 +166,31 @@ jobs:
             ECR_REGISTRY=$ECR_REGISTRY
             IMAGE_TAG=$IMAGE_TAG
             EOF
-            echo "✅ .env file created for HTTP environment."
+            echo "✅ .env file created."
 
             echo "======> 3. Cleaning up old resources"
+            mv docker-compose.prod.yml docker-compose.yml
             if command -v docker-compose &>/dev/null; then COMPOSE_CMD="docker-compose"; else COMPOSE_CMD="docker compose"; fi
             echo "Using '$COMPOSE_CMD' for Docker Compose."
 
-            $COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans || true
+            $COMPOSE_CMD down --remove-orphans || true
             echo "🧹 Clearing up docker resources..."
             docker system prune -af
 
-            echo "======> 4. Starting new containers"
-            $COMPOSE_CMD -f docker-compose.prod.yml pull app
-            $COMPOSE_CMD -f docker-compose.prod.yml up -d --force-recreate
+            echo "======> 4. Starting new containers with --env-file"
+            $COMPOSE_CMD --env-file ./.env up -d --force-recreate
             echo "✅ Docker Compose 'up' command executed."
 
-            echo "======> 5. Health check (HTTP)"
+            echo "======> 5. Health check"
             HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
             echo "Health checking at: $HEALTH_CHECK_URL"
 
             # 10초 간격으로 12번 (총 2분) 헬스체크
             for i in {1..12}; do
-              # curl이 실패(non-zero exit)하더라도 스크립트가 중단되지 않도록 처리하고, HTTP 상태 코드를 변수에 저장
               HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL || echo "000")
               if [ "$HTTP_CODE" -eq 200 ]; then
                 echo "✅ Health check PASSED on attempt $i with status $HTTP_CODE."
-                $COMPOSE_CMD -f docker-compose.prod.yml ps
+                $COMPOSE_CMD ps
                 exit 0
               fi
               echo "Attempt $i: Health check failed with HTTP status $HTTP_CODE. Retrying in 10 seconds..."
@@ -212,10 +199,9 @@ jobs:
 
             echo "🚨 Health check FAILED after multiple attempts."
             echo "======> Final container status:"
-            $COMPOSE_CMD -f docker-compose.prod.yml ps -a
+            $COMPOSE_CMD ps -a
 
-            # app 서비스 컨테이너의 ID를 정확히 찾아 로그 출력
-            APP_CONTAINER_ID=$($COMPOSE_CMD -f docker-compose.prod.yml ps -q app)
+            APP_CONTAINER_ID=$($COMPOSE_CMD ps -q app)
             if [ -n "$APP_CONTAINER_ID" ]; then
               echo "======> Displaying last 200 lines of logs for container 'app' ($APP_CONTAINER_ID):"
               docker logs --tail 200 "$APP_CONTAINER_ID"

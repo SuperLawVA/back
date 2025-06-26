@@ -23,9 +23,13 @@ public record ChatSessionResponseDTO(
         String status
 ) {
     public static ChatSessionResponseDTO fromEntity(ChatSessionEntity entity) {
+        UserInSessionDTO userInSessionDTO = (entity.getUser() != null)
+                ? UserInSessionDTO.fromEntity(entity.getUser())
+                : null;
+
         return new ChatSessionResponseDTO(
                 entity.getSessionId(),
-                UserInSessionDTO.fromEntity(entity.getUser()),
+                userInSessionDTO,
                 entity.getCreatedAt(),
                 entity.getLastActiveAt(),
                 entity.getStatus().name()
@@ -44,6 +48,9 @@ public record ChatSessionResponseDTO(
             String nickname
     ) {
         public static UserInSessionDTO fromEntity(com.superlawva.domain.user.entity.User userEntity) {
+            if (userEntity == null) {
+                return null;
+            }
             return new UserInSessionDTO(
                     userEntity.getId(),
                     userEntity.getEmail(),
