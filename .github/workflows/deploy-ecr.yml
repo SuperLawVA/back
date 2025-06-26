@@ -143,7 +143,7 @@ jobs:
             # === SSL/HTTPS 설정 (Spring Boot 표준 형식) ===
             SERVER_PORT=8443
             SERVER_SSL_ENABLED=${{ secrets.SERVER_SSL_ENABLED }}
-            SERVER_SSL_KEY_STORE=file:/home/ubuntu/keystore.p12
+            SERVER_SSL_KEY_STORE=${{ secrets.SERVER_SSL_KEY_STORE }}
             SERVER_SSL_KEY_STORE_PASSWORD=${{ secrets.SERVER_SSL_KEY_STORE_PASSWORD }}
             SERVER_SSL_KEY_ALIAS=${{ secrets.SERVER_SSL_KEY_ALIAS }}
 
