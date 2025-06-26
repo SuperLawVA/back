@@ -168,6 +168,10 @@ jobs:
             EOF
             echo "✅ .env file created."
 
+            echo "======> DIAGNOSTICS: Printing .env file contents"
+            cat .env
+            echo "======> DIAGNOSTICS: Value of CHATBOT_API_BASE_URL in shell is: $CHATBOT_API_BASE_URL"
+
             echo "======> 3. Cleaning up old resources"
             mv docker-compose.prod.yml docker-compose.yml
             if command -v docker-compose &>/dev/null; then COMPOSE_CMD="docker-compose"; else COMPOSE_CMD="docker compose"; fi
