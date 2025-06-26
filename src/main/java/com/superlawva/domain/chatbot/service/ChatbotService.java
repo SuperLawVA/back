@@ -234,11 +234,13 @@ public class ChatbotService {
      */
     @Transactional
     public ChatSessionResponseDTO createSession(User user) {
-        if (user == null) {
-            log.error("새 세션 생성을 위한 사용자 정보가 null입니다.");
-            throw new BaseException(ErrorStatus._INTERNAL_SERVER_ERROR);
+        User sessionUser = user;
+        if (sessionUser == null) {
+            log.warn("인증 정보 없이 세션 생성을 시도합니다. 임시 사용자로 세션을 생성합니다.");
+            // 임시 사용자 객체 생성 (실제 DB에는 존재하지 않음)
+            sessionUser = User.builder().id(0L).nickname("Anonymous").build();
         }
-        ChatSessionEntity newSession = new ChatSessionEntity(user);
+        ChatSessionEntity newSession = new ChatSessionEntity(sessionUser);
         ChatSessionEntity savedSession = chatSessionRepository.save(newSession);
         return ChatSessionResponseDTO.fromEntity(savedSession);
     }

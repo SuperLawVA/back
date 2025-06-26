@@ -619,9 +619,6 @@ public class ChatbotController {
     public ResponseEntity<ChatSessionResponseDTO> createSession(
             @Parameter(hidden = true) @LoginUser User user
     ) {
-        if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
-        }
         ChatSessionResponseDTO newSession = chatbotService.createSession(user);
         return ResponseEntity.ok(newSession);
     }
