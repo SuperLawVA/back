@@ -201,7 +201,7 @@ jobs:
 
             # 10초 간격으로 12번 (총 2분) 헬스체크
             for i in {1..12}; do
-              HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL)
+              HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL || true)
               if [ "$HTTP_CODE" -eq 200 ]; then
                 echo "✅ Health check PASSED on attempt $i with status $HTTP_CODE."
                 $COMPOSE_CMD -f docker-compose.prod.yml ps
