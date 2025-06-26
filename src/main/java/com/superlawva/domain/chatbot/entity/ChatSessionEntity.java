@@ -3,22 +3,31 @@ package com.superlawva.domain.chatbot.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.superlawva.domain.user.entity.User;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "chatbot_sessions")
 @Getter
-@Builder
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
+@Builder
 public class ChatSessionEntity {
+    
+    public ChatSessionEntity(User user) {
+        this.sessionId = UUID.randomUUID().toString();
+        this.user = user;
+        this.status = SessionStatus.active;
+        this.createdAt = LocalDateTime.now();
+        this.lastActiveAt = LocalDateTime.now();
+    }
     
     @Id
     @Column(name = "session_id", length = 36)

@@ -113,12 +113,12 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/**", "/health", "/api/health", "/api/v1/status").permitAll()
                 // Swagger UI 관련 리소스 허용
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                // 검색 API 공개
+                .requestMatchers("/search/**").permitAll()
                 // 기본 API 경로 패턴 (필요에 따라 추가)
                 .requestMatchers("/api/v1/auth/**").permitAll()
-                // 나머지 요청은 인증 필요 (필요시 주석 해제)
-                // .anyRequest().authenticated()
-                // 현재는 모든 요청을 임시로 허용
-                .anyRequest().permitAll()
+                // 나머지 요청은 인증 필요
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 

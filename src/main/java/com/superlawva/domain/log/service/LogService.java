@@ -10,6 +10,7 @@ import com.superlawva.domain.user.entity.User;
 import com.superlawva.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class LogService {
 
     /* ------------- Repositories ------------- */
@@ -127,5 +129,17 @@ public class LogService {
         errorRepo.save(err);
     }
 
-
+    /**
+     * 검색 로그 기록
+     * @param user 검색을 수행한 사용자
+     * @param query 검색어
+     * @param resultCount 검색 결과 개수
+     */
+    @Transactional
+    public void logSearch(User user, String query, int resultCount) {
+        // @AllArgsConstructor를 사용한 객체 생성 (ID는 null, 나머지는 값 전달)
+        SearchResult searchLog = new SearchResult(null, user, query, resultCount, LocalDateTime.now());
+        searchResultRepo.save(searchLog);
+        log.info("검색 로그 기록 - 사용자: {}, 검색어: '{}', 결과: {}개", user.getId(), query, resultCount);
+    }
 }

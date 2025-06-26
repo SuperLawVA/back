@@ -617,22 +617,12 @@ public class ChatbotController {
     @PostMapping("/session")
     @SecurityRequirement(name = "JWT")
     public ResponseEntity<ChatSessionEntity> createSession(
-            @Valid @RequestBody SessionCreateRequestDTO request,
             @Parameter(hidden = true) @LoginUser User user
     ) {
         if (user == null) {
             throw new BaseException(ErrorStatus._UNAUTHORIZED);
         }
-        
-        // 요청된 userId와 JWT 토큰의 사용자 ID가 일치하는지 확인
-        if (!user.getId().equals(request.userId())) {
-            log.warn("JWT 토큰의 사용자 ID({})와 요청 사용자 ID({})가 일치하지 않음", user.getId(), request.userId());
-            throw new BaseException(ErrorStatus._FORBIDDEN);
-        }
-        
-        ChatSessionEntity newSession = chatbotService.createNewSession(user);
-        log.info("새 세션 생성 API 호출 - 사용자: {}, 세션: {}", user.getId(), newSession.getSessionId());
-        
+        ChatSessionEntity newSession = chatbotService.createSession(user);
         return ResponseEntity.ok(newSession);
     }
 

@@ -8,6 +8,9 @@ import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
 import com.superlawva.domain.chatbot.repository.ChatSessionRepository;
 import com.superlawva.domain.chatbot.repository.ChatMessageRepository;
 import com.superlawva.domain.user.entity.User;
+import com.superlawva.domain.user.repository.UserRepository;
+import com.superlawva.global.exception.BaseException;
+import com.superlawva.global.response.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -30,6 +33,7 @@ public class ChatbotService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ChatbotApiService chatbotApiService;
+    private final UserRepository userRepository;
     
     /**
      * 챗봇에게 메시지 전송 (ML 팀 API 연동)
@@ -227,17 +231,14 @@ public class ChatbotService {
     /**
      * 새 세션 생성
      */
-    public ChatSessionEntity createNewSession(User user) {
-        String newSessionId = UUID.randomUUID().toString();
-        ChatSessionEntity newSession = ChatSessionEntity.builder()
-                .sessionId(newSessionId)
-                .user(user)
-                .status(ChatSessionEntity.SessionStatus.active)
-                .build();
-        
-        ChatSessionEntity savedSession = chatSessionRepository.save(newSession);
-        log.info("새 세션 생성됨 - 사용자: {}, 세션: {}", user.getId(), newSessionId);
-        return savedSession;
+    @Transactional
+    public ChatSessionEntity createSession(User user) {
+        if (user == null) {
+            log.error("새 세션 생성을 위한 사용자 정보가 null입니다.");
+            throw new BaseException(ErrorStatus._INTERNAL_SERVER_ERROR);
+        }
+        ChatSessionEntity newSession = new ChatSessionEntity(user);
+        return chatSessionRepository.save(newSession);
     }
 
     /**

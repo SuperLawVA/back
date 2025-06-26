@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -265,18 +264,15 @@ public class SearchController {
         )
     })
     @PostMapping("/search")
-    @SecurityRequirement(name = "JWT")
     public ResponseEntity<SearchResponseDTO> searchDocuments(
             @Valid @RequestBody SearchRequestDTO request,
             @Parameter(hidden = true) @LoginUser User user
     ) {
-        if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
-        }
+        log.info("검색 요청 - Query: '{}', Type: '{}', k: {}, User: {}", 
+                 request.query(), request.search_type(), request.k(), (user != null ? user.getId() : "Anonymous"));
         
-        log.info("법령/판례 검색 요청 - 사용자: {}, 질의: '{}'", user.getId(), request.query());
+        SearchResponseDTO response = searchService.search(request, user);
         
-        SearchResponseDTO response = searchService.searchDocuments(request, user);
         return ResponseEntity.ok(response);
     }
 } 
