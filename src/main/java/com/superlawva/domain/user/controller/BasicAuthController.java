@@ -230,6 +230,9 @@ public class BasicAuthController {
         - 알고리즘: HS256 (HMAC SHA-256)
         - 서버에서 토큰 검증 시 페이로드의 userId를 사용하여 사용자 정보 조회
         - 토큰 만료 시 401 Unauthorized 응답
+        
+        **403 Forbidden 발생 시:**
+        `SecurityConfig`에서 `/auth/login` 경로가 `permitAll()`로 설정되어 있는지 확인하세요.
         """
     )
     @ApiResponses({

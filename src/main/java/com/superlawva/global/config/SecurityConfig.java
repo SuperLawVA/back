@@ -115,6 +115,8 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                 // 검색 API 공개
                 .requestMatchers("/search/**").permitAll()
+                // 인증/인가 API 공개
+                .requestMatchers("/auth/**", "/verification/**").permitAll()
                 // 기본 API 경로 패턴 (필요에 따라 추가)
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 // 나머지 요청은 인증 필요
