@@ -58,6 +58,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<Object> handleGeneralException(Exception e) {
+        // 임시 디버깅: 로깅 시스템을 우회하고 원시 스택 트레이스를 직접 콘솔에 출력
+        System.err.println("===== START OF FORCED STACK TRACE =====");
+        e.printStackTrace();
+        System.err.println("===== END OF FORCED STACK TRACE =====");
+
         log.error("Unexpected error: ", e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure("500", "예상치 못한 오류가 발생했습니다.", null);
         return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
