@@ -3,6 +3,7 @@ package com.superlawva.domain.chatbot.service;
 import com.superlawva.domain.chatbot.dto.ChatbotRequestDTO;
 import com.superlawva.domain.chatbot.dto.ChatbotResponseDTO;
 import com.superlawva.domain.chatbot.dto.SessionListResponseDTO;
+import com.superlawva.domain.chatbot.dto.ChatSessionResponseDTO;
 import com.superlawva.domain.chatbot.entity.ChatSessionEntity;
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
 import com.superlawva.domain.chatbot.repository.ChatSessionRepository;
@@ -232,13 +233,14 @@ public class ChatbotService {
      * 새 세션 생성
      */
     @Transactional
-    public ChatSessionEntity createSession(User user) {
+    public ChatSessionResponseDTO createSession(User user) {
         if (user == null) {
             log.error("새 세션 생성을 위한 사용자 정보가 null입니다.");
             throw new BaseException(ErrorStatus._INTERNAL_SERVER_ERROR);
         }
         ChatSessionEntity newSession = new ChatSessionEntity(user);
-        return chatSessionRepository.save(newSession);
+        ChatSessionEntity savedSession = chatSessionRepository.save(newSession);
+        return ChatSessionResponseDTO.fromEntity(savedSession);
     }
 
     /**

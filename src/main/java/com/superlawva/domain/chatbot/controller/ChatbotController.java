@@ -2,6 +2,7 @@ package com.superlawva.domain.chatbot.controller;
 
 import com.superlawva.domain.chatbot.dto.ChatbotRequestDTO;
 import com.superlawva.domain.chatbot.dto.ChatbotResponseDTO;
+import com.superlawva.domain.chatbot.dto.ChatSessionResponseDTO;
 import com.superlawva.domain.chatbot.dto.SessionDeleteResponseDTO;
 import com.superlawva.domain.chatbot.dto.SessionListResponseDTO;
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
@@ -615,13 +616,13 @@ public class ChatbotController {
     })
     @PostMapping("/session")
     @SecurityRequirement(name = "JWT")
-    public ResponseEntity<ChatSessionEntity> createSession(
+    public ResponseEntity<ChatSessionResponseDTO> createSession(
             @Parameter(hidden = true) @LoginUser User user
     ) {
         if (user == null) {
             throw new BaseException(ErrorStatus._UNAUTHORIZED);
         }
-        ChatSessionEntity newSession = chatbotService.createSession(user);
+        ChatSessionResponseDTO newSession = chatbotService.createSession(user);
         return ResponseEntity.ok(newSession);
     }
 
