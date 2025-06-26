@@ -1,19 +1,24 @@
 // WordsSearchRequestDto.java
 package com.superlawva.domain.words.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Data;
 
-@Getter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class WordsSearchRequestDto {
     
+    @Schema(description = "검색할 키워드", example = "계약금")
+    @Builder.Default
     private String keyword = "";
     
+    @Schema(description = "페이지 번호 (0부터 시작)", example = "0")
     @Builder.Default
     private int page = 1;
     

@@ -2,7 +2,6 @@ package com.superlawva.domain.chatbot.controller;
 
 import com.superlawva.domain.chatbot.dto.ChatbotRequestDTO;
 import com.superlawva.domain.chatbot.dto.ChatbotResponseDTO;
-import com.superlawva.domain.chatbot.dto.SessionCreateRequestDTO;
 import com.superlawva.domain.chatbot.dto.SessionDeleteResponseDTO;
 import com.superlawva.domain.chatbot.dto.SessionListResponseDTO;
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
