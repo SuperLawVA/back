@@ -46,6 +46,9 @@ public enum ErrorStatus {
     NAVER_TOKEN_REQUEST_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NAVER500", "네이버 토큰 요청에 실패했습니다."),
     NAVER_USER_INFO_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "NAVER500", "네이버 사용자 정보 조회에 실패했습니다."),
 
+    // ML
+    ML_API_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ML500", "ML 검색 API 호출에 실패했습니다. 관리자에게 문의하세요."),
+
     // MAIL
     MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "MAIL500", "메일 전송에 실패했습니다.");
 

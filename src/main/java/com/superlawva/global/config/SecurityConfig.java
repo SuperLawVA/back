@@ -114,8 +114,8 @@ public class SecurityConfig {
                 
                 // 그 외 모든 요청은 인증 없이 허용
                 .anyRequest().permitAll()
-            )
-            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+            );
+            // .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         // Spring Security의 기본 로그아웃 처리 활성화
         http.logout(logout -> logout

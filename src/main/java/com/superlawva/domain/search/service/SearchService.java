@@ -30,7 +30,7 @@ public class SearchService {
     private final CasesRepository casesRepository;
 
     @Value("${ml.api.base-url}")
-    private String mlApiBaseUrl;
+    private String searchApiBaseUrl;
 
     public SearchResponseDTO search(SearchRequestDTO request, @Nullable User user) {
         long startTime = System.currentTimeMillis();
@@ -40,7 +40,7 @@ public class SearchService {
         }
 
         try {
-            String url = mlApiBaseUrl + "/api/v1/search";
+            String url = searchApiBaseUrl + "/api/v1/search";
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
@@ -70,12 +70,12 @@ public class SearchService {
                 return new SearchResponseDTO(laws, cases, allDocuments, searchTimeSeconds, allDocuments.size());
             } else {
                 log.error("ML 검색 API 호출 실패 - 상태코드: {}", response.getStatusCode());
-                throw new BaseException(ErrorStatus._INTERNAL_SERVER_ERROR);
+                throw new BaseException(ErrorStatus.ML_API_CONNECTION_FAILED);
             }
 
         } catch (Exception e) {
             log.error("ML 검색 API 호출 중 오류 발생", e);
-            throw new BaseException(ErrorStatus._INTERNAL_SERVER_ERROR);
+            throw new BaseException(ErrorStatus.ML_API_CONNECTION_FAILED);
         }
     }
 

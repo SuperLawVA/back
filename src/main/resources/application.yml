@@ -91,7 +91,7 @@ chatbot:
 # ML API 설정 (새로 추가)
 ml:
   api:
-    base-url: ${ML_API_BASE_URL:http://localhost:8000}
+    base-url: ${CHATBOT_API_BASE_URL:http://localhost:8000}
     connection-timeout: 10000
     read-timeout: 60000
 
