@@ -252,3 +252,4 @@ dependency-reduced-pom.xml
 README.html
 .exercism
 github_key
+environment-variables.md
