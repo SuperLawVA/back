@@ -83,7 +83,6 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         env:
           # 스크립트에서 사용할 모든 변수들을 이 곳에 정의합니다.
-          # 이렇게 하면 스크립트 내에서 secrets을 직접 참조할 필요가 없어집니다.
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -129,7 +128,6 @@ jobs:
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
             echo "======> 2. Creating .env file"
-            # GCP 키 파일 생성 (변수는 action의 envs를 통해 전달됨)
             if [ -n "$GCP_SERVICE_ACCOUNT_KEY_JSON" ]; then
               echo "$GCP_SERVICE_ACCOUNT_KEY_JSON" > /home/ubuntu/service-account-key.json
               echo "✅ GCP service account key created."
@@ -201,7 +199,8 @@ jobs:
 
             # 10초 간격으로 12번 (총 2분) 헬스체크
             for i in {1..12}; do
-              HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL || true)
+              # curl이 실패(non-zero exit)하더라도 스크립트가 중단되지 않도록 처리하고, HTTP 상태 코드를 변수에 저장
+              HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL || echo "000")
               if [ "$HTTP_CODE" -eq 200 ]; then
                 echo "✅ Health check PASSED on attempt $i with status $HTTP_CODE."
                 $COMPOSE_CMD -f docker-compose.prod.yml ps

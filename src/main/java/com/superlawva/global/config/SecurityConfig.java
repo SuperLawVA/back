@@ -1,5 +1,6 @@
 package com.superlawva.global.config;
 
+import com.superlawva.domain.user.entity.User;
 import com.superlawva.domain.user.repository.UserRepository;
 import com.superlawva.global.security.filter.JwtAuthFilter;
 import com.superlawva.global.security.filter.LogoutFilter;
@@ -28,6 +29,8 @@ import org.springframework.core.env.Environment;
 import com.superlawva.global.security.service.TokenBlacklistService;
 import com.superlawva.global.security.service.CustomOAuth2UserService;
 import com.superlawva.global.security.handler.OAuth2LoginSuccessHandler;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Arrays;
 
@@ -67,11 +70,6 @@ public class SecurityConfig {
         AuthenticationManagerBuilder builder = http.getSharedObject(AuthenticationManagerBuilder.class);
         builder.authenticationProvider(provider);
         return builder.build();
-    }
-
-    @Bean
-    public LogoutFilter logoutFilter() {
-        return new LogoutFilter(jwtTokenProvider, refreshTokenService);
     }
 
     @Bean
@@ -122,8 +120,24 @@ public class SecurityConfig {
                 // 현재는 모든 요청을 임시로 허용
                 .anyRequest().permitAll()
             )
-            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(logoutFilter(), JwtAuthFilter.class);
+            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+
+        // Spring Security의 기본 로그아웃 처리 활성화
+        http.logout(logout -> logout
+                .logoutUrl("/auth/logout") // 로그아웃을 처리할 URL 지정
+                .addLogoutHandler((request, response, authentication) -> {
+                    if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
+                        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                        String email = userDetails.getUsername();
+                        userRepository.findByEmail(email).ifPresent(user -> {
+                            refreshTokenService.deleteRefreshToken(user.getId());
+                        });
+                    }
+                })
+                .logoutSuccessHandler((request, response, authentication) ->
+                    response.setStatus(HttpServletResponse.SC_OK)
+                )
+        );
 
         // OAuth2 기능 활성화 여부에 따라 설정 적용
         if (oauth2Enabled) {

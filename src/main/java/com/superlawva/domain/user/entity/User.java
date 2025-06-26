@@ -1,6 +1,5 @@
 package com.superlawva.domain.user.entity;
 
-// import com.superlawva.global.security.converter.AesCryptoConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
