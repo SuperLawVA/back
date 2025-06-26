@@ -18,7 +18,6 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       # 1. 소스코드 체크아웃
       - name: Checkout source code
@@ -28,7 +27,7 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v3
         with:
-          distribution: temurin
+          distribution: "temurin"
           java-version: "17"
 
       # 3. Gradle 캐시
@@ -48,301 +47,194 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean bootJar -x test
 
-      # 5. AWS 인증 및 ECR 로그인을 다시 추가합니다.
-      - name: AWS 자격 증명 구성
+      # 5. AWS 인증 및 ECR 로그인
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Amazon ECR 로그인
+      - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       # 6. Docker 이미지 빌드, 태깅, 푸시
-      - name: Docker 이미지 빌드, 태깅, 푸시
+      - name: Build, tag, and push Docker image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "✅ Docker 이미지 푸시 완료: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "✅ Docker image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-      # 8. docker-compose.prod.yml 파일 EC2에 복사
+      # 7. docker-compose.prod.yml 파일 EC2에 복사
       - name: Copy docker-compose.prod.yml to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          source: docker-compose.prod.yml
-          target: /home/ubuntu/
+          source: "docker-compose.prod.yml"
+          target: "/home/ubuntu/"
 
-      # 9. EC2에 배포
-      - name: Deploy to EC2
+      # 8. EC2에 배포
+      - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          envs: AWS_REGION,ECR_REGISTRY,ECR_REPOSITORY,IMAGE_TAG,${{ join(secrets.*, ',') }}
+          envs: ${{ toJSON(secrets) }} # 모든 시크릿을 안전하게 전달
           script: |
-            set -e
+            set -e # 스크립트 실패 시 즉시 중단
+            set -o pipefail # 파이프라인 실패 시 중단
 
-            echo "=== 환경 준비 ==="
+            export ECR_REGISTRY=${{ env.ECR_REGISTRY }}
+            export IMAGE_TAG=${{ env.IMAGE_TAG }}
+            export AWS_REGION=${{ env.AWS_REGION }}
+
+            echo "======> Deployment started on EC2"
             cd /home/ubuntu
 
-            # ECR 로그인 (가장 안전한 방식)
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+            echo "======> 1. Preparing environment"
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-            # 환경변수 파일 생성
-            echo "환경변수 설정..."
-
-            # 🚨 GCP 서비스 계정 키 파일 생성
-            # GitHub Secret에 저장된 JSON 내용을 파일로 만듭니다.
-            echo "${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}" > /home/ubuntu/service-account-key.json
-
-            # 🔐 SSL 키스토어 파일 복원
-            # GitHub Secret에 저장된 base64 인코딩된 키스토어를 복원합니다.
-            if [ -n "${{ secrets.SSL_KEYSTORE_BASE64 }}" ]; then
-              echo "SSL 키스토어 복원 중..."
-              echo "${{ secrets.SSL_KEYSTORE_BASE64 }}" | base64 -d > /home/ubuntu/keystore.p12
-              chmod 600 /home/ubuntu/keystore.p12
-              echo "✅ SSL 키스토어 복원 완료"
+            echo "======> 2. Creating .env file"
+            # GCP 서비스 계정 키 파일 생성
+            if [ -n "$GCP_SERVICE_ACCOUNT_KEY_JSON" ]; then
+              echo "$GCP_SERVICE_ACCOUNT_KEY_JSON" > /home/ubuntu/service-account-key.json
+              echo "✅ GCP service account key created."
             else
-              echo "⚠️ SSL 키스토어가 없습니다. HTTP 모드로 실행됩니다."
+              echo "⚠️ GCP service account key not found."
             fi
 
+            # SSL 키스토어 파일 복원
+            if [ -n "$SSL_KEYSTORE_BASE64" ]; then
+              echo "$SSL_KEYSTORE_BASE64" | base64 -d > /home/ubuntu/keystore.p12
+              chmod 600 /home/ubuntu/keystore.p12
+              echo "✅ SSL keystore restored."
+            else
+              echo "⚠️ SSL keystore not found. Running in HTTP mode."
+            fi
+
+            # .env 파일 생성
             cat > .env << EOF
-            # === 데이터베이스 (RDS) ===
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            DB_USERNAME=${{ secrets.DB_USERNAME }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-
-            # === MongoDB ===
-            MONGODB_URI=${{ secrets.MONGODB_URI }}
-
-            # === Redis (Docker Container) ===
+            # --- Database ---
+            DATABASE_URL=$DATABASE_URL
+            DB_USERNAME=$DB_USERNAME
+            DB_PASSWORD=$DB_PASSWORD
+            # --- MongoDB ---
+            MONGODB_URI=$MONGODB_URI
+            # --- Redis ---
             REDIS_HOST=redis
             REDIS_PORT=6379
-
-            # === JWT 토큰 ===
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            # --- JWT ---
+            JWT_SECRET=$JWT_SECRET
             JWT_ACCESS_TOKEN_VALIDITY=43200000
-
-            # === AES 암호화 ===
-            AES_SECRET_KEY=${{ secrets.AES_SECRET_KEY }}
-
-            # === 이메일 서비스 ===
-            MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}
-            MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}
-
-            # === SSL/HTTPS 설정 (Spring Boot 표준 형식) ===
-            SERVER_PORT=8443
-            SERVER_SSL_ENABLED=${{ secrets.SERVER_SSL_ENABLED }}
-            SERVER_SSL_KEY_STORE=${{ secrets.SERVER_SSL_KEY_STORE }}
-            SERVER_SSL_KEY_STORE_PASSWORD=${{ secrets.SERVER_SSL_KEY_STORE_PASSWORD }}
-            SERVER_SSL_KEY_ALIAS=${{ secrets.SERVER_SSL_KEY_ALIAS }}
-
-            # === OAuth2 소셜 로그인 ===
-            KAKAO_CLIENT_ID=${{ secrets.KAKAO_CLIENT_ID }}
-            KAKAO_CLIENT_SECRET=${{ secrets.KAKAO_CLIENT_SECRET }}
-            KAKAO_REDIRECT_URI=${{ secrets.SSL_ENABLED == 'true' && secrets.KAKAO_REDIRECT_URI_HTTPS || secrets.KAKAO_REDIRECT_URI }}
-            NAVER_CLIENT_ID=${{ secrets.NAVER_CLIENT_ID }}
-            NAVER_CLIENT_SECRET=${{ secrets.NAVER_CLIENT_SECRET }}
-            NAVER_REDIRECT_URI=${{ secrets.SSL_ENABLED == 'true' && secrets.NAVER_REDIRECT_URI_HTTPS || secrets.NAVER_REDIRECT_URI }}
-
-            # === AI 서비스 설정 ===
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY || 'dummy-api-key' }}
-            GEMINI_MODEL_NAME=gemini-2.0-flash-exp
-            GEMINI_API_URL=https://generativelanguage.googleapis.com
-
-            # === Google Cloud 설정 ===
-            GCP_ENABLED=${{ secrets.GCP_ENABLED || 'false' }}
-            GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID || 'dummy-project' }}
-            GCP_LOCATION=us
-            GCP_PROCESSOR_ID=${{ secrets.GCP_PROCESSOR_ID || 'dummy-processor' }}
-
-            # === ML API 설정 ===
-            ML_API_BASE_URL=http://3.34.41.104:8000
-            ML_API_CONNECTION_TIMEOUT=10000
-            ML_API_READ_TIMEOUT=60000
-
-            # === 챗봇 API 설정 ===
-            CHATBOT_API_BASE_URL=http://43.201.42.119:8000
-            CHATBOT_API_TIMEOUT=30000
-
-            # === AWS 설정 ===
-            AWS_REGION=ap-northeast-2
-            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            AWS_S3_BUCKET_NAME=superlawva-logs
-
-            # === 기타 설정 ===
-            FRONTEND_URL=https://super-lawva.vercel.app
-            SPRING_PROFILES_ACTIVE=${{ secrets.SERVER_SSL_ENABLED == 'true' && 'prod,ssl' || 'prod' }}
-
-            # === Docker 이미지 정보 ===
+            # --- AES ---
+            AES_SECRET_KEY=$AES_SECRET_KEY
+            # --- Mail ---
+            MAIL_USERNAME=$MAIL_USERNAME
+            MAIL_PASSWORD=$MAIL_PASSWORD
+            # --- SSL/HTTPS ---
+            SERVER_PORT=${SERVER_PORT:-8080}
+            SERVER_SSL_ENABLED=${SERVER_SSL_ENABLED:-false}
+            SERVER_SSL_KEY_STORE=$SERVER_SSL_KEY_STORE
+            SERVER_SSL_KEY_STORE_PASSWORD=$SERVER_SSL_KEY_STORE_PASSWORD
+            SERVER_SSL_KEY_ALIAS=$SERVER_SSL_KEY_ALIAS
+            # --- OAuth2 ---
+            KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
+            KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
+            KAKAO_REDIRECT_URI=$KAKAO_REDIRECT_URI
+            NAVER_CLIENT_ID=$NAVER_CLIENT_ID
+            NAVER_CLIENT_SECRET=$NAVER_CLIENT_SECRET
+            NAVER_REDIRECT_URI=$NAVER_REDIRECT_URI
+            # --- AI Services ---
+            GEMINI_API_KEY=$GEMINI_API_KEY
+            GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-gemini-pro}
+            GEMINI_API_URL=${GEMINI_API_URL:-https://generativelanguage.googleapis.com}
+            # --- GCP ---
+            GCP_ENABLED=${GCP_ENABLED:-false}
+            GCP_PROJECT_ID=$GCP_PROJECT_ID
+            GCP_LOCATION=${GCP_LOCATION:-us}
+            GCP_PROCESSOR_ID=$GCP_PROCESSOR_ID
+            # --- ML API ---
+            ML_API_BASE_URL=$ML_API_BASE_URL
+            ML_API_CONNECTION_TIMEOUT=${ML_API_CONNECTION_TIMEOUT:-10000}
+            ML_API_READ_TIMEOUT=${ML_API_READ_TIMEOUT:-60000}
+            # --- Chatbot API ---
+            CHATBOT_API_BASE_URL=$CHATBOT_API_BASE_URL
+            CHATBOT_API_TIMEOUT=${CHATBOT_API_TIMEOUT:-30000}
+            # --- AWS ---
+            AWS_REGION=$AWS_REGION
+            AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+            AWS_S3_BUCKET_NAME=$AWS_S3_BUCKET_NAME
+            # --- General ---
+            FRONTEND_URL=$FRONTEND_URL
+            SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+            # --- Docker Image Info ---
             ECR_REGISTRY=$ECR_REGISTRY
             IMAGE_TAG=$IMAGE_TAG
             EOF
+            echo "✅ .env file created."
 
-            # .env 파일 확인 (보안을 위해 각 시크릿의 길이만 출력)
-            echo "=== .env 파일 생성 완료 (길이 검증 모드) ==="
-            echo "각 환경 변수의 글자 수를 확인하여 값이 올바르게 전달되었는지 검증합니다."
-            echo "--------------------------------------------------------"
-            while IFS='=' read -r key value; do
-              # 실제 값을 출력하는 대신 글자 수를 셉니다.
-              printf "%-35s: %s 글자\n" "$key" "${#value}"
-            done < .env
-            echo "--------------------------------------------------------"
-
-            echo "=== Docker Compose 배포 ==="
-            # 포트 정리 (SSL 사용 시 8443, HTTP 사용 시 8080)
-            echo "포트 정리 중..."
-            sudo fuser -k 6379/tcp || true
-            sudo fuser -k 6380/tcp || true
-            sudo fuser -k 8080/tcp || true
-            sudo fuser -k 8443/tcp || true
-            sudo lsof -ti:6379 | xargs -r sudo kill -9 || true
-            sudo lsof -ti:6380 | xargs -r sudo kill -9 || true
-            sudo lsof -ti:8080 | xargs -r sudo kill -9 || true
-            sudo lsof -ti:8443 | xargs -r sudo kill -9 || true
-
-            # Redis 시스템 서비스 중지 (있다면)
-            sudo systemctl stop redis-server 2>/dev/null || true
-            sudo systemctl stop redis 2>/dev/null || true
-
-            # Redis 관련 Docker 컨테이너 정리
-            docker stop $(docker ps -q --filter "name=redis") 2>/dev/null || true
-            docker rm $(docker ps -aq --filter "name=redis") 2>/dev/null || true
-
-            # Docker Compose 설치 확인 및 명령어 결정
-            if command -v docker-compose >/dev/null 2>&1; then
-              COMPOSE_CMD="docker-compose"
-            elif docker compose version >/dev/null 2>&1; then
-              COMPOSE_CMD="docker compose"
-            else
-              echo "Docker Compose를 설치합니다..."
-              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              COMPOSE_CMD="docker-compose"
-            fi
-
-            echo "사용할 Docker Compose 명령어: $COMPOSE_CMD"
-
-            # 기존 컨테이너 중지
-            $COMPOSE_CMD -f docker-compose.prod.yml down || true
-
-            # 🔥 새 이미지를 받기 전에 Docker 시스템을 정리하여 공간 확보 (중요!)
-            echo "🧹 Clearing up docker resources to free up space..."
-            docker system prune -af || true
-
-            # 새 이미지 풀
-            $COMPOSE_CMD -f docker-compose.prod.yml pull app
-
-            # SSL 활성화 여부에 따라 프로필 결정
-            PROFILES="prod"
-            if [ "${{ secrets.SSL_ENABLED }}" = "true" ]; then
-              PROFILES="prod,ssl"
-            fi
-            echo "🚀 활성화할 Spring 프로필: $PROFILES (이 값은 .env 파일에 기록됩니다)"
-
-            # 새 컨테이너 시작 (.env 파일을 통해 변수가 주입되므로 명령어 앞의 변수 선언 제거)
-            $COMPOSE_CMD -f docker-compose.prod.yml up -d
-
-            # 로그 확인
-            echo "=== 배포 완료 - 실시간 로그 확인 ==="
-            echo "60초간 실시간 로그 모니터링..."
-            timeout 60s $COMPOSE_CMD -f docker-compose.prod.yml logs -f app || true
-
-            echo "=== 최근 로그 확인 ==="
-            $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=100 app
-
-            # 헬스체크
-            echo "=== 헬스체크 ==="
-            echo "컨테이너 상태 확인:"
-            $COMPOSE_CMD -f docker-compose.prod.yml ps
-
-            # .env 파일에서 환경 변수 로드 (헬스체크를 위해)
-            if [ -f .env ]; then
-              export $(grep -v '^#' .env | xargs)
-            fi
-
-            # SSL 설정에 따른 헬스체크 URL 결정
-            if [ "${SERVER_SSL_ENABLED}" = "true" ]; then
-              HEALTH_PORT=${SERVER_PORT:-8443} # .env에 포트가 없을 경우 기본값
-              HEALTH_URL_BASE="https://localhost:${HEALTH_PORT}"
-            else
-              HEALTH_PORT=${SERVER_PORT:-8080} # .env에 포트가 없을 경우 기본값
-              HEALTH_URL_BASE="http://localhost:${HEALTH_PORT}"
-            fi
-
-            # jq 설치 (JSON 파싱을 위해)
-            if ! command -v jq &> /dev/null; then
-              echo "jq가 설치되어 있지 않습니다. 설치를 시도합니다..."
-              sudo apt-get update && sudo apt-get install -y jq || true # 실패해도 스크립트가 중단되지 않도록
-            fi
-
-            echo "Actuator 헬스체크를 시작합니다... (최대 2회 시도)"
-            for i in {1..2}; do
-              echo "헬스체크 시도 $i/2... (URL: $HEALTH_URL_BASE/actuator/health)"
-
-              # Actuator의 상세 헬스 정보를 curl로 요청하고 HTTP 상태 코드를 저장
-              HTTP_STATUS=$(curl -s -o /tmp/health_check.json -w "%{http_code}" -m 120 -k "$HEALTH_URL_BASE/actuator/health")
-
-              # jq가 설치되어 있고, HTTP 상태 코드가 200이며, JSON 응답 내용의 status가 "UP"인지 확인
-              if command -v jq &> /dev/null && [ "$HTTP_STATUS" -eq 200 ] && [ "$(jq -r '.status' /tmp/health_check.json 2>/dev/null)" = "UP" ]; then
-                echo "✅ Actuator 헬스체크 성공! 애플리케이션이 정상적으로 시작되었습니다."
-                echo "--- 상세 정보 ---"
-                jq . /tmp/health_check.json
-                echo "-----------------"
-                break
-              # jq가 없거나, HTTP 상태가 200이 아닌 경우 (단순 성공/실패만 확인)
-              elif ! command -v jq &> /dev/null && [ "$HTTP_STATUS" -eq 200 ]; then
-                echo "✅ Actuator 헬스체크 성공! (기본 응답)"
-                cat /tmp/health_check.json
-                break
-              else
-                echo "❌ 헬스체크 실패 (HTTP Status: $HTTP_STATUS)"
-                echo "--- 실패 시 상세 응답 ---"
-                # 응답이 JSON 형식이면 예쁘게 출력하고, 아니면 그냥 출력
-                if command -v jq &> /dev/null && jq . /tmp/health_check.json > /dev/null 2>&1; then
-                  jq . /tmp/health_check.json
-                else
-                  cat /tmp/health_check.json
-                fi
-                echo "-----------------------"
-                
-                if [ $i -lt 2 ]; then
-                  echo "⏳ 20초 후 재시도합니다..."
-                  sleep 20
-                else
-                  echo "🔥 최종 헬스체크에 실패했습니다. 배포를 중단합니다."
-                  echo "더 많은 컨테이너 로그를 확인하려면 GitHub Actions 로그를 참조하세요."
-                  $COMPOSE_CMD -f docker-compose.prod.yml logs --tail=300 app
-                  exit 1
-                fi
-              fi
+            echo "======> 3. Cleaning up old resources"
+            # 포트 정리
+            PORTS_TO_FREE="6379 6380 8080 8443"
+            for PORT in $PORTS_TO_FREE; do
+              echo "Clearing port $PORT..."
+              sudo fuser -k ${PORT}/tcp || true
+              sudo lsof -ti:${PORT} | xargs -r sudo kill -9 || true
             done
 
-            # SSL 설정 정보 출력
-            if [ "${SERVER_SSL_ENABLED}" = "true" ]; then
-              echo "🔐 HTTPS 설정으로 배포 완료!"
-              echo "📍 접속 URL: https://your-domain.com"
-              echo "📋 Swagger UI: https://your-domain.com/swagger-ui/index.html"
-              echo "⚠️ 자체 서명 인증서 사용 시 브라우저에서 '안전하지 않음' 경고가 나타날 수 있습니다."
+            # Docker Compose 명령어 결정
+            if command -v docker-compose &>/dev/null; then
+              COMPOSE_CMD="docker-compose"
+            elif docker compose version &>/dev/null; then
+              COMPOSE_CMD="docker compose"
             else
-              echo "🔓 HTTP 설정으로 배포 완료!"
-              echo "📍 접속 URL: http://your-domain.com"
-              echo "📋 Swagger UI: http://your-domain.com/swagger-ui/index.html"
+              echo "Error: docker-compose or docker compose not found." >&2
+              exit 1
+            fi
+            echo "Using '$COMPOSE_CMD' for Docker Compose."
+
+            $COMPOSE_CMD -f docker-compose.prod.yml down --remove-orphans || true
+            echo "🧹 Clearing up docker resources to free up space..."
+            docker system prune -af
+
+            echo "======> 4. Starting new containers"
+            $COMPOSE_CMD -f docker-compose.prod.yml pull app
+            $COMPOSE_CMD -f docker-compose.prod.yml up -d --force-recreate
+            echo "✅ Docker Compose 'up' command executed."
+
+            echo "======> 5. Health check"
+            # SSL 활성화 여부에 따라 헬스체크 URL 및 포트 결정
+            if [ "$SERVER_SSL_ENABLED" = "true" ]; then
+              HEALTH_CHECK_URL="https://localhost:8443/actuator/health"
+              CURL_OPTS="--insecure" # 로컬에서 자체 서명 인증서 사용 시 필요
+            else
+              HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
+              CURL_OPTS=""
             fi
 
-            # 정리
-            echo "=== 이미지 정리 ==="
-            docker system prune -f || true
+            echo "Health checking at: $HEALTH_CHECK_URL"
 
-            echo "🎉 배포 완료!"
+            # 10초 간격으로 12번 (총 2분) 헬스체크 시도
+            for i in {1..12}; do
+              # curl의 --fail 옵션은 HTTP 상태 코드가 2xx가 아니면 실패로 처리
+              # -s: silent, -f: fail, -v: verbose
+              if curl -sf $CURL_OPTS $HEALTH_CHECK_URL; then
+                echo "✅ Health check PASSED on attempt $i."
+                docker ps
+                exit 0
+              fi
+              echo "Attempt $i: Health check failed. Retrying in 10 seconds..."
+              sleep 10
+            done
+
+            echo "🚨 Health check FAILED after multiple attempts."
+            echo "======> Container logs:"
+            $COMPOSE_CMD logs --tail="100" app
+            exit 1

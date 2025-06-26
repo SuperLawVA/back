@@ -110,6 +110,7 @@ public class SecurityConfig {
         // 요청 인증/인가 및 필터
         http
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll()
                 // 헬스체크 및 상태 확인 API 명시적 허용
                 .requestMatchers("/actuator/**", "/health", "/api/health", "/api/v1/status").permitAll()
                 // Swagger UI 관련 리소스 허용
