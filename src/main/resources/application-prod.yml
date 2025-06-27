@@ -137,7 +137,7 @@ chatbot:
 # ML API 설정
 ml:
   api:
-    base-url: ${ML_API_BASE_URL:http://3.34.41.104:8000}
+    base-url: ${ML_API_BASE_URL:http://43.201.42.119:8000/}
     connection-timeout: ${ML_API_CONNECTION_TIMEOUT:10000}
     read-timeout: ${ML_API_READ_TIMEOUT:60000}
 

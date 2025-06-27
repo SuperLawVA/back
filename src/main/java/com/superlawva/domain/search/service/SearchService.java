@@ -41,6 +41,7 @@ public class SearchService {
 
         try {
             String url = searchApiBaseUrl + "/api/v1/search";
+            log.info("Attempting to call ML search API at: {}", url);
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
             
