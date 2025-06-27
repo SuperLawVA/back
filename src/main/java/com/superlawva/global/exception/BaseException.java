@@ -1,16 +1,21 @@
 package com.superlawva.global.exception;
 
 import com.superlawva.global.response.status.ErrorStatus;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
- 
+
 @Getter
-@AllArgsConstructor
 public class BaseException extends RuntimeException {
-    private final ErrorStatus errorStatus;
-    
-    // 기본 생성자 추가 (컴파일 오류 해결용)
-    public BaseException() {
-        this.errorStatus = ErrorStatus._INTERNAL_SERVER_ERROR;
+
+    private final ErrorStatus code;
+    private final String message;
+
+    public BaseException(ErrorStatus code) {
+        this.code = code;
+        this.message = code.getMessage();
+    }
+
+    public BaseException(ErrorStatus code, String message) {
+        this.code = code;
+        this.message = message;
     }
 } 

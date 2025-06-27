@@ -1,5 +1,6 @@
 package com.superlawva.domain.search.service;
 
+import com.superlawva.domain.search.dto.MLSearchResponse;
 import com.superlawva.domain.search.dto.SearchRequestDTO;
 import com.superlawva.domain.search.dto.SearchResponseDTO;
 import com.superlawva.domain.search.repository.CasesRepository;
@@ -42,29 +43,26 @@ public class SearchService {
         try {
             String url = searchApiBaseUrl + "/api/v1/search";
             log.info("Attempting to call ML search API at: {}", url);
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
             
-            HttpEntity<SearchRequestDTO> httpEntity = new HttpEntity<>(request, headers);
-            
-            ResponseEntity<SearchResponseDTO> response = restTemplate.postForEntity(url, httpEntity, SearchResponseDTO.class);
-            
+            HttpEntity<SearchRequestDTO> httpEntity = new HttpEntity<>(request, new HttpHeaders());
+            ResponseEntity<MLSearchResponse> response = restTemplate.postForEntity(url, httpEntity, MLSearchResponse.class);
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                SearchResponseDTO mlResult = response.getBody();
-                
+                MLSearchResponse mlResult = response.getBody();
                 log.info("ML 검색 성공 - 사용자: {}, 질의: '{}', 결과: {}개", (user != null ? user.getId() : "Anonymous"), request.query(), mlResult.totalResults());
 
                 List<SearchResponseDTO.DocumentResult> allDocuments = mlResult.documents().stream()
+                        .map(this::convertToDocumentResult)
                         .map(this::enrichDocument)
-                        .sorted(Comparator.comparing(SearchResponseDTO.DocumentResult::similarity).reversed())
+                        .sorted(Comparator.comparing(SearchResponseDTO.DocumentResult::boostedSimilarity).reversed())
                         .collect(Collectors.toList());
 
                 List<SearchResponseDTO.DocumentResult> laws = allDocuments.stream()
-                        .filter(doc -> "law".equalsIgnoreCase(doc.metadata().type()))
+                        .filter(doc -> "law".equalsIgnoreCase(doc.source()))
                         .collect(Collectors.toList());
 
                 List<SearchResponseDTO.DocumentResult> cases = allDocuments.stream()
-                        .filter(doc -> "case".equalsIgnoreCase(doc.metadata().type()))
+                        .filter(doc -> "case".equalsIgnoreCase(doc.source()))
                         .collect(Collectors.toList());
 
                 double searchTimeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
@@ -76,27 +74,49 @@ public class SearchService {
 
         } catch (Exception e) {
             log.error("ML 검색 API 호출 중 오류 발생", e);
-            throw new BaseException(ErrorStatus.ML_API_CONNECTION_FAILED);
+            throw new BaseException(ErrorStatus.ML_API_CONNECTION_FAILED, e.getMessage());
         }
     }
 
+    private SearchResponseDTO.DocumentResult convertToDocumentResult(MLSearchResponse.Document mlDoc) {
+        return new SearchResponseDTO.DocumentResult(
+                parseTitle(mlDoc.document()),
+                parseContent(mlDoc.document()),
+                mlDoc.similarity(),
+                mlDoc.boostedSimilarity(),
+                mlDoc.source(),
+                mlDoc.metadata()
+        );
+    }
+    
     private SearchResponseDTO.DocumentResult enrichDocument(SearchResponseDTO.DocumentResult doc) {
-        if ("case".equalsIgnoreCase(doc.metadata().type())) {
-            String caseId = doc.metadata().caseId();
-            if (caseId != null && !caseId.isEmpty()) {
+        if ("case".equalsIgnoreCase(doc.source())) {
+            Object caseIdObj = doc.metadata().get("case_id"); // ML 팀에서 사용하는 키가 case_id라고 가정
+            if (caseIdObj instanceof String caseId && !caseId.isEmpty()) {
                 return casesRepository.findByCaseId(caseId)
-                        .map(dbCase -> {
-                            String newTitle = String.format("%s %s", dbCase.getCaseNumber(), dbCase.getCaseTitle());
-                            return new SearchResponseDTO.DocumentResult(
-                                    newTitle,
-                                    dbCase.getSummary(),
-                                    doc.similarity(),
-                                    doc.metadata()
-                            );
-                        })
+                        .map(dbCase -> new SearchResponseDTO.DocumentResult(
+                                String.format("%s %s", dbCase.getCaseNumber(), dbCase.getCaseTitle()),
+                                dbCase.getSummary(),
+                                doc.similarity(),
+                                doc.boostedSimilarity(),
+                                doc.source(),
+                                doc.metadata()
+                        ))
                         .orElse(doc);
             }
         }
         return doc;
+    }
+
+    private String parseTitle(String document) {
+        if (document == null) return "";
+        String[] parts = document.split("\\n", 2);
+        return parts.length > 0 ? parts[0].replace("제목:", "").trim() : document;
+    }
+
+    private String parseContent(String document) {
+        if (document == null) return "";
+        String[] parts = document.split("\\n", 2);
+        return parts.length > 1 ? parts[1].replace("내용:", "").trim() : "";
     }
 } 

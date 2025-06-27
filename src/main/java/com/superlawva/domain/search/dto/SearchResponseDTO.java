@@ -4,8 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Map;
 
-@Schema(description = "법령/판례 검색 응답 (ML 팀 API 스펙)")
+@Schema(description = "법령/판례 검색 응답 (클라이언트 전달용)")
 public record SearchResponseDTO(
         
         @Schema(description = "법령 검색 결과")
@@ -14,7 +15,7 @@ public record SearchResponseDTO(
         @Schema(description = "판례 검색 결과")
         List<DocumentResult> cases,
         
-        @Schema(description = "전체 검색된 문서 목록")
+        @Schema(description = "전체 검색된 문서 목록 (하위 호환성용)")
         List<DocumentResult> documents,
         
         @Schema(description = "검색 처리 시간(초)", example = "0.245")
@@ -35,29 +36,41 @@ public record SearchResponseDTO(
             @Schema(description = "문서 내용", example = "임대차 계약에 있어서...")
             String content,
             
-            @Schema(description = "유사도 점수", example = "0.892")
+            @Schema(description = "원본 유사도 점수", example = "0.892")
             Double similarity,
             
-            @Schema(description = "문서 메타데이터")
-            DocumentMetadata metadata
-    ) {}
-    
-    @Schema(description = "문서 메타데이터")
-    public record DocumentMetadata(
+            @Schema(description = "가중치 적용 유사도 점수", example = "0.912")
+            Double boostedSimilarity,
             
-            @Schema(description = "문서 유형", example = "law")
-            String type,
-            
-            @Schema(description = "법령/사건 번호", example = "주택임대차보호법")
+            @Schema(description = "문서 출처 (law/case)", example = "law")
             String source,
             
-            @Schema(description = "조항/판결일", example = "제3조")
-            String section,
-            
-            @Schema(description = "URL 또는 참조", example = "https://...")
-            String url,
-            
-            @Schema(description = "판례 고유 ID (판례인 경우만)", example = "2023다12345")
-            String caseId
-    ) {}
+            @Schema(description = "문서 메타데이터")
+            Map<String, Object> metadata
+    ) {
+        @com.fasterxml.jackson.annotation.JsonCreator
+        public DocumentResult(
+                @JsonProperty("document") String document,
+                @JsonProperty("similarity") Double similarity,
+                @JsonProperty("boostedSimilarity") Double boostedSimilarity,
+                @JsonProperty("source") String source,
+                @JsonProperty("metadata") Map<String, Object> metadata
+        ) {
+            this(parseTitle(document), parseContent(document), similarity, boostedSimilarity, source, metadata);
+        }
+
+        private static String parseTitle(String document) {
+            if (document == null || !document.contains("\\n")) {
+                return document;
+            }
+            return document.split("\\\\n", 2)[0].replace("제목:", "").trim();
+        }
+
+        private static String parseContent(String document) {
+            if (document == null || !document.contains("\\n")) {
+                return "";
+            }
+            return document.split("\\\\n", 2)[1].replace("내용:", "").trim();
+        }
+    }
 } 

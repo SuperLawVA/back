@@ -40,7 +40,7 @@ public class ChatbotService {
      * 챗봇에게 메시지 전송 (ML 팀 API 연동)
      */
     public ChatbotResponseDTO sendMessage(ChatbotRequestDTO request, User user) {
-        log.info("사용자 {}의 챗봇 메시지 전송: {}", user.getId(), request.message());
+        log.info("사용자 {}의 챗봇 메시지 전송: {}", user != null ? user.getId() : "Anonymous", request.message());
         
         // 1. 세션 조회 또는 생성
         ChatSessionEntity session = getOrCreateSession(request.session_id(), user);
@@ -50,58 +50,45 @@ public class ChatbotService {
         chatMessageRepository.save(userMessage);
         
         // 3. ML 팀 API 호출
-        ChatbotApiService.ChatbotApiResponse apiResponse = chatbotApiService.sendMessage(
+        ChatbotApiService.ChatbotApiResult apiResult = chatbotApiService.sendMessage(
                 request.message(),
                 session.getSessionId(),
-                user.getId()
+                user != null ? user.getId() : null
         );
         
         // 4. 봇 응답 저장
-        String botAnswer = apiResponse.success() ? apiResponse.answer() : 
+        String botAnswer = apiResult.success() ? apiResult.answer() :
                           "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
         
         ChatMessageEntity botMessage = ChatMessageEntity.createAssistantMessage(
                 session,
                 botAnswer,
-                apiResponse.questionType(),
-                apiResponse.responseTimeSeconds() != null ? 
-                    BigDecimal.valueOf(apiResponse.responseTimeSeconds()) : null
+                apiResult.questionType(),
+                apiResult.responseTimeSeconds() != null ?
+                    BigDecimal.valueOf(apiResult.responseTimeSeconds()) : null
         );
-        
-        // ML API에서 토큰 사용량 정보가 있으면 저장
-        if (apiResponse.tokenUsage() != null) {
-            botMessage = ChatMessageEntity.builder()
-                    .session(session)
-                    .role(ChatMessageEntity.MessageRole.assistant)
-                    .content(botAnswer)
-                    .questionType(apiResponse.questionType())
-                    .responseTimeSeconds(apiResponse.responseTimeSeconds() != null ? 
-                        BigDecimal.valueOf(apiResponse.responseTimeSeconds()) : null)
-                    .tokenUsage(apiResponse.tokenUsage())
-                    .build();
-        }
         
         chatMessageRepository.save(botMessage);
         
         // 5. 세션 활동 업데이트
-        session.updateActivity(apiResponse.questionType());
+        session.updateActivity(apiResult.questionType());
         chatSessionRepository.save(session);
         
         // 6. ML 팀 스펙 응답 반환
-        String finalSessionId = apiResponse.sessionId() != null ? 
-                               apiResponse.sessionId() : session.getSessionId();
+        String finalSessionId = apiResult.sessionId() != null ?
+                               apiResult.sessionId() : session.getSessionId();
         
-        if (apiResponse.success()) {
-            log.info("챗봇 응답 성공 - 세션: {}, 처리시간: {}초", finalSessionId, apiResponse.responseTimeSeconds());
+        if (apiResult.success()) {
+            log.info("챗봇 응답 성공 - 세션: {}, 처리시간: {}초", finalSessionId, apiResult.responseTimeSeconds());
         } else {
-            log.error("챗봇 API 호출 실패 - 세션: {}, 오류: {}", finalSessionId, apiResponse.error());
+            log.error("챗봇 API 호출 실패 - 세션: {}, 오류: {}", finalSessionId, apiResult.error());
         }
         
         return ChatbotResponseDTO.from(
                 botAnswer,
                 finalSessionId,
-                apiResponse.questionType(),
-                apiResponse.responseTimeSeconds()
+                apiResult.questionType(),
+                apiResult.responseTimeSeconds()
         );
     }
     
@@ -109,22 +96,25 @@ public class ChatbotService {
      * 세션 조회 또는 생성
      */
     private ChatSessionEntity getOrCreateSession(String sessionId, User user) {
-        if (sessionId != null) {
-            Optional<ChatSessionEntity> existingSession = chatSessionRepository.findById(sessionId);
-            if (existingSession.isPresent()) {
-                return existingSession.get();
-            }
+        if (sessionId != null && !sessionId.isBlank()) {
+            return chatSessionRepository.findById(sessionId)
+                    .orElseGet(() -> createNewSession(sessionId, user));
         }
+        return createNewSession(null, user);
+    }
+
+    private ChatSessionEntity createNewSession(String sessionId, User user) {
+        String newSessionId = (sessionId != null) ? sessionId : UUID.randomUUID().toString();
         
-        // 새 세션 생성
-        String newSessionId = sessionId != null ? sessionId : UUID.randomUUID().toString();
-        ChatSessionEntity newSession = ChatSessionEntity.builder()
+        ChatSessionEntity.ChatSessionEntityBuilder builder = ChatSessionEntity.builder()
                 .sessionId(newSessionId)
-                .user(user)
-                .status(ChatSessionEntity.SessionStatus.active)
-                .build();
-        
-        return chatSessionRepository.save(newSession);
+                .status(ChatSessionEntity.SessionStatus.active);
+
+        if (user != null) {
+            builder.user(user);
+        }
+
+        return chatSessionRepository.save(builder.build());
     }
     
     /**
@@ -144,10 +134,16 @@ public class ChatbotService {
         log.info("세션 {}의 대화 이력 조회", sessionId);
         
         // 보안: 세션이 해당 사용자의 것인지 확인
-        Optional<ChatSessionEntity> session = chatSessionRepository.findById(sessionId);
-        if (session.isEmpty() || !session.get().getUser().getId().equals(user.getId())) {
+        Optional<ChatSessionEntity> sessionOpt = chatSessionRepository.findById(sessionId);
+        if (sessionOpt.isEmpty()) {
+            throw new BaseException(ErrorStatus.CHAT_SESSION_NOT_FOUND);
+        }
+        ChatSessionEntity session = sessionOpt.get();
+        
+        // 익명 세션이 아니고, 세션의 소유자가 현재 사용자와 다를 경우 접근 제한
+        if (session.getUser() != null && !session.getUser().getId().equals(user.getId())) {
             log.warn("사용자 {}가 권한 없는 세션 {}에 접근 시도", user.getId(), sessionId);
-            return List.of();
+            throw new BaseException(ErrorStatus.FORBIDDEN_ACCESS_TO_SESSION);
         }
         
         return chatMessageRepository.findBySessionSessionIdOrderByCreatedAtAsc(sessionId);
@@ -167,6 +163,10 @@ public class ChatbotService {
      */
     @Transactional(readOnly = true)
     public List<SessionListResponseDTO> getUserSessionList(Long userId) {
+        if (userId == null) {
+            log.warn("사용자 ID가 null이므로 빈 세션 목록을 반환합니다.");
+            return List.of();
+        }
         log.info("사용자 {}의 간소화된 세션 목록 조회", userId);
         
         List<ChatSessionEntity> sessions = chatSessionRepository.findByUserIdOrderByLastActiveAtDesc(userId);
@@ -234,50 +234,44 @@ public class ChatbotService {
      */
     @Transactional
     public ChatSessionResponseDTO createSession(User user) {
-        ChatSessionEntity newSession = new ChatSessionEntity(user);
-        
-        if (user == null) {
-            log.warn("인증 정보 없이 세션 생성을 시도합니다. 익명 세션으로 생성합니다.");
-            newSession = ChatSessionEntity.builder()
+        ChatSessionEntity.ChatSessionEntityBuilder builder = ChatSessionEntity.builder()
                 .sessionId(UUID.randomUUID().toString())
-                .user(null) // User 필드를 명시적으로 null로 설정
-                .status(ChatSessionEntity.SessionStatus.active)
-                .build();
+                .status(ChatSessionEntity.SessionStatus.active);
+        
+        if (user != null) {
+            log.info("사용자 {}를 위한 새 세션 생성", user.getId());
+            builder.user(user);
+        } else {
+            log.info("익명 사용자를 위한 새 세션 생성");
         }
         
+        ChatSessionEntity newSession = builder.build();
         ChatSessionEntity savedSession = chatSessionRepository.save(newSession);
         return ChatSessionResponseDTO.fromEntity(savedSession);
     }
 
     /**
-     * 세션 완전 삭제 (ML 팀 스펙)
-     * 세션과 관련된 모든 메시지를 함께 삭제
+     * 세션 삭제
      */
+    @Transactional
     public boolean deleteSession(String sessionId, User user) {
-        Optional<ChatSessionEntity> session = chatSessionRepository.findById(sessionId);
+        log.info("세션 {} 삭제 요청 (사용자: {})", sessionId, user != null ? user.getId() : "Anonymous");
         
-        if (session.isEmpty()) {
-            log.warn("존재하지 않는 세션 {} 삭제 시도 - 사용자: {}", sessionId, user.getId());
-            return false;
+        Optional<ChatSessionEntity> sessionOpt = chatSessionRepository.findById(sessionId);
+        if (sessionOpt.isEmpty()) {
+            return false; // 혹은 예외 처리
         }
         
-        if (!session.get().getUser().getId().equals(user.getId())) {
-            log.warn("사용자 {}가 권한 없는 세션 {} 삭제 시도", user.getId(), sessionId);
-            return false;
-        }
+        ChatSessionEntity session = sessionOpt.get();
         
-        try {
-            // 1. 해당 세션의 모든 메시지 삭제
-            chatMessageRepository.deleteBySessionSessionId(sessionId);
-            log.info("세션 {}의 모든 메시지 삭제 완료", sessionId);
-            
-            // 2. 세션 삭제
-            chatSessionRepository.delete(session.get());
-            log.info("세션 {} 완전 삭제 완료 - 사용자: {}", sessionId, user.getId());
-            
+        // 익명 세션이거나, 세션 소유자가 현재 사용자와 일치할 경우에만 삭제 허용
+        if (session.getUser() == null || session.getUser().getId().equals(user.getId())) {
+            chatMessageRepository.deleteBySession(session);
+            chatSessionRepository.delete(session);
+            log.info("세션 {}와 관련 메시지 삭제 완료", sessionId);
             return true;
-        } catch (Exception e) {
-            log.error("세션 {} 삭제 중 오류 발생: {}", sessionId, e.getMessage(), e);
+        } else {
+            log.warn("사용자 {}가 권한 없는 세션 {} 삭제 시도", user.getId(), sessionId);
             return false;
         }
     }

@@ -50,7 +50,20 @@ public enum ErrorStatus {
     ML_API_CONNECTION_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "ML500", "ML 검색 API 호출에 실패했습니다. 관리자에게 문의하세요."),
 
     // MAIL
-    MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "MAIL500", "메일 전송에 실패했습니다.");
+    MAIL_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "MAIL500", "메일 전송에 실패했습니다."),
+
+    // Document
+    DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "DOCUMENT4001", "해당 문서를 찾을 수 없습니다."),
+    FILE_STORAGE_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "DOCUMENT5001", "파일 저장에 실패했습니다."),
+    INVALID_FILE_TYPE(HttpStatus.BAD_REQUEST, "DOCUMENT4002", "지원하지 않는 파일 형식입니다."),
+
+    // Chatbot
+    CHAT_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CHAT4001", "해당 채팅 세션을 찾을 수 없습니다."),
+    FORBIDDEN_ACCESS_TO_SESSION(HttpStatus.FORBIDDEN, "CHAT4003", "해당 채팅 세션에 접근할 권한이 없습니다."),
+
+    // Alarm
+    ALARM_NOT_FOUND(HttpStatus.NOT_FOUND, "ALARM4001", "해당 알림을 찾을 수 없습니다."),
+    INVALID_ALARM_TYPE(HttpStatus.BAD_REQUEST, "ALARM4002", "유효하지 않은 알림 유형입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
