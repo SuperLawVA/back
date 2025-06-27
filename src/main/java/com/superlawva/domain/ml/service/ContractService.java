@@ -3,6 +3,7 @@ package com.superlawva.domain.ml.service;
 import com.superlawva.domain.ml.client.MLApiClient;
 import com.superlawva.domain.ml.dto.ContractCreateRequest;
 import com.superlawva.domain.ml.dto.ContractResponse;
+import com.superlawva.domain.ml.dto.ContractUpdateRequest;
 import com.superlawva.domain.ocr3.entity.ContractData;
 import com.superlawva.domain.ocr3.repository.ContractDataRepository;
 import lombok.RequiredArgsConstructor;
@@ -67,11 +68,65 @@ public class ContractService {
     }
 
     @Transactional
-    public ContractResponse updateContract(String id, ContractCreateRequest request) {
+    public ContractResponse updateContract(String id, ContractUpdateRequest request) {
         ContractData contract = contractDataRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("계약서를 찾을 수 없습니다. ID: " + id));
-        if (request.getArticles() != null) contract.setArticles(request.getArticles());
-        if (request.getUserQuery() != null) contract.setArticles(request.getUserQuery()); // 수정시 특약도 변경 가능(articles에 임시 저장)
+
+        // 선택적으로 필드를 업데이트
+        if (request.getContractType() != null) {
+            contract.setContractType(request.getContractType());
+        }
+        if (request.getArticles() != null) {
+            contract.setArticles(request.getArticles());
+        }
+        if (request.getAgreements() != null) {
+            contract.setAgreements(request.getAgreements());
+        }
+
+        // dates
+        if (request.getDates() != null) {
+            contract.setDates(request.getDates());
+        }
+
+        // property
+        if (request.getProperty() != null) {
+            contract.setProperty(request.getProperty());
+        }
+
+        // payment
+        if (request.getPayment() != null) {
+            contract.setPayment(request.getPayment());
+        }
+
+        // parties
+        if (request.getLessor() != null) {
+            contract.setLessor(request.getLessor());
+        }
+        if (request.getLessee() != null) {
+            contract.setLessee(request.getLessee());
+        }
+
+        // brokers
+        if (request.getBroker1() != null) {
+            contract.setBroker1(request.getBroker1());
+        }
+        if (request.getBroker2() != null) {
+            contract.setBroker2(request.getBroker2());
+        }
+
+        // recommended agreements
+        if (request.getRecommendedAgreements() != null) {
+            contract.setRecommendedAgreements(request.getRecommendedAgreements());
+        }
+
+        if (request.getLegalBasis() != null) {
+            contract.setLegalBasis(request.getLegalBasis());
+        }
+
+        if (request.getCaseBasis() != null) {
+            contract.setCaseBasis(request.getCaseBasis());
+        }
+
         contract.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
         ContractData saved = contractDataRepository.save(contract);
         return ContractResponse.fromEntity(saved);

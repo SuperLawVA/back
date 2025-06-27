@@ -261,14 +261,6 @@ public class OcrService {
         """;
     }
     
-    // 모든 계약서 조회
-    public List<ContractData> getAllContracts() {
-        log.info("Retrieving all contracts from MongoDB");
-        List<ContractData> contracts = contractDataRepository.findAll();
-        log.info("Found {} contracts", contracts.size());
-        return contracts;
-    }
-    
     // 🟢 특정 ID로 계약서 조회
     public ContractData getContractById(String id) {
         log.info("Retrieving contract with ID: {}", id);

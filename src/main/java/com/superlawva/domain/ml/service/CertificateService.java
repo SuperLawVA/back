@@ -94,33 +94,6 @@ public class CertificateService {
                 .collect(Collectors.toList());
     }
     
-
-    
-    /**
-     * UPDATE - 내용증명서 수정
-     */
-    @Transactional
-    public CertificateResponse updateCertificate(String certificateId, CertificateUpdateRequest request, String userId) {
-        log.info("✏️ 내용증명서 수정 요청 - Certificate ID: {}, User ID: {}", certificateId, userId);
-        
-        Certificate certificate = certificateRepository.findById(certificateId)
-                .orElseThrow(() -> new RuntimeException("내용증명서를 찾을 수 없습니다: " + certificateId));
-        
-        // 사용자 권한 확인
-        if (!certificate.getUserId().equals(userId)) {
-            throw new RuntimeException("해당 내용증명서를 수정할 권한이 없습니다.");
-        }
-        
-        // 수정 가능한 필드 업데이트
-        updateCertificateFields(certificate, request);
-        
-        Certificate updatedCertificate = certificateRepository.save(certificate);
-        
-        log.info("✅ 내용증명서 수정 완료 - Certificate ID: {}", certificateId);
-        
-        return convertToResponse(updatedCertificate);
-    }
-    
     /**
      * DELETE - 내용증명서 삭제
      */
@@ -141,6 +114,68 @@ public class CertificateService {
         log.info("✅ 내용증명서 삭제 완료 - Certificate ID: {}", certificateId);
         
         return true;
+    }
+    
+    // 부분 수정 메서드
+    @Transactional
+    public CertificateResponse updateCertificatePartial(String certificateId, CertificateUpdateRequest request) {
+        Certificate certificate = certificateRepository.findById(certificateId)
+                .orElseThrow(() -> new RuntimeException("내용증명서를 찾을 수 없습니다. ID: " + certificateId));
+
+        if (request.getTitle() != null) certificate.setTitle(request.getTitle());
+        if (request.getUserQuery() != null) certificate.setUserQuery(request.getUserQuery());
+        if (request.getBody() != null) certificate.setBody(request.getBody());
+        if (request.getStrategySummary() != null) certificate.setStrategySummary(request.getStrategySummary());
+        if (request.getFollowupStrategy() != null) certificate.setFollowupStrategy(request.getFollowupStrategy());
+        if (request.getReceiver() != null) {
+            Certificate.Receiver r = new Certificate.Receiver();
+            r.setName(request.getReceiver().getName());
+            r.setAddress(request.getReceiver().getAddress());
+            r.setDetailAddress(request.getReceiver().getDetailAddress());
+            certificate.setReceiver(r);
+        }
+        if (request.getSender() != null) {
+            Certificate.Sender s = new Certificate.Sender();
+            s.setName(request.getSender().getName());
+            s.setAddress(request.getSender().getAddress());
+            s.setDetailAddress(request.getSender().getDetailAddress());
+            certificate.setSender(s);
+        }
+        if (request.getLegalBasis() != null) {
+            List<Certificate.LegalBasis> legalList = new java.util.ArrayList<>();
+            for (var dto : request.getLegalBasis()) {
+                Certificate.LegalBasis l = new Certificate.LegalBasis();
+                l.setLawId(dto.getLawId());
+                l.setLaw(dto.getLaw());
+                l.setExplanation(dto.getExplanation());
+                l.setContent(dto.getContent());
+                legalList.add(l);
+            }
+            certificate.setLegalBasis(legalList);
+        }
+        if (request.getCaseBasis() != null) {
+            List<Certificate.CaseBasis> caseList = new java.util.ArrayList<>();
+            for (var dto : request.getCaseBasis()) {
+                Certificate.CaseBasis c = new Certificate.CaseBasis();
+                c.setCaseId(dto.getCaseId());
+                c.setCaseName(dto.getCaseName());
+                c.setExplanation(dto.getExplanation());
+                c.setLink(dto.getLink());
+                caseList.add(c);
+            }
+            certificate.setCaseBasis(caseList);
+        }
+        if (request.getCertificationMetadata() != null) {
+            var metaDto = request.getCertificationMetadata();
+            Certificate.CertificationMetadata meta = new Certificate.CertificationMetadata();
+            meta.setModel(metaDto.getModel());
+            meta.setGenerationTime(metaDto.getGenerationTime());
+            meta.setUserAgent(metaDto.getUserAgent());
+            meta.setVersion(metaDto.getVersion());
+            certificate.setCertificationMetadata(meta);
+        }
+        Certificate saved = certificateRepository.save(certificate);
+        return convertToResponse(saved);
     }
     
     // Private helper methods
@@ -318,8 +353,7 @@ public class CertificateService {
                 certificate.setCertificationMetadata(metadata);
             }
             
-            // 원본 ML 응답 저장
-            certificate.setRawMlResponse(mlResponse);
+
             
             // MongoDB에 저장
             Certificate savedCertificate = certificateRepository.save(certificate);
@@ -344,18 +378,8 @@ public class CertificateService {
             failedCertificate.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
             failedCertificate.setStatus("FAILED");
             failedCertificate.setErrorMessage(e.getMessage());
-            failedCertificate.setRawMlResponse(mlResponse);
-            
+
             return certificateRepository.save(failedCertificate);
-        }
-    }
-    
-    private void updateCertificateFields(Certificate certificate, CertificateUpdateRequest request) {
-        if (request.getTitle() != null) {
-            certificate.setTitle(request.getTitle());
-        }
-        if (request.getBody() != null) {
-            certificate.setBody(request.getBody());
         }
     }
     

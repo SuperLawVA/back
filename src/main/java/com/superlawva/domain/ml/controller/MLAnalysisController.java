@@ -36,14 +36,13 @@ public class MLAnalysisController {
     @ApiResponse(responseCode = "404", description = "계약서를 찾을 수 없음")
     @ApiResponse(responseCode = "500", description = "서버 오류")
     public ResponseEntity<Map<String, Object>> createAnalysis(
-            @Parameter(description = "계약서 ID", required = true) @PathVariable String contractId,
-            @Parameter(description = "사용자 ID", required = true) @RequestParam String userId) {
+            @Parameter(description = "계약서 ID", required = true) @PathVariable String contractId) {
 
-        log.info("📊 계약서 분석 생성 요청 - Contract ID: {}, User ID: {}", contractId, userId);
+        log.info("📊 계약서 분석 생성 요청 - Contract ID: {}", contractId);
 
         try {
-            // 기존 analyzeContract 메서드 활용
-            Map<String, Object> result = mlAnalysisService.analyzeContract(contractId, userId);
+            // 분석 서비스 호출 (userId 필요 없음)
+            Map<String, Object> result = mlAnalysisService.analyzeContract(contractId);
 
             if (result.get("success").equals(true)) {
                 log.info("✅ 계약서 분석 생성 성공");
@@ -58,7 +57,6 @@ public class MLAnalysisController {
                     "success", false,
                     "error", e.getMessage(),
                     "contractId", contractId,
-                    "userId", userId,
                     "timestamp", LocalDateTime.now(ZoneOffset.UTC)
             ));
         }

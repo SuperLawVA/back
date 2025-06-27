@@ -33,16 +33,19 @@ public class MLAnalysisService {
      * 계약서 분석 및 결과 저장 (기존 메서드)
      */
     @Transactional
-    public Map<String, Object> analyzeContract(String contractId, String userId) {
-        log.info("🤖 계약서 분석 시작 - Contract ID: {}, User ID: {}", contractId, userId);
+    public Map<String, Object> analyzeContract(String contractId) {
+        log.info("🤖 계약서 분석 시작 - Contract ID: {}", contractId);
 
         try {
             // 1. MongoDB에서 계약서 데이터 조회
             ContractData contractData = contractDataRepository.findById(contractId)
                     .orElseThrow(() -> new RuntimeException("계약서를 찾을 수 없습니다: " + contractId));
 
+            // 계약서 데이터에서 사용자 ID 추출 (없으면 빈 문자열)
+            String userId = contractData.getUserId() != null ? contractData.getUserId() : "";
+
             // 2. ML API 요청 데이터 구성 (contract_type 변환 포함)
-            Map<String, Object> mlRequest = buildContractAnalysisRequest(contractData, userId);
+            Map<String, Object> mlRequest = buildContractAnalysisRequest(contractData);
 
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.analyzeContract(mlRequest);
@@ -71,7 +74,6 @@ public class MLAnalysisService {
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
             errorResult.put("contractId", contractId);
-            errorResult.put("userId", userId);
             errorResult.put("error", e.getMessage());
             errorResult.put("timestamp", LocalDateTime.now(ZoneOffset.UTC));
 
@@ -116,8 +118,6 @@ public class MLAnalysisService {
         return filteredResults;
     }
 
-
-
     /**
      * DELETE - 분석 결과 삭제 (보안: userId 검증)
      */
@@ -151,8 +151,6 @@ public class MLAnalysisService {
             throw e;
         }
     }
-
-
 
     /**
      * ML 분석 결과를 MongoDB analysis 컬렉션에 저장 (간소화된 버전)
@@ -210,10 +208,13 @@ public class MLAnalysisService {
     /**
      * 계약서 분석용 ML 요청 데이터 구성 (MongoDB BSON 타입을 JSON 호환 형식으로 변환)
      */
-    private Map<String, Object> buildContractAnalysisRequest(ContractData contractData, String userId) {
+    private Map<String, Object> buildContractAnalysisRequest(ContractData contractData) {
         Map<String, Object> request = new HashMap<>();
         request.put("contract_id", contractData.get_id());
-        request.put("user_id", userId);
+        // 계약서 데이터에 user_id가 있을 경우 포함
+        if (contractData.getUserId() != null && !contractData.getUserId().isEmpty()) {
+            request.put("user_id", contractData.getUserId());
+        }
 
         // ⭐ contract_type을 ML API가 인식할 수 있는 형식으로 변환
         String normalizedContractType = normalizeContractType(contractData.getContractType());
@@ -222,7 +223,7 @@ public class MLAnalysisService {
         // 계약서 상세 정보 (MongoDB 타입을 ML API 호환 형식으로 변환)
         Map<String, Object> contractInfo = new HashMap<>();
         contractInfo.put("id", contractData.get_id());
-        contractInfo.put("user_id", userId);
+        contractInfo.put("user_id", contractData.getUserId());
         contractInfo.put("contract_type", normalizedContractType);
 
         // Dates 변환
@@ -517,7 +518,7 @@ public class MLAnalysisService {
 
             // 2단계: ML API 요청 데이터 구성
             log.info("📦 2단계: ML API 요청 데이터 구성 중...");
-            Map<String, Object> mlRequest = buildContractAnalysisRequest(contractData, userId);
+            Map<String, Object> mlRequest = buildContractAnalysisRequest(contractData);
 
             log.info("✅ ML API 요청 데이터 구성 완료:");
             log.info("   - contract_id: {}", mlRequest.get("contract_id"));

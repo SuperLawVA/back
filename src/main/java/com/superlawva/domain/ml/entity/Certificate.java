@@ -66,10 +66,6 @@ public class Certificate {
     @Field("certification_metadata")
     private CertificationMetadata certificationMetadata;
 
-    // 전체 ML API 응답 (원본 보존)
-    @Field("raw_ml_response")
-    private Map<String, Object> rawMlResponse;
-
     // 처리 상태
     private String status; // "SUCCESS", "FAILED", "PROCESSING"
 

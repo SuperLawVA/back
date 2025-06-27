@@ -148,56 +148,6 @@ public class CertificateController {
         }
     }
 
-
-
-    /**
-     * UPDATE - 내용증명서 수정
-     */
-    @PutMapping("/{certificateId}")
-    @Operation(summary = "내용증명서 수정", description = "내용증명서 ID로 특정 내용증명서를 수정합니다.")
-    @ApiResponse(responseCode = "200", description = "수정 성공")
-    @ApiResponse(responseCode = "403", description = "권한 없음")
-    @ApiResponse(responseCode = "404", description = "내용증명서를 찾을 수 없음")
-    public ResponseEntity<Map<String, Object>> updateCertificate(
-            @Parameter(description = "내용증명서 ID", required = true) @PathVariable String certificateId,
-            @Parameter(description = "수정 요청", required = true) @Valid @RequestBody CertificateUpdateRequest request,
-            @Parameter(description = "사용자 ID (보안 검증용)", required = true) @RequestParam String userId) {
-
-        log.info("✏️ 내용증명서 수정 요청 - Certificate ID: {}, User ID: {}", certificateId, userId);
-
-        try {
-            CertificateResponse updatedCertificate = certificateService.updateCertificate(certificateId, request, userId);
-
-            return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "message", "내용증명서가 성공적으로 수정되었습니다.",
-                    "certificate", updatedCertificate,
-                    "timestamp", LocalDateTime.now(ZoneOffset.UTC)
-            ));
-
-        } catch (RuntimeException e) {
-            if (e.getMessage().contains("권한이 없습니다")) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
-                        "success", false,
-                        "error", e.getMessage(),
-                        "certificateId", certificateId,
-                        "timestamp", LocalDateTime.now(ZoneOffset.UTC)
-                ));
-            } else if (e.getMessage().contains("찾을 수 없습니다")) {
-                return ResponseEntity.notFound().build();
-            }
-            throw e;
-        } catch (Exception e) {
-            log.error("내용증명서 수정 실패", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "success", false,
-                    "error", e.getMessage(),
-                    "certificateId", certificateId,
-                    "timestamp", LocalDateTime.now(ZoneOffset.UTC)
-            ));
-        }
-    }
-
     /**
      * DELETE - 내용증명서 삭제
      */
@@ -249,5 +199,16 @@ public class CertificateController {
         }
     }
 
+    /**
+     * UPDATE - 내용증명서 수정 (부분 수정)
+     */
+    @PutMapping("/{certificateId}")
+    @Operation(summary = "내용증명서 수정", description = "내용증명서 ID로 특정 내용증명서를 부분 수정합니다.")
+    public ResponseEntity<CertificateResponse> updateCertificate(
+            @PathVariable String certificateId,
+            @RequestBody CertificateUpdateRequest request) {
+        CertificateResponse updated = certificateService.updateCertificatePartial(certificateId, request);
+        return ResponseEntity.ok(updated);
+    }
 
 } 

@@ -26,37 +26,6 @@ public class OcrController {
 
     private final OcrService ocrService;
 
-
-
-
-
-    // 모든 계약서 조회
-    @GetMapping("/api/upload/ocr3/contracts/all")
-    public ResponseEntity<?> getAllContracts() {
-        log.info("Retrieving all contracts");
-
-        try {
-            java.util.List<com.superlawva.domain.ocr3.entity.ContractData> contracts =
-                    ocrService.getAllContracts();
-
-            return ResponseEntity.ok(java.util.Map.of(
-                    "success", true,
-                    "count", contracts.size(),
-                    "contracts", contracts
-            ));
-        } catch (Exception e) {
-            log.error("Error retrieving contracts: {}", e.getMessage(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ErrorResponse.builder()
-                            .error("RETRIEVAL_ERROR")
-                            .message("계약서 목록 조회 중 오류가 발생했습니다: " + e.getMessage())
-                            .timestamp(LocalDateTime.now().toString())
-                            .build());
-        }
-    }
-
-
-
     // 🟢 MongoDB Atlas에서 특정 ID로 계약서 조회
     @GetMapping("/api/upload/ocr3/contracts/{id}")
     public ResponseEntity<?> getContractById(@PathVariable String id) {
@@ -153,6 +122,5 @@ public class OcrController {
                             .build());
         }
     }
-
 
 }

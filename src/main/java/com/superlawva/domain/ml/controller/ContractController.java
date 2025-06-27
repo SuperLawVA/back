@@ -2,6 +2,7 @@ package com.superlawva.domain.ml.controller;
 
 import com.superlawva.domain.ml.dto.ContractCreateRequest;
 import com.superlawva.domain.ml.dto.ContractResponse;
+import com.superlawva.domain.ml.dto.ContractUpdateRequest;
 import com.superlawva.domain.ml.service.ContractService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +25,10 @@ public class ContractController {
         return ResponseEntity.ok(contractService.createContract(request));
     }
 
-      @PutMapping("/{id}")
-    @Operation(summary = "계약서 수정", description = "ContractId로 계약서 내용 수정")
-    public ResponseEntity<ContractResponse> updateContract(@PathVariable String id, @RequestBody ContractCreateRequest request) {
+    @PutMapping("/{id}")
+    @Operation(summary = "계약서 수정", description = "ContractId로 계약서(직접 작성/ OCR) 내용을 수정합니다.")
+    public ResponseEntity<ContractResponse> updateContract(@PathVariable String id,
+                                                           @RequestBody ContractUpdateRequest request) {
         return ResponseEntity.ok(contractService.updateContract(id, request));
     }
 

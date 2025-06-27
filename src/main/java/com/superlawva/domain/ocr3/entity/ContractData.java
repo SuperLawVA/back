@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.superlawva.global.util.NumberLongDeserializer;
+
 @Data
 @Document(collection = "contract")
 public class ContractData {
@@ -104,12 +107,14 @@ public class ContractData {
     
     @Data
     public static class Payment {
+        @JsonDeserialize(using = NumberLongDeserializer.class)
         private Long deposit;
         
         @Field("deposit_kr")
         private String depositKr;
         
         @Field("down_payment")
+        @JsonDeserialize(using = NumberLongDeserializer.class)
         private Long downPayment;
         
         @Field("down_payment_kr")
@@ -124,6 +129,7 @@ public class ContractData {
         @Field("intermediate_payment_date")
         private String intermediatePaymentDate;
         
+        @JsonDeserialize(using = NumberLongDeserializer.class)
         @Field("remaining_balance")
         private Long remainingBalance;
         
@@ -134,6 +140,7 @@ public class ContractData {
         private String remainingBalanceDate;
         
         @Field("monthly_rent")
+        @JsonDeserialize(using = NumberLongDeserializer.class)
         private Long monthlyRent;
         
         @Field("monthly_rent_date")
