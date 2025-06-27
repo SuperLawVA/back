@@ -7,6 +7,10 @@ RUN ./gradlew clean bootJar --no-daemon
 
 # stage 2: runtime
 FROM amazoncorretto:17-alpine-jdk
+
+# 네트워크 진단을 위한 curl 설치
+RUN apk update && apk add --no-cache curl
+
 ARG JAR_FILE=build/libs/*.jar
 COPY ${JAR_FILE} app.jar
 
