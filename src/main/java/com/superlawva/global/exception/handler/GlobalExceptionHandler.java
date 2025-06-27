@@ -19,11 +19,11 @@ public class GlobalExceptionHandler {
     protected ResponseEntity<Object> handleBaseException(BaseException e) {
         log.error("BaseException occurred: ", e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure(
-                e.getErrorStatus().getCode(),
-                e.getErrorStatus().getMessage(),
+                e.getCode().getCode(),
+                e.getMessage(),
                 null
         );
-        return new ResponseEntity<>(responseBody, e.getErrorStatus().getHttpStatus());
+        return new ResponseEntity<>(responseBody, e.getCode().getHttpStatus());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
