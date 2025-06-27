@@ -9,14 +9,17 @@ import org.springframework.web.client.RestTemplate;
 @Configuration
 public class RestTemplateConfig {
     
-    @Value("${chatbot.api.timeout:30000}")
-    private int timeout;
+    @Value("${ml.api.connection-timeout:10000}")
+    private int connectionTimeout;
+    
+    @Value("${ml.api.read-timeout:60000}")
+    private int readTimeout;
     
     @Bean
     public RestTemplate restTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(timeout);
-        factory.setReadTimeout(timeout);
+        factory.setConnectTimeout(connectionTimeout);
+        factory.setReadTimeout(readTimeout);
         
         RestTemplate restTemplate = new RestTemplate(factory);
         return restTemplate;
