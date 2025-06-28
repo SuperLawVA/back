@@ -1,13 +1,15 @@
 package com.superlawva.domain.ocr3.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-// TODO: GCP Document AI 의존성 추가 후 활성화
-/*
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.documentai.v1.*;
+import com.google.cloud.documentai.v1.DocumentProcessorServiceClient;
+import com.google.cloud.documentai.v1.DocumentProcessorServiceSettings;
+import com.google.cloud.documentai.v1.RawDocument;
+import com.google.cloud.documentai.v1.ProcessRequest;
+import com.google.cloud.documentai.v1.ProcessResponse;
 import com.google.protobuf.ByteString;
-*/
 import com.superlawva.domain.ocr3.dto.GeminiResponse;
 import com.superlawva.domain.ocr3.dto.OcrResponse;
 import com.superlawva.domain.ocr3.entity.ContractData;
@@ -39,20 +41,14 @@ public class OcrService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final S3Service s3Service;
-    // TODO: GCP Document AI 의존성 추가 후 활성화
-    // private final GoogleCredentials googleCredentials;
-
-    // TODO: GCP Document AI 의존성 추가 후 활성화
-    /*
+    private final GoogleCredentials googleCredentials;
+    private final DocumentProcessorServiceClient documentProcessorServiceClient;
     @Value("${gcp.project-id}")
     private String projectId;
-
     @Value("${gcp.location}")
     private String location;
-
     @Value("${gcp.processor-id}")
     private String processorId;
-    */
 
     @Value("${gemini.api-key}")
     private String geminiApiKey;
@@ -66,175 +62,102 @@ public class OcrService {
     public OcrResponse processContract(MultipartFile file) throws Exception {
         log.info("Starting OCR processing for file: {}", file.getOriginalFilename());
 
-        // Step 1: Upload image to S3
-        String s3ImageUrl = s3Service.uploadImage(file, "anonymous");
-        log.info("Image uploaded to S3: {}", s3ImageUrl);
-
-        // TODO: GCP Document AI 의존성 추가 후 활성화
-        // Step 2: Extract text using Document AI
-        // String extractedText = extractTextFromImage(file);
-        String extractedText = "임시 OCR 텍스트"; // 임시 구현
+        // Step 1: Extract text using Document AI
+        String extractedText = extractTextFromImage(file);
         log.info("Text extraction completed");
 
-        // Step 3: Analyze text with Gemini
+        // Step 2: Analyze text with Gemini
         long startTime = System.currentTimeMillis();
         GeminiResponse geminiResponse = analyzeTextWithGemini(extractedText);
         double generationTime = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info("Gemini analysis completed in {} seconds", generationTime);
 
-        // Step 4: Prepare contract data
-        ContractData contractData = geminiResponse.getContractData();
-        contractData.setUserId(null); // Will be set based on authenticated user
-        contractData.setIsGenerated(false);
-        contractData.setFileUrl(s3ImageUrl); // S3 URL 저장
-        contractData.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
-        contractData.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
-
-        // Set metadata
-        ContractData.ContractMetadata metadata = new ContractData.ContractMetadata();
-        metadata.setModel(String.format("doc-ai:%s + gemini:%s", "temp-processor", geminiModelName));
-        metadata.setGenerationTime(generationTime);
-        metadata.setUserAgent(null);
-        metadata.setVersion("v3.1.0");
-        contractData.setContractMetadata(metadata);
-
-        // Step 5: Save to database
+        // Step 3: Prepare contract data (MySQL)
+        ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, null, generationTime);
         ContractData savedContract = contractDataRepository.save(contractData);
         log.info("Contract saved with ID: {}", savedContract.getId());
 
-        // Step 6: Return response
+        // Step 4: Return response
         return OcrResponse.builder()
                 .contractData(savedContract)
                 .debugMode(geminiResponse.isDebugMode())
                 .build();
     }
 
-    // 🟢 사용자 ID를 포함한 계약서 처리 메서드 추가
     public OcrResponse processContractWithUserId(MultipartFile file, String userId) throws Exception {
         log.info("Starting OCR processing for file: {} with userId: {}", file.getOriginalFilename(), userId);
 
-        // Step 1: Upload image to S3
-        String s3ImageUrl = s3Service.uploadImage(file, userId);
-        log.info("Image uploaded to S3: {}", s3ImageUrl);
-
-        // Step 2: Extract text using OCR (임시 구현)
+        // Step 1: Extract text using Document AI
         String extractedText = extractTextFromImage(file);
-        log.info("Text extraction completed - Length: {}", extractedText.length());
+        log.info("Text extraction completed");
 
-        // Step 3: Analyze text with Gemini
+        // Step 2: Analyze text with Gemini
         long startTime = System.currentTimeMillis();
         GeminiResponse geminiResponse = analyzeTextWithGemini(extractedText);
         double generationTime = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info("Gemini analysis completed in {} seconds", generationTime);
 
-        // Step 4: Prepare contract data with userId
-        ContractData contractData = geminiResponse.getContractData();
-        contractData.setUserId(userId);  // 🔗 MySQL user.id 설정
-        contractData.setIsGenerated(false);
-        contractData.setFileUrl(s3ImageUrl); // S3 URL 저장
-        contractData.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
-        contractData.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
-
-        // Set metadata
-        ContractData.ContractMetadata metadata = new ContractData.ContractMetadata();
-        metadata.setModel(String.format("ocr:%s + gemini:%s", "temp-ocr", geminiModelName));
-        metadata.setGenerationTime(generationTime);
-        metadata.setUserAgent(null);
-        metadata.setVersion("v3.1.0");
-        contractData.setContractMetadata(metadata);
-
-        // Step 5: Save to database with userId
+        // Step 3: Prepare contract data with userId (MySQL)
+        ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, userId, generationTime);
         ContractData savedContract = contractDataRepository.save(contractData);
         log.info("Contract saved with ID: {} for userId: {}", savedContract.getId(), userId);
 
-        // Step 6: Return response
+        // Step 4: Return response
         return OcrResponse.builder()
                 .contractData(savedContract)
                 .debugMode(geminiResponse.isDebugMode())
                 .build();
     }
 
-    // 🟢 임시 OCR 텍스트 추출 구현 (실제 OCR 엔진 대체)
+    private ContractData mapGeminiToContractData(ContractData geminiData, MultipartFile file, String userId, double generationTime) throws JsonProcessingException {
+        ContractData contractData = new ContractData();
+        contractData.setUserId(userId != null ? userId : geminiData.getUserId());
+        contractData.setContractType(geminiData.getContractType());
+        contractData.setDates(geminiData.getDates());
+        contractData.setProperty(geminiData.getProperty());
+        contractData.setPayment(geminiData.getPayment());
+        contractData.setLessor(geminiData.getLessor());
+        contractData.setLessee(geminiData.getLessee());
+        contractData.setBroker1(geminiData.getBroker1());
+        contractData.setBroker2(geminiData.getBroker2());
+        contractData.setIsGenerated(false);
+        contractData.setFileUrl("file://" + file.getOriginalFilename());
+        contractData.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
+        contractData.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
+
+        // JSON 변환이 필요한 필드 처리
+        contractData.setArticlesJson(objectMapper.writeValueAsString(geminiData.getArticlesJson() != null ? geminiData.getArticlesJson() : geminiData.getArticlesJson()));
+        contractData.setAgreementsJson(objectMapper.writeValueAsString(geminiData.getAgreementsJson() != null ? geminiData.getAgreementsJson() : geminiData.getAgreementsJson()));
+        contractData.setRecommendedAgreementsJson(objectMapper.writeValueAsString(geminiData.getRecommendedAgreementsJson()));
+        contractData.setLegalBasisJson(objectMapper.writeValueAsString(geminiData.getLegalBasisJson()));
+        contractData.setCaseBasisJson(objectMapper.writeValueAsString(geminiData.getCaseBasisJson()));
+        contractData.setAnalysisMetadataJson(objectMapper.writeValueAsString(geminiData.getAnalysisMetadataJson()));
+
+        // ContractMetadata 세팅
+        ContractData.ContractMetadata metadata = new ContractData.ContractMetadata();
+        metadata.setModel(String.format("doc-ai:%s + gemini:%s", this.processorId, this.geminiModelName));
+        metadata.setGenerationTime(generationTime);
+        metadata.setUserAgent(null);
+        metadata.setVersion("v3.1.0");
+        contractData.setContractMetadata(metadata);
+
+        return contractData;
+    }
+
     private String extractTextFromImage(MultipartFile file) throws IOException {
-        log.info("Extracting text from image: {} ({} bytes)", file.getOriginalFilename(), file.getSize());
-        
-        // 파일 확장자 확인
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null) {
-            throw new IllegalArgumentException("파일명이 없습니다.");
-        }
-        
-        String fileExtension = originalFilename.toLowerCase();
-        
-        // PDF 파일인 경우
-        if (fileExtension.endsWith(".pdf")) {
-            return extractTextFromPdf(file);
-        }
-        // 이미지 파일인 경우
-        else if (fileExtension.endsWith(".jpg") || fileExtension.endsWith(".jpeg") || 
-                 fileExtension.endsWith(".png") || fileExtension.endsWith(".gif")) {
-            return extractTextFromImageFile(file);
-        }
-        else {
-            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다: " + fileExtension);
-        }
-    }
-    
-    // 🟢 PDF에서 텍스트 추출 (간단한 구현)
-    private String extractTextFromPdf(MultipartFile file) throws IOException {
-        log.info("PDF 텍스트 추출 시작");
-        
-        // 실제 구현에서는 PDF 텍스트 추출 라이브러리 사용
-        // 예: Apache PDFBox, iText 등
-        
-        // 임시로 샘플 계약서 텍스트 반환
-        return """
-        임대차계약서
-        
-        제1조 (계약의 목적)
-        임대인은 임차인에게 서울시 강남구 테헤란로 123번지에 위치한 오피스텔을 임대하고, 
-        임차인은 이를 임대받아 주거용으로 사용한다.
-        
-        제2조 (계약기간)
-        계약기간은 2025년 1월 1일부터 2027년 12월 31일까지로 한다.
-        
-        제3조 (보증금 및 월세)
-        1. 보증금: 5천만원
-        2. 월세: 150만원
-        3. 월세 납부일: 매월 5일
-        
-        임대인: 김영희 (주민등록번호: 850212-2345678)
-        임차인: 박민수 (주민등록번호: 920405-3456789)
-        
-        계약일: 2024년 12월 15일
-        """;
-    }
-    
-    // 🟢 이미지에서 텍스트 추출 (간단한 구현)
-    private String extractTextFromImageFile(MultipartFile file) throws IOException {
-        log.info("이미지 텍스트 추출 시작");
-        
-        // 실제 구현에서는 OCR 라이브러리 사용
-        // 예: Tesseract, Google Cloud Vision API 등
-        
-        // 임시로 샘플 계약서 텍스트 반환
-        return """
-        전세계약서
-        
-        임대인: 이철수
-        임차인: 최영희
-        
-        임대목적물: 서울시 서초구 반포대로 123번지
-        임대기간: 2025년 3월 1일 ~ 2027년 2월 28일
-        전세금: 8천만원
-        
-        특약사항:
-        1. 반려동물 허용
-        2. 주차공간 1대 제공
-        3. 관리비 월 15만원 별도
-        
-        계약일: 2025년 1월 15일
-        """;
+        log.debug("Initializing Document AI client");
+        String name = String.format("projects/%s/locations/%s/processors/%s", projectId, location, processorId);
+        ByteString content = ByteString.copyFrom(file.getBytes());
+        RawDocument rawDocument = RawDocument.newBuilder()
+                .setContent(content)
+                .setMimeType(file.getContentType() != null ? file.getContentType() : "image/jpeg")
+                .build();
+        ProcessRequest request = ProcessRequest.newBuilder()
+                .setName(name)
+                .setRawDocument(rawDocument)
+                .build();
+        ProcessResponse result = documentProcessorServiceClient.processDocument(request);
+        return result.getDocument().getText();
     }
 
     private GeminiResponse analyzeTextWithGemini(String ocrText) throws Exception {

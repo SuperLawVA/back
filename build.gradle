@@ -46,7 +46,7 @@ dependencies {
     implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
     /* ── OpenAPI Docs ──────────────────────────── */
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
     /* ── JWT ───────────────────────────────────── */
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -77,6 +77,10 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    /* ── GCP Document AI ────────────────────────── */
+    implementation 'com.google.cloud:google-cloud-document-ai:2.25.0'
+    implementation 'com.google.auth:google-auth-library-oauth2-http:1.19.0'
 }
 
 tasks.named('test') {

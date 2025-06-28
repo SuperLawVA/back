@@ -1,9 +1,6 @@
 package com.superlawva.global.config;
 
 import org.springframework.context.annotation.Configuration;
-
-// TODO: GCP 의존성 추가 후 활성화
-/*
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.documentai.v1.DocumentProcessorServiceClient;
@@ -31,9 +28,11 @@ public class GcpConfig {
 
     @Bean
     public GoogleCredentials googleCredentials() throws IOException {
-        return GoogleCredentials.fromStream(
+        GoogleCredentials credentials = GoogleCredentials.fromStream(
                 getClass().getResourceAsStream(credentialsFilePath)
         );
+        System.out.println("[GCP] GoogleCredentials loaded from: " + credentialsFilePath + ", projectId: " + projectId);
+        return credentials;
     }
 
     @Bean
@@ -45,4 +44,3 @@ public class GcpConfig {
         return DocumentProcessorServiceClient.create(settings);
     }
 }
-*/
