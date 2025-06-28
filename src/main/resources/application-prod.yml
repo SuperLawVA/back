@@ -212,3 +212,12 @@ management:
 
 frontend:
   url: ${FRONTEND_URL:http://localhost:3000}
+
+# SpringDoc OpenAPI 설정 (prod 환경 명시적 활성화)
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
