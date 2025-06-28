@@ -31,6 +31,7 @@ import com.superlawva.global.security.service.CustomOAuth2UserService;
 import com.superlawva.global.security.handler.OAuth2LoginSuccessHandler;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.userdetails.UserDetails;
+import static org.springframework.boot.autoconfigure.security.servlet.PathRequest.toStaticResources;
 
 import java.util.Arrays;
 
@@ -108,17 +109,25 @@ public class SecurityConfig {
         // 요청 인증/인가 및 필터
         http
             .authorizeHttpRequests(auth -> auth
-                // 필수 인증 경로 (로그아웃, 사용자 정보 조회 등)
+                // SpringDoc 및 정적 리소스에 대한 명시적 최우선 허용
+                .requestMatchers(
+                    "/",
+                    "/favicon.ico",
+                    "/error",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/actuator/**",
+                    "/health/**"
+                ).permitAll()
+                .requestMatchers(toStaticResources().atCommonLocations()).permitAll() // 정적 리소스
+
+                // 기존의 다른 규칙들
                 .requestMatchers(POST, "/auth/logout").authenticated()
                 .requestMatchers("/user/me").authenticated()
-                
-                // 챗봇 API는 인증 없이 접근 허용
                 .requestMatchers("/chtbot/**").permitAll()
                 
-                // Swagger, actuator, health, favicon 경로 허용
-                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/actuator/**", "/health", "/favicon.ico").permitAll()
-                
-                // 그 외 모든 요청은 인증 없이 허용
+                // 그 외 모든 요청은 일단 허용 (필요에 따라 변경)
                 .anyRequest().permitAll()
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
