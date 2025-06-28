@@ -78,6 +78,17 @@ jobs:
           source: "docker-compose.prod.yml"
           target: "/home/ubuntu/"
 
+      # 8-1. GCP 서비스 계정 키 처리 및 환경변수 주입
+      - name: ⬇️ Decode & export GCP key
+        run: |
+          echo "${{ secrets.GCP_SERVICE_KEY_JSON }}" | base64 -d > /tmp/gcp-key.json
+          echo "::add-mask::${{ secrets.GCP_SERVICE_KEY_JSON }}"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+          GCP_PROJECT_ID=$(jq -r '.project_id' /tmp/gcp-key.json)
+          echo "GCP_PROJECT_ID=$GCP_PROJECT_ID" >> $GITHUB_ENV
+          echo "GCP_PROCESSOR_ID=${{ secrets.GCP_PROCESSOR_ID }}" >> $GITHUB_ENV
+        shell: bash
+
       # 8. EC2에 배포 (SSH 액션의 env 기능을 사용하여 변수 주입)
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -97,9 +108,10 @@ jobs:
           NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
           NAVER_REDIRECT_URI: ${{ secrets.NAVER_REDIRECT_URI }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GCP_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }}
+          # GCP_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY_JSON }} # TODO: 확인 후 삭제
+          GCP_SERVICE_KEY_JSON: ${{ secrets.GCP_SERVICE_KEY_JSON }}
           GCP_ENABLED: ${{ secrets.GCP_ENABLED }}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_PROJECT_ID: ${{ env.GCP_PROJECT_ID }}
           GCP_PROCESSOR_ID: ${{ secrets.GCP_PROCESSOR_ID }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -113,7 +125,7 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_KEY }}
-          envs: DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,GCP_SERVICE_ACCOUNT_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,AWS_S3_BUCKET_NAME,FRONTEND_URL,JWT_ACCESS_TOKEN_VALIDITY,SERVER_PORT,AWS_ACCOUNT_ID
+          envs: DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,GCP_SERVICE_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,AWS_S3_BUCKET_NAME,FRONTEND_URL,JWT_ACCESS_TOKEN_VALIDITY,SERVER_PORT,AWS_ACCOUNT_ID
           script: |
             set -e
             set -o pipefail
@@ -160,7 +172,7 @@ jobs:
             GEMINI_API_KEY=$GEMINI_API_KEY
             CHATBOT_API_BASE_URL=http://43.201.42.119:8000
             # --- GCP ---
-            GCP_ENABLED=${GCP_ENABLED:-false}
+            GCP_ENABLED=true
             GCP_PROJECT_ID=$GCP_PROJECT_ID
             GCP_PROCESSOR_ID=$GCP_PROCESSOR_ID
             # --- AWS S3 ---
@@ -178,8 +190,8 @@ jobs:
             EOF
             echo "✅ .env file created."
 
-            echo "======> DIAGNOSTICS: Printing .env file contents"
-            cat .env
+            # echo "======> DIAGNOSTICS: Printing .env file contents"
+            # cat .env
             echo "======> DIAGNOSTICS: Value of CHATBOT_API_BASE_URL in shell is: $CHATBOT_API_BASE_URL"
 
             echo "======> 3. Cleaning up old resources"
