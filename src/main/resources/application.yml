@@ -157,6 +157,7 @@ springdoc:
   show-actuator: true
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
+  packages-to-scan: com.superlawva
 
 # OAuth2 소셜 로그인 기능 활성화 여부 (기본: 비활성화)
 oauth2:
@@ -180,3 +181,11 @@ gemini:
   api-key: ${GEMINI_API_KEY:}
   model-name: ${GEMINI_MODEL_NAME:gemini-1.5-flash}
   api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com}
+
+gcp:
+  enabled: true
+  project-id: theta-gizmo-463308-j4
+  location: us
+  processor-id: 56d956757d67d15a
+  credentials:
+    path: classpath:service-account-key.json
