@@ -34,7 +34,7 @@ public class ContractService {
         try {
             // 1. ML API 호출
             Map<String, Object> mlRequest = Map.of(
-                    "user_id", request.getUserId(),
+                    "user_id", String.valueOf(request.getUserId()),
                     "user_query", request.getUserQuery()
             );
             Map<String, Object> mlResponse = mlApiClient.generateSpecialTerms(mlRequest);

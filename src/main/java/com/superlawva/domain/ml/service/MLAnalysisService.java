@@ -223,8 +223,8 @@ public class MLAnalysisService {
      */
     private Map<String, Object> buildContractAnalysisRequest(ContractData contractData, String userId) {
         Map<String, Object> request = new HashMap<>();
-        request.put("contract_id", contractData.getId());
-        request.put("user_id", userId);
+        request.put("contract_id", String.valueOf(contractData.getId()));
+        request.put("user_id", String.valueOf(userId));
         request.put("contract_type", contractData.getContractType());
 
         // 계약서 상세 정보
@@ -247,8 +247,8 @@ public class MLAnalysisService {
      */
     private Map<String, Object> buildProofGenerationRequest(ContractData contractData, String userId) {
         Map<String, Object> request = new HashMap<>();
-        request.put("contract_id", contractData.getId());
-        request.put("user_id", userId);
+        request.put("contract_id", String.valueOf(contractData.getId()));
+        request.put("user_id", String.valueOf(userId));
         request.put("contract_type", contractData.getContractType());
         request.put("request_type", "PROOF_GENERATION");
 
@@ -272,8 +272,8 @@ public class MLAnalysisService {
      */
     private Map<String, Object> buildSpecialTermsRequest(ContractData contractData, String userId) {
         Map<String, Object> request = new HashMap<>();
-        request.put("contract_id", contractData.getId());
-        request.put("user_id", userId);
+        request.put("contract_id", String.valueOf(contractData.getId()));
+        request.put("user_id", String.valueOf(userId));
         request.put("contract_type", contractData.getContractType());
         request.put("request_type", "SPECIAL_TERMS");
 

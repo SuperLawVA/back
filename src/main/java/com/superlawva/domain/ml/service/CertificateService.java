@@ -137,10 +137,10 @@ public class CertificateService {
     // Private helper methods
     private Map<String, Object> buildCertificateRequest(ContractData contractData, CertificateCreateRequest request) {
         Map<String, Object> mlRequest = new HashMap<>();
+        mlRequest.put("contract_id", String.valueOf(contractData.getId()));
+        mlRequest.put("user_id", String.valueOf(request.getUserId()));
         mlRequest.put("user_query", request.getUserQuery());
         Map<String, Object> contractInfo = new HashMap<>();
-        contractInfo.put("id", contractData.getId() != null ? contractData.getId().toString() : null);
-        contractInfo.put("user_id", request.getUserId());
         contractInfo.put("contract_type", contractData.getContractType());
         if (contractData.getDates() != null) {
             Map<String, Object> dates = new HashMap<>();
