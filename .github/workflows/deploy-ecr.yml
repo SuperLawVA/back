@@ -212,6 +212,9 @@ jobs:
             $COMPOSE_CMD --env-file ./.env up -d --force-recreate
             echo "✅ Docker Compose 'up' command executed."
 
+            echo "======> Waiting for containers to initialize..."
+            sleep 20
+
             echo "======> 5. Health check"
             HEALTH_CHECK_URL="http://app:8080/actuator/health"
             echo "Health checking at: $HEALTH_CHECK_URL"
