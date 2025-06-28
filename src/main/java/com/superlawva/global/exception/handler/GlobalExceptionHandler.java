@@ -59,12 +59,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<Object> handleGeneralException(Exception e, HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        // Swagger/OpenAPI/Actuator 요청은 예외 래핑하지 않고 그대로 던짐
-        if (uri.startsWith("/v3/api-docs") || uri.startsWith("/swagger") || uri.startsWith("/actuator")) {
-            throw new RuntimeException(e);
-        }
-        log.error("Unexpected error: ", e);
+        log.error("Unexpected error for URI: {}", request.getRequestURI(), e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure("500", "예상치 못한 오류가 발생했습니다.", null);
         return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
     }

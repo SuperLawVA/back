@@ -39,13 +39,17 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-
-    implementation 'org.springframework.security:spring-security-config'
-    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
+    
+    // Actuator에서 webmvc starter 제외 (springdoc 충돌 방지)
+    implementation ('org.springframework.boot:spring-boot-starter-actuator') {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-web'
+    }
 
     /* ── OpenAPI Docs ──────────────────────────── */
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
+
+    implementation 'org.springframework.security:spring-security-config'
+    implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
 
     /* ── JWT ───────────────────────────────────── */
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -59,6 +63,11 @@ dependencies {
     implementation 'software.amazon.awssdk:s3:2.24.12'
     implementation 'software.amazon.awssdk:sts:2.24.12'
 
+    /* ── GCP Document AI ────────────────────────── */
+    implementation platform('com.google.cloud:libraries-bom:26.28.0')
+    implementation 'com.google.cloud:google-cloud-document-ai'
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
+    
     /* ── Utils ─────────────────────────────────── */
     implementation 'io.lettuce:lettuce-core'
     implementation 'commons-io:commons-io:2.15.0'
@@ -76,11 +85,6 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-    /* ── GCP Document AI ────────────────────────── */
-    implementation platform('com.google.cloud:libraries-bom:26.28.0')
-    implementation 'com.google.cloud:google-cloud-document-ai'
-    implementation 'com.google.auth:google-auth-library-oauth2-http'
 }
 
 tasks.named('test') {
