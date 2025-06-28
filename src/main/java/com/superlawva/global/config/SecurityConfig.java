@@ -35,8 +35,10 @@ import static org.springframework.boot.autoconfigure.security.servlet.PathReques
 
 import java.util.Arrays;
 
-import static org.springframework.security.config.Customizer.withDefaults;
+import static org.springframework.boot.autoconfigure.security.servlet.PathRequest.toStaticResources;
+import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @RequiredArgsConstructor
@@ -87,18 +89,7 @@ public class SecurityConfig {
         
         http
             .authorizeHttpRequests(auth -> auth
-                // Swagger UI 및 API 문서 경로에 대한 명시적 최우선 허용
-                .requestMatchers(
-                    "/",
-                    "/swagger-ui.html",
-                    "/swagger-ui/**",
-                    "/v3/api-docs/**",
-                    "/actuator/**",
-                    "/health/**",
-                    "/error"
-                ).permitAll()
-                .requestMatchers(toStaticResources().atCommonLocations()).permitAll()
-                .anyRequest().authenticated() // 위 경로 외 모든 요청은 인증 필요
+                .anyRequest().permitAll() // 모든 요청을 인증 없이 허용
             );
         
         http
