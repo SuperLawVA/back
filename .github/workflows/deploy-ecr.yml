@@ -216,7 +216,8 @@ jobs:
             sleep 20
 
             echo "======> 5. Health check"
-            HEALTH_CHECK_URL="http://app:8080/actuator/health"
+            SERVER_PORT=${SERVER_PORT:-8080}
+            HEALTH_CHECK_URL="http://localhost:${SERVER_PORT}/actuator/health"
             echo "Health checking at: $HEALTH_CHECK_URL"
             # 10초 간격으로 6번 (총 1분) 헬스체크
             for i in {1..6}; do
