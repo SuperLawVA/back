@@ -202,3 +202,35 @@ jobs:
 
             $COMPOSE_CMD --env-file ./.env up -d --force-recreate
             echo "✅ Docker Compose 'up' command executed."
+
+            echo "======> Waiting for containers to initialize..."
+            sleep 20
+
+            echo "======> 5. Health check"
+            HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
+            echo "Health checking at: $HEALTH_CHECK_URL"
+            # 10초 간격으로 6번 (총 1분) 헬스체크
+            for i in {1..6}; do
+              HTTP_CODE=$(curl -v -s -o /dev/stderr -w "%{http_code}" "$HEALTH_CHECK_URL" || echo "000")
+              if [ "$HTTP_CODE" -eq 200 ]; then
+                echo "✅ Health check PASSED on attempt $i with status $HTTP_CODE."
+                $COMPOSE_CMD ps
+                exit 0
+              fi
+              echo "Attempt $i: Health check failed with HTTP status $HTTP_CODE. Retrying in 10 seconds..."
+              sleep 10
+            done
+
+            echo "🚨 Health check FAILED after multiple attempts."
+            echo "======> Final container status:"
+            $COMPOSE_CMD ps -a
+
+            APP_CONTAINER_ID=$($COMPOSE_CMD ps -q app)
+            if [ -n "$APP_CONTAINER_ID" ]; then
+              echo "======> Displaying last 200 lines of logs for container 'app' ($APP_CONTAINER_ID):"
+              docker logs --tail 200 "$APP_CONTAINER_ID"
+            else
+              echo "⚠️ Could not find the 'app' container to display logs."
+            fi
+
+            exit 1
