@@ -1,4 +1,4 @@
-ㅎ로 가자name: Deploy Spring Boot to EC2
+name: Deploy Spring Boot to EC2
 
 on:
   push:
