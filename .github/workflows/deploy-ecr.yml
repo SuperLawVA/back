@@ -140,7 +140,11 @@ jobs:
             echo "======> 1. Preparing environment"
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
 
-            echo "======> 2. Creating .env file"
+            echo "======> 2a. Creating gcp-key.json file"
+            echo "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
+            echo "✅ gcp-key.json file created."
+
+            echo "======> 2b. Creating .env file"
             cat > .env << EOF
             # --- Database ---
             DATABASE_URL=$DATABASE_URL
@@ -172,6 +176,7 @@ jobs:
             GEMINI_API_KEY=$GEMINI_API_KEY
             CHATBOT_API_BASE_URL=http://43.201.42.119:8000
             # --- GCP ---
+            GOOGLE_APPLICATION_CREDENTIALS=/home/ubuntu/gcp-key.json
             GCP_ENABLED=true
             GCP_PROJECT_ID=$GCP_PROJECT_ID
             GCP_PROCESSOR_ID=$GCP_PROCESSOR_ID

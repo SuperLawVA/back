@@ -18,11 +18,14 @@ services:
     container_name: superlawva-app
     restart: unless-stopped
     depends_on: [redis]
-    env_file: .env
+    env_file:
+      - ./.env
     ports:
       - "8080:8080"
       - "8443:8443"
     networks: [app-network]
+    volumes:
+      - /home/ubuntu/gcp-key.json:/home/ubuntu/gcp-key.json
     # HTTP 테스트를 위해 volumes 섹션 전체를 주석 처리합니다.
     # volumes:
     #   # 호스트의 키스토어 파일(${SERVER_SSL_KEY_STORE})을 컨테이너의 고정된 경로로 마운트
@@ -41,7 +44,7 @@ services:
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN
       - LOGGING_LEVEL_ORG_HIBERNATE=WARN
       - LOGGING_LEVEL_ORG_SQL=WARN
-      - TZ=Asia/Seoul  # 시간대 설정 추가
+      - TZ=Asia/Seoul # 시간대 설정 추가
     deploy:
       resources:
         limits:
