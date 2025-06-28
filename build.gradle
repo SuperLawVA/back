@@ -39,7 +39,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // implementation 'org.springframework.boot:spring-boot-starter-actuator' // SpringDoc 충돌 가능성으로 임시 비활성화
 
     /* ── OpenAPI Docs ──────────────────────────── */
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
