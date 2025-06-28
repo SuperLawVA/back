@@ -24,7 +24,7 @@ services:
       - "8080:8080"
     networks: [app-network]
     volumes:
-      - /home/ubuntu/gcp-key.json:/home/ubuntu/gcp-key.json
+      - /home/ubuntu/gcp-key.json:/app/gcp-key.json
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379 # 내부 네트워크에서는 6379 사용
