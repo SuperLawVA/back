@@ -14,8 +14,8 @@ RUN apk update && apk add --no-cache curl
 ARG JAR_FILE=build/libs/*.jar
 COPY ${JAR_FILE} app.jar
 
-# 8080(http)과 8443(https) 포트를 모두 노출
-EXPOSE 8080 8443
+# 8080(http) 포트 노출
+EXPOSE 8080
 
 # 컨테이너 시작 시 실행될 명령어
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

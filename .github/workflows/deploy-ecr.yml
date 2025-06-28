@@ -20,205 +20,208 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. 소스코드 체크아웃
-    - name: Checkout source code
-      uses: actions/checkout@v4
+      # 1. 소스코드 체크아웃
+      - name: Checkout source code
+        uses: actions/checkout@v4
 
-    # 2. JDK 17 설정
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: "17"
+      # 2. JDK 17 설정
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: "17"
 
-    # 3. Gradle 캐시
-    - name: Cache Gradle packages
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        restore-keys: |
-          ${{ runner.os }}-gradle-
+      # 3. Gradle 캐시
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-    # 4. Spring Boot 애플리케이션 빌드
-    - name: Build Spring Boot App
-      run: |
-        chmod +x ./gradlew
-        ./gradlew clean bootJar -x test
+      # 4. Spring Boot 애플리케이션 빌드
+      - name: Build Spring Boot App
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean bootJar -x test
 
-    # 5. AWS 인증
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region:            ${{ env.AWS_REGION }}
+      # 5. AWS 인증
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
 
-    - name: Login to Amazon ECR
-      id:   login-ecr
-      uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-    # 6. Docker 이미지 빌드, 태깅, 푸시
-    - name: Build, tag, and push Docker image to ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-      run: |
-        docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "✅ Docker image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+      # 6. Docker 이미지 빌드, 태깅, 푸시
+      - name: Build, tag, and push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build --platform linux/amd64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "✅ Docker image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-    # 7. docker-compose 파일 전송
-    - name: Copy docker-compose.prod.yml to EC2
-      uses: appleboy/scp-action@v0.1.4
-      with:
-        host:     ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key:      ${{ secrets.EC2_KEY }}
-        source:   docker-compose.prod.yml
-        target:   /home/ubuntu/
+      # 7. docker-compose 파일 전송
+      - name: Copy docker-compose.prod.yml to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          source: docker-compose.prod.yml
+          target: /home/ubuntu/
 
-    # 8-1. GCP 서비스 계정 키 처리
-    - name: ⬇️ Export GCP key (no base64)
-      shell: bash
-      run: |
-        echo '${{ secrets.GCP_SERVICE_KEY_JSON }}' > /tmp/gcp-key.json
-        echo "::add-mask::${{ secrets.GCP_SERVICE_KEY_JSON }}"
-        echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
-        GCP_PROJECT_ID=$(jq -r '.project_id' /tmp/gcp-key.json)
-        echo "GCP_PROJECT_ID=$GCP_PROJECT_ID" >> $GITHUB_ENV
-        echo "GCP_PROCESSOR_ID=${{ secrets.GCP_PROCESSOR_ID }}" >> $GITHUB_ENV
+      # 8-1. GCP 서비스 계정 키 처리
+      - name: ⬇️ Export GCP key (no base64)
+        shell: bash
+        run: |
+          echo '${{ secrets.GCP_SERVICE_KEY_JSON }}' > /tmp/gcp-key.json
+          echo "::add-mask::${{ secrets.GCP_SERVICE_KEY_JSON }}"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+          GCP_PROJECT_ID=$(jq -r '.project_id' /tmp/gcp-key.json)
+          echo "GCP_PROJECT_ID=$GCP_PROJECT_ID" >> $GITHUB_ENV
+          echo "GCP_PROCESSOR_ID=${{ secrets.GCP_PROCESSOR_ID }}" >> $GITHUB_ENV
 
-    # 8-2. EC2 배포
-    - name: Deploy to EC2 via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      env:   # --- 비밀/환경변수 목록 ---
-        DATABASE_URL:              ${{ secrets.DATABASE_URL }}
-        DB_USERNAME:               ${{ secrets.DB_USERNAME }}
-        DB_PASSWORD:               ${{ secrets.DB_PASSWORD }}
-        MONGODB_URI:               ${{ secrets.MONGODB_URI }}
-        JWT_SECRET:                ${{ secrets.JWT_SECRET }}
-        AES_SECRET_KEY:            ${{ secrets.AES_SECRET_KEY }}
-        MAIL_USERNAME:             ${{ secrets.MAIL_USERNAME }}
-        MAIL_PASSWORD:             ${{ secrets.MAIL_PASSWORD }}
-        KAKAO_CLIENT_ID:           ${{ secrets.KAKAO_CLIENT_ID }}
-        KAKAO_CLIENT_SECRET:       ${{ secrets.KAKAO_CLIENT_SECRET }}
-        KAKAO_REDIRECT_URI:        ${{ secrets.KAKAO_REDIRECT_URI }}
-        NAVER_CLIENT_ID:           ${{ secrets.NAVER_CLIENT_ID }}
-        NAVER_CLIENT_SECRET:       ${{ secrets.NAVER_CLIENT_SECRET }}
-        NAVER_REDIRECT_URI:        ${{ secrets.NAVER_REDIRECT_URI }}
-        GEMINI_API_KEY:            ${{ secrets.GEMINI_API_KEY }}
-        GCP_SERVICE_KEY_JSON:      ${{ secrets.GCP_SERVICE_KEY_JSON }}
-        GCP_ENABLED:               ${{ secrets.GCP_ENABLED }}
-        GCP_PROJECT_ID:            ${{ env.GCP_PROJECT_ID }}
-        GCP_PROCESSOR_ID:          ${{ secrets.GCP_PROCESSOR_ID }}
-        AWS_ACCESS_KEY_ID:         ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY:     ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION:                ${{ env.AWS_REGION }}
-        AWS_S3_BUCKET_NAME:        ${{ secrets.AWS_S3_BUCKET_NAME }}
-        FRONTEND_URL:              ${{ secrets.FRONTEND_URL }}
-        JWT_ACCESS_TOKEN_VALIDITY: ${{ secrets.JWT_ACCESS_TOKEN_VALIDITY }}
-        SERVER_PORT:               ${{ secrets.SERVER_PORT }}
-        AWS_ACCOUNT_ID:            ${{ secrets.AWS_ACCOUNT_ID }}
-      with:
-        host:     ${{ secrets.EC2_HOST }}
-        username: ubuntu
-        key:      ${{ secrets.EC2_KEY }}
-        envs: >
-          DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,
-          AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,
-          KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,
-          NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,
-          GCP_SERVICE_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,
-          AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,
-          AWS_S3_BUCKET_NAME,FRONTEND_URL,JWT_ACCESS_TOKEN_VALIDITY,
-          SERVER_PORT,AWS_ACCOUNT_ID
-        script: |
-          set -euo pipefail
+      # 8-2. EC2 배포
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env: # --- 비밀/환경변수 목록 ---
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AES_SECRET_KEY: ${{ secrets.AES_SECRET_KEY }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          KAKAO_CLIENT_ID: ${{ secrets.KAKAO_CLIENT_ID }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          KAKAO_REDIRECT_URI: ${{ secrets.KAKAO_REDIRECT_URI }}
+          NAVER_CLIENT_ID: ${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET: ${{ secrets.NAVER_CLIENT_SECRET }}
+          NAVER_REDIRECT_URI: ${{ secrets.NAVER_REDIRECT_URI }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GCP_SERVICE_KEY_JSON: ${{ secrets.GCP_SERVICE_KEY_JSON }}
+          GCP_ENABLED: ${{ secrets.GCP_ENABLED }}
+          GCP_PROJECT_ID: ${{ env.GCP_PROJECT_ID }}
+          GCP_PROCESSOR_ID: ${{ secrets.GCP_PROCESSOR_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          JWT_ACCESS_TOKEN_VALIDITY: ${{ secrets.JWT_ACCESS_TOKEN_VALIDITY }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_KEY }}
+          envs: >
+            DATABASE_URL,DB_USERNAME,DB_PASSWORD,MONGODB_URI,JWT_SECRET,
+            AES_SECRET_KEY,MAIL_USERNAME,MAIL_PASSWORD,KAKAO_CLIENT_ID,
+            KAKAO_CLIENT_SECRET,KAKAO_REDIRECT_URI,NAVER_CLIENT_ID,
+            NAVER_CLIENT_SECRET,NAVER_REDIRECT_URI,GEMINI_API_KEY,
+            GCP_SERVICE_KEY_JSON,GCP_ENABLED,GCP_PROJECT_ID,GCP_PROCESSOR_ID,
+            AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,
+            AWS_S3_BUCKET_NAME,FRONTEND_URL,JWT_ACCESS_TOKEN_VALIDITY,
+            SERVER_PORT,AWS_ACCOUNT_ID
+          script: |
+            set -euo pipefail
 
-          # --- 공통 환경 ---
-          export ECR_REGISTRY="${{ env.ECR_REGISTRY }}"
-          export IMAGE_TAG="${{ env.IMAGE_TAG }}"
-          export AWS_REGION="${{ env.AWS_REGION }}"
+            # --- 공통 환경 ---
+            export ECR_REGISTRY="${{ env.ECR_REGISTRY }}"
+            export IMAGE_TAG="${{ env.IMAGE_TAG }}"
+            export AWS_REGION="${{ env.AWS_REGION }}"
 
-          echo "======> Deployment started on EC2"
-          cd /home/ubuntu
+            echo "======> Deployment started on EC2"
+            cd /home/ubuntu
 
-          echo "======> 1. AWS ECR 로그인"
-          aws ecr get-login-password --region "$AWS_REGION" |
-            docker login --username AWS --password-stdin "$ECR_REGISTRY"
+            echo "======> 1. AWS ECR 로그인"
+            aws ecr get-login-password --region "$AWS_REGION" |
+              docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-          echo "======> 2. gcp-key.json 및 .env 생성"
-          echo "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
+            echo "======> 2. gcp-key.json 및 .env 생성"
+            echo "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
 
-          cat > .env <<EOF
-          DATABASE_URL=$DATABASE_URL
-          DB_USERNAME=$DB_USERNAME
-          DB_PASSWORD=$DB_PASSWORD
-          MONGODB_URI=$MONGODB_URI
-          REDIS_HOST=redis
-          REDIS_PORT=6379
-          JWT_SECRET=$JWT_SECRET
-          JWT_ACCESS_TOKEN_VALIDITY=$JWT_ACCESS_TOKEN_VALIDITY
-          AES_SECRET_KEY=$AES_SECRET_KEY
-          MAIL_USERNAME=$MAIL_USERNAME
-          MAIL_PASSWORD=$MAIL_PASSWORD
-          SERVER_PORT=$SERVER_PORT
-          KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
-          KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
-          KAKAO_REDIRECT_URI=$KAKAO_REDIRECT_URI
-          NAVER_CLIENT_ID=$NAVER_CLIENT_ID
-          NAVER_CLIENT_SECRET=$NAVER_CLIENT_SECRET
-          NAVER_REDIRECT_URI=$NAVER_REDIRECT_URI
-          GEMINI_API_KEY=$GEMINI_API_KEY
-          CHATBOT_API_BASE_URL=http://43.201.42.119:8000
-          GOOGLE_APPLICATION_CREDENTIALS=/home/ubuntu/gcp-key.json
-          GCP_ENABLED=$GCP_ENABLED
-          GCP_PROJECT_ID=$GCP_PROJECT_ID
-          GCP_PROCESSOR_ID=$GCP_PROCESSOR_ID
-          AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-          AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-          AWS_REGION=$AWS_REGION
-          AWS_S3_BUCKET_NAME=$AWS_S3_BUCKET_NAME
-          AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
-          FRONTEND_URL=$FRONTEND_URL
-          SPRING_PROFILES_ACTIVE=prod
-          ECR_REGISTRY=$ECR_REGISTRY
-          IMAGE_TAG=$IMAGE_TAG
-          EOF
-          echo "✅ .env file created."
+            cat > .env <<EOF
+            DATABASE_URL=$DATABASE_URL
+            DB_USERNAME=$DB_USERNAME
+            DB_PASSWORD=$DB_PASSWORD
+            MONGODB_URI=$MONGODB_URI
+            REDIS_HOST=redis
+            REDIS_PORT=6379
+            JWT_SECRET=$JWT_SECRET
+            JWT_ACCESS_TOKEN_VALIDITY=$JWT_ACCESS_TOKEN_VALIDITY
+            AES_SECRET_KEY=$AES_SECRET_KEY
+            MAIL_USERNAME=$MAIL_USERNAME
+            MAIL_PASSWORD=$MAIL_PASSWORD
+            SERVER_PORT=$SERVER_PORT
+            KAKAO_CLIENT_ID=$KAKAO_CLIENT_ID
+            KAKAO_CLIENT_SECRET=$KAKAO_CLIENT_SECRET
+            KAKAO_REDIRECT_URI=$KAKAO_REDIRECT_URI
+            NAVER_CLIENT_ID=$NAVER_CLIENT_ID
+            NAVER_CLIENT_SECRET=$NAVER_CLIENT_SECRET
+            NAVER_REDIRECT_URI=$NAVER_REDIRECT_URI
+            GEMINI_API_KEY=$GEMINI_API_KEY
+            CHATBOT_API_BASE_URL=http://43.201.42.119:8000
+            GOOGLE_APPLICATION_CREDENTIALS=/home/ubuntu/gcp-key.json
+            GCP_ENABLED=$GCP_ENABLED
+            GCP_PROJECT_ID=$GCP_PROJECT_ID
+            GCP_PROCESSOR_ID=$GCP_PROCESSOR_ID
+            AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+            AWS_REGION=$AWS_REGION
+            AWS_S3_BUCKET_NAME=$AWS_S3_BUCKET_NAME
+            AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID
+            FRONTEND_URL=$FRONTEND_URL
+            SPRING_PROFILES_ACTIVE=prod
+            ECR_REGISTRY=$ECR_REGISTRY
+            IMAGE_TAG=$IMAGE_TAG
+            EOF
+            echo "✅ .env file created."
 
-          echo "======> 3. Docker 정리 및 재배포"
-          mv docker-compose.prod.yml docker-compose.yml
-          if command -v docker-compose &>/dev/null; then
-            COMPOSE_CMD="docker-compose"
-          else
-            COMPOSE_CMD="docker compose"
-          fi
-
-          $COMPOSE_CMD down --remove-orphans || true
-          docker system prune -af
-
-          $COMPOSE_CMD --env-file ./.env up -d --force-recreate
-          echo "✅ Containers (re)started"
-
-          echo "======> 4. Health check"
-          SERVER_PORT=${SERVER_PORT:-8080}
-          HEALTH_CHECK_URL="http://localhost:${SERVER_PORT}/actuator/health"
-
-          for i in {1..6}; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL" || echo "000")
-            if [ "$HTTP_CODE" = "200" ]; then
-              echo "✅ Health check PASSED on attempt $i"
-              $COMPOSE_CMD ps
-              exit 0
+            echo "======> 3. Docker 정리 및 재배포"
+            mv docker-compose.prod.yml docker-compose.yml
+            if command -v docker-compose &>/dev/null; then
+              COMPOSE_CMD="docker-compose"
+            else
+              COMPOSE_CMD="docker compose"
             fi
-            echo "Attempt $i failed (HTTP $HTTP_CODE). Retrying in 10 s…"
-            sleep 10
-          done
 
-          echo "🚨 Health check FAILED after 6 attempts"
-          $COMPOSE_CMD ps -a
-          docker logs --tail 200 "$($COMPOSE_CMD ps -q app)" || true
-          exit 1
+            $COMPOSE_CMD down --remove-orphans || true
+            docker system prune -af
+
+            $COMPOSE_CMD --env-file ./.env up -d --force-recreate
+            echo "✅ Containers (re)started"
+
+            echo "======> Waiting for containers to initialize..."
+            sleep 20
+
+            echo "======> 5. Health check"
+            HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
+            echo "Health checking at: $HEALTH_CHECK_URL"
+            # 10초 간격으로 6번 (총 1분) 헬스체크
+            for i in {1..6}; do
+              HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$HEALTH_CHECK_URL" || echo "000")
+              if [ "$HTTP_CODE" = "200" ]; then
+                echo "✅ Health check PASSED on attempt $i"
+                $COMPOSE_CMD ps
+                exit 0
+              fi
+              echo "Attempt $i failed (HTTP $HTTP_CODE). Retrying in 10 s…"
+              sleep 10
+            done
+
+            echo "🚨 Health check FAILED after 6 attempts"
+            $COMPOSE_CMD ps -a
+            docker logs --tail 200 "$($COMPOSE_CMD ps -q app)" || true
+            exit 1
