@@ -50,11 +50,11 @@ services:
           memory: 1G
         reservations:
           memory: 256M
-    # healthcheck: # Actuator 비활성화로 인해 임시 주석 처리
-    #   test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   redis_data:
