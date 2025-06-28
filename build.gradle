@@ -77,6 +77,9 @@ dependencies {
     /* ── .env 환경변수 ─────────────────────────── */
     implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 
+    /* ── MIME Type Detection ───────────────────── */
+    implementation 'org.apache.tika:tika-core:2.9.1'
+
     /* ── Test ──────────────────────────────────── */
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'

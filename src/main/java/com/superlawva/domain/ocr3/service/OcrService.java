@@ -22,6 +22,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.apache.tika.Tika;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -146,12 +147,29 @@ public class OcrService {
 
     private String extractTextFromImage(MultipartFile file) throws IOException {
         log.debug("Initializing Document AI client");
+        
+        Tika tika = new Tika();
+        String mimeType = tika.detect(file.getInputStream());
+        
+        // 지원하는 MIME 타입 목록
+        List<String> supportedMimeTypes = List.of("image/jpeg", "image/png", "image/tiff", "application/pdf");
+
+        if (!supportedMimeTypes.contains(mimeType)) {
+            log.error("Unsupported MIME type: {} for file: {}", mimeType, file.getOriginalFilename());
+            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다: " + mimeType);
+        }
+
+        log.info("Detected MIME type: {}", mimeType);
+
         String name = String.format("projects/%s/locations/%s/processors/%s", projectId, location, processorId);
+        
         ByteString content = ByteString.copyFrom(file.getBytes());
+        
         RawDocument rawDocument = RawDocument.newBuilder()
                 .setContent(content)
-                .setMimeType(file.getContentType() != null ? file.getContentType() : "image/jpeg")
+                .setMimeType(mimeType) // Tika로 감지한 정확한 MIME 타입 사용
                 .build();
+        
         ProcessRequest request = ProcessRequest.newBuilder()
                 .setName(name)
                 .setRawDocument(rawDocument)

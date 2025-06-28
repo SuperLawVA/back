@@ -78,39 +78,30 @@ public class SecurityConfig {
         log.info("=== SecurityFilterChain 설정 시작 ===");
         
         http
-            .cors(withDefaults())
+            .authorizeHttpRequests(auth -> auth
+                // Swagger UI 및 API 문서 경로에 대한 명시적 최우선 허용
+                .requestMatchers(
+                    "/",
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/actuator/**",
+                    "/health/**",
+                    "/error"
+                ).permitAll()
+                .requestMatchers(toStaticResources().atCommonLocations()).permitAll()
+                .anyRequest().authenticated() // 위 경로 외 모든 요청은 인증 필요
+            );
+            
+        http
             .csrf(csrf -> csrf.disable())
+            .cors(withDefaults())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
             );
         
-        log.info("🔓 HTTP 설정으로 실행합니다.");
-
-        // 요청 인증/인가 및 필터
         http
-            .authorizeHttpRequests(auth -> auth
-                // SpringDoc 및 정적 리소스에 대한 명시적 최우선 허용
-                .requestMatchers(
-                    "/",
-                    "/favicon.ico",
-                    "/error",
-                    "/swagger-ui/**",
-                    "/swagger-ui.html",
-                    "/v3/api-docs/**",
-                    "/actuator/**",
-                    "/health/**"
-                ).permitAll()
-                .requestMatchers(toStaticResources().atCommonLocations()).permitAll() // 정적 리소스
-
-                // 기존의 다른 규칙들
-                .requestMatchers(POST, "/auth/logout").authenticated()
-                .requestMatchers("/user/me").authenticated()
-                .requestMatchers("/chtbot/**").permitAll()
-                
-                // 그 외 모든 요청은 일단 허용 (필요에 따라 변경)
-                .anyRequest().permitAll()
-            )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         // Spring Security의 기본 로그아웃 처리 활성화
