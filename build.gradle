@@ -26,8 +26,7 @@ repositories {
 // 🟢 Google Cloud BOM으로 버전 관리 (gRPC 버전 충돌 해결)
 dependencyManagement {
     imports {
-        // mavenBom 'com.google.cloud:libraries-bom:26.28.0'  // 로컬 개발 시 주석처리
-        // mavenBom 'io.grpc:grpc-bom:1.60.0' // gRPC 버전 통일  // 로컬 개발 시 주석처리
+        mavenBom 'com.google.cloud:libraries-bom:26.28.0'
     }
 }
 
@@ -79,8 +78,9 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     /* ── GCP Document AI ────────────────────────── */
-    implementation 'com.google.cloud:google-cloud-document-ai:2.25.0'
-    implementation 'com.google.auth:google-auth-library-oauth2-http:1.19.0'
+    implementation platform('com.google.cloud:libraries-bom:26.28.0')
+    implementation 'com.google.cloud:google-cloud-document-ai'
+    implementation 'com.google.auth:google-auth-library-oauth2-http'
 }
 
 tasks.named('test') {

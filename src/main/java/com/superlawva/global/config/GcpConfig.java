@@ -14,17 +14,11 @@ import java.io.IOException;
 @Configuration
 public class GcpConfig {
 
-    @Value("${gcp.project.id}")
+    @Value("${gcp.project-id}")
     private String projectId;
 
     @Value("${gcp.credentials.file.path}")
     private String credentialsFilePath;
-
-    @Value("${gcp.documentai.processor.id}")
-    private String processorId;
-
-    @Value("${gcp.documentai.location}")
-    private String location;
 
     @Bean
     public GoogleCredentials googleCredentials() throws IOException {

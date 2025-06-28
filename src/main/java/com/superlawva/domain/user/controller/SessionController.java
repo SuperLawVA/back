@@ -94,23 +94,7 @@ public class SessionController {
         - 액세스 토큰은 자연 만료 (보통 1-12시간)
         - 리프레시 토큰 즉시 삭제로 재발급 불가
         - 완전한 서버 측 로그아웃
-        
-        **사용법:**
-        ```javascript
-        const response = await fetch('/auth/logout', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (response.ok) {
-            localStorage.removeItem('access_token');
-            window.location.href = '/login';
-        }
-        ```
-        
+       
         **주의사항:**
         - 이 API는 LogoutFilter에서 처리됩니다 (이 컨트롤러 메서드는 실행되지 않음)
         - 성공 후 클라이언트에서 토큰 삭제 필수
