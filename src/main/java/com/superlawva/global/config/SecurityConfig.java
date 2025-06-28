@@ -78,6 +78,14 @@ public class SecurityConfig {
         log.info("=== SecurityFilterChain 설정 시작 ===");
         
         http
+            .csrf(csrf -> csrf.disable())
+            .cors(withDefaults())
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.sameOrigin())
+            );
+        
+        http
             .authorizeHttpRequests(auth -> auth
                 // Swagger UI 및 API 문서 경로에 대한 명시적 최우선 허용
                 .requestMatchers(
@@ -91,14 +99,6 @@ public class SecurityConfig {
                 ).permitAll()
                 .requestMatchers(toStaticResources().atCommonLocations()).permitAll()
                 .anyRequest().authenticated() // 위 경로 외 모든 요청은 인증 필요
-            );
-            
-        http
-            .csrf(csrf -> csrf.disable())
-            .cors(withDefaults())
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .headers(headers -> headers
-                .frameOptions(frameOptions -> frameOptions.sameOrigin())
             );
         
         http

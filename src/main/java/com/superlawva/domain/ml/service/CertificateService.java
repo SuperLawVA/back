@@ -210,7 +210,7 @@ public class CertificateService {
 
     private CertificateEntity saveCertificateResult(ContractData contractData, Map<String, Object> mlResponse, CertificateCreateRequest request) {
         CertificateEntity.CertificateEntityBuilder builder = CertificateEntity.builder()
-                .contractId(contractData.getId() != null ? contractData.getId().toString() : null)
+                .contractId(contractData.getId().toString())
                 .userId(request.getUserId())
                 .userQuery(request.getUserQuery())
                 .createdDate(LocalDateTime.now(ZoneOffset.UTC))
@@ -240,9 +240,8 @@ public class CertificateService {
 
         } catch (Exception e) {
             log.error("❌ ML 내용증명서 응답 저장 실패", e);
-            // 실패 기록 저장
             return certificateRepository.save(CertificateEntity.builder()
-                    .contractId(contractData.getId() != null ? contractData.getId().toString() : null)
+                    .contractId(contractData.getId().toString())
                     .userId(request.getUserId())
                     .userQuery(request.getUserQuery())
                     .createdDate(LocalDateTime.now(ZoneOffset.UTC))
