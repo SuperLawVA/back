@@ -80,32 +80,13 @@ public class SecurityConfig {
         http
             .cors(withDefaults())
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-
-        // 'ssl' 프로필 활성화 여부 확인
-        boolean isSslProfileActive = Arrays.asList(environment.getActiveProfiles()).contains("ssl");
-
-        // 헤더 설정
-        http.headers(headers -> {
-            headers
-                .frameOptions(frameOptions -> frameOptions.deny())
-                .contentTypeOptions();
-            
-            if (isSslProfileActive) {
-                log.info("🔐 HSTS 설정을 적용합니다.");
-                headers.httpStrictTransportSecurity(hsts -> 
-                    hsts.maxAgeInSeconds(31536000).includeSubDomains(true));
-            }
-        });
+            .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .headers(headers -> headers
+                .frameOptions(frameOptions -> frameOptions.sameOrigin())
+            );
         
-        // HTTPS 리다이렉션
-        if (isSslProfileActive) {
-            log.info("🔐 'ssl' 프로필 활성: 모든 요청에 HTTPS를 강제합니다.");
-            http.requiresChannel(channel -> channel.anyRequest().requiresSecure());
-        } else {
-            log.info("🔓 'ssl' 프로필 비활성: HTTP 설정으로 실행합니다.");
-        }
-        
+        log.info("🔓 HTTP 설정으로 실행합니다.");
+
         // 요청 인증/인가 및 필터
         http
             .authorizeHttpRequests(auth -> auth

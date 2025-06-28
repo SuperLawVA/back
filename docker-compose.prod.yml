@@ -25,16 +25,7 @@ services:
     networks: [app-network]
     volumes:
       - /home/ubuntu/gcp-key.json:/home/ubuntu/gcp-key.json
-    # HTTP 테스트를 위해 volumes 섹션 전체를 주석 처리합니다.
-    # volumes:
-    #   # 호스트의 키스토어 파일(${SERVER_SSL_KEY_STORE})을 컨테이너의 고정된 경로로 마운트
-    #   # SERVER_SSL_KEY_STORE는 배포 스크립트의 .env 파일에서 설정됩니다.
-    #   - ${SERVER_SSL_KEY_STORE}:/app/keystore.p12:ro
     environment:
-      # 컨테이너 내부 경로를 사용하고, 타입을 PKCS12로 명시하도록 오버라이드
-      # HTTP 테스트를 위해 다음 2라인을 주석 처리합니다.
-      # - SERVER_SSL_KEY_STORE=file:/app/keystore.p12
-      # - SERVER_SSL_KEY_STORE_TYPE=PKCS12
       - REDIS_HOST=redis
       - REDIS_PORT=6379 # 내부 네트워크에서는 6379 사용
       - JAVA_OPTS=-Xms256m -Xmx512m -XX:MaxMetaspaceSize=128m -XX:+UseG1GC -XX:+UseContainerSupport -XX:MaxRAMPercentage=60.0
