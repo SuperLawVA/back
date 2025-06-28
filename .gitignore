@@ -256,3 +256,6 @@ github_key
 # GCP
 gcp-key.json
 /gcp-credentials.json
+
+# service account key
+service-account-key.json
