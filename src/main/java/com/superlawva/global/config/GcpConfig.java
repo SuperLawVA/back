@@ -1,6 +1,5 @@
 package com.superlawva.global.config;
 
-import org.springframework.context.annotation.Configuration;
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.documentai.v1.DocumentProcessorServiceClient;
@@ -8,8 +7,10 @@ import com.google.cloud.documentai.v1.DocumentProcessorServiceSettings;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.Resource;
 
 import java.io.IOException;
+import java.io.InputStream;
 
 @Configuration
 public class GcpConfig {
@@ -17,12 +18,17 @@ public class GcpConfig {
     @Value("${gcp.project-id}")
     private String projectId;
 
+    @Value("${gcp.credentials.path}")
+    private Resource credentialsPath;
+
     @Bean
     public GoogleCredentials googleCredentials() throws IOException {
-        // ADC를 사용하여 환경 변수에서 인증 정보를 자동으로 로드합니다.
-        GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
-        System.out.println("[GCP] GoogleCredentials loaded successfully via Application Default Credentials for project: " + projectId);
-        return credentials;
+        System.out.println("[GCP] Loading credentials from: " + credentialsPath.getURI());
+        try (InputStream inputStream = credentialsPath.getInputStream()) {
+            GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream);
+            System.out.println("[GCP] GoogleCredentials loaded successfully from " + credentialsPath.getFilename());
+            return credentials;
+        }
     }
 
     @Bean
