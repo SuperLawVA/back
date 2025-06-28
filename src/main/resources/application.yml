@@ -165,7 +165,7 @@ oauth2:
 # 서버 기본 설정
 server:
   address: 0.0.0.0
-  port: ${SERVER_PORT:8080}
+  port: 8080
 
 # AWS S3 설정
 aws:
