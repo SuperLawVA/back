@@ -206,7 +206,7 @@ management:
       show-details: when-authorized
   health:
     defaults:
-      enabled: false # 구동 우선을 위해 기본 헬스체크 비활성화
+      enabled: true # 기본 헬스체크 활성화
   server:
     port: 8080
 
