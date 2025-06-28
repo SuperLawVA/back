@@ -210,9 +210,8 @@ jobs:
             echo "======> 5. Health check"
             HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
             echo "Health checking at: $HEALTH_CHECK_URL"
-
-            # 10초 간격으로 12번 (총 2분) 헬스체크
-            for i in {1..12}; do
+            # 10초 간격으로 6번 (총 1분) 헬스체크
+            for i in {1..6}; do
               HTTP_CODE=$(curl -s -o /dev/stderr -w "%{http_code}" $HEALTH_CHECK_URL || echo "000")
               if [ "$HTTP_CODE" -eq 200 ]; then
                 echo "✅ Health check PASSED on attempt $i with status $HTTP_CODE."

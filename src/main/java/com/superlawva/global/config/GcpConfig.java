@@ -17,15 +17,11 @@ public class GcpConfig {
     @Value("${gcp.project-id}")
     private String projectId;
 
-    @Value("${gcp.credentials.file.path}")
-    private String credentialsFilePath;
-
     @Bean
     public GoogleCredentials googleCredentials() throws IOException {
-        GoogleCredentials credentials = GoogleCredentials.fromStream(
-                getClass().getResourceAsStream(credentialsFilePath)
-        );
-        System.out.println("[GCP] GoogleCredentials loaded from: " + credentialsFilePath + ", projectId: " + projectId);
+        // ADC를 사용하여 환경 변수에서 인증 정보를 자동으로 로드합니다.
+        GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
+        System.out.println("[GCP] GoogleCredentials loaded successfully via Application Default Credentials for project: " + projectId);
         return credentials;
     }
 
