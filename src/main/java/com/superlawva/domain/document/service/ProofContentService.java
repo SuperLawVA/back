@@ -2,8 +2,8 @@ package com.superlawva.domain.document.service;
 
 import com.superlawva.domain.document.dto.ProofContentRequestDTO;
 import com.superlawva.domain.document.dto.DocumentResponseDTO;
-import com.superlawva.domain.document.entity.Document;
-import com.superlawva.domain.document.entity.GeneratedDocument;
+import com.superlawva.domain.document.entity.DocumentEntity;
+import com.superlawva.domain.document.entity.GeneratedDocumentEntity;
 import com.superlawva.domain.document.repository.DocumentRepository;
 import com.superlawva.domain.document.repository.GeneratedDocumentRepository;
 
@@ -30,7 +30,7 @@ public class ProofContentService {
     /**
      * AI 기반 증명 내용 생성
      */
-    public DocumentResponseDTO generateProofContent(String contractDocumentId, ProofContentRequestDTO request) {
+    public DocumentResponseDTO generateProofContent(Long contractDocumentId, ProofContentRequestDTO request) {
         log.info("AI 증명 내용 생성 시작 - 계약서 ID: {}, 증명 유형: {}", 
                 contractDocumentId, request.getProofType());
         
@@ -38,37 +38,37 @@ public class ProofContentService {
         
         try {
             // 1. 기준 계약서 문서 조회
-            Document contractDocument = documentRepository.findById(contractDocumentId)
+            DocumentEntity contractDocument = documentRepository.findById(contractDocumentId)
                     .orElseThrow(() -> new RuntimeException("계약서 문서를 찾을 수 없습니다: " + contractDocumentId));
             
             // 2. 증명서 Document 엔티티 생성
-            Document proofDocument = Document.builder()
+            DocumentEntity proofDocument = DocumentEntity.builder()
                 .userId(request.getUserId())
                 .originalFilename(generateProofFilename(request))
                 .encryptedFileKey(UUID.randomUUID().toString())
-                .documentType(Document.DocumentType.CERTIFICATE)
+                .documentType(DocumentEntity.DocumentType.CERTIFICATE)
                 .mimeType("application/pdf")
                 .fileSizeBytes(0L) // 생성 후 업데이트
-                .status(Document.DocumentStatus.OCR_PROCESSING) // 생성 중
+                .status(DocumentEntity.DocumentStatus.OCR_PROCESSING) // 생성 중
                 .build();
             
             proofDocument = documentRepository.save(proofDocument);
             
                          // 3. GeneratedDocument 메타데이터 생성
-             GeneratedDocument generatedDocument = GeneratedDocument.builder()
+             GeneratedDocumentEntity generatedDocument = GeneratedDocumentEntity.builder()
                  .userId(request.getUserId())
-                 .documentId(proofDocument.getId()) // MongoDB ObjectId 참조
-                 .generationType(GeneratedDocument.GenerationType.PROOF_CONTENT)
+                 .documentId(proofDocument.getId()) // JPA ID 참조
+                 .generationType(GeneratedDocumentEntity.DocGenerationType.PROOF_CONTENT)
                  .requestData(convertRequestToJson(request, contractDocumentId))
                  .modelName("proof-generator-v1") // TODO: 실제 모델명으로 변경
                  .modelVersion("1.0.0")
-                 .status(GeneratedDocument.DocumentStatus.GENERATING)
+                 .status(GeneratedDocumentEntity.DocumentStatus.GENERATING)
                  .build();
             
             generatedDocument = generatedDocumentRepository.save(generatedDocument);
             
             // 4. 계약서 내용 분석 및 증명서 생성
-            String contractContent = extractContractContent(contractDocument); // TODO: 구현
+            String contractContent = extractContractContent(contractDocument);
             String proofContent = generateProofContentWithAI(contractContent, request);
             
             // 5. 생성 결과 저장 및 메타데이터 업데이트
@@ -76,12 +76,12 @@ public class ProofContentService {
             double generationTime = (endTime - startTime) / 1000.0;
             
             // 문서 상태 업데이트
-            proofDocument.setStatus(Document.DocumentStatus.OCR_COMPLETED);
+            proofDocument.setStatus(DocumentEntity.DocumentStatus.OCR_COMPLETED);
             proofDocument.setFileSizeBytes((long) proofContent.length());
             documentRepository.save(proofDocument);
             
             // 생성 메타데이터 업데이트
-            generatedDocument.setStatus(GeneratedDocument.DocumentStatus.GENERATED);
+            generatedDocument.setStatus(GeneratedDocumentEntity.DocumentStatus.GENERATED);
             generatedDocument.setGenerationTimeSeconds(generationTime);
             generatedDocument.setTokenCount(estimateTokenCount(proofContent));
             generatedDocument.setQualityScore(calculateProofQualityScore(proofContent, request));
@@ -107,16 +107,15 @@ public class ProofContentService {
                 LocalDate.now().toString());
     }
 
-    private String convertRequestToJson(ProofContentRequestDTO request, String contractDocumentId) {
+    private String convertRequestToJson(ProofContentRequestDTO request, Long contractDocumentId) {
         // TODO: JSON 직렬화 구현
-        return String.format("{\"contractDocumentId\": \"%s\", \"proofType\": \"%s\"}", 
+        return String.format("{\"contractDocumentId\": %d, \"proofType\": \"%s\"}", 
                 contractDocumentId, request.getProofType());
     }
 
-    private String extractContractContent(Document contractDocument) {
+    private String extractContractContent(DocumentEntity contractDocument) {
         // TODO: 실제 계약서 내용 추출 로직 구현
-        log.info("계약서 내용 추출 - Document ID: {}", contractDocument.getId());
-        return "계약서 내용 추출 결과 (임시)";
+        return "계약서 내용 추출 (임시)";
     }
 
     private String generateProofContentWithAI(String contractContent, ProofContentRequestDTO request) {

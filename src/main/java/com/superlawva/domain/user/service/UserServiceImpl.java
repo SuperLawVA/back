@@ -48,16 +48,16 @@ public class UserServiceImpl implements UserService {
         }
         
         if (email == null || email.trim().isEmpty()) {
-            throw new BaseException(ErrorStatus._BAD_REQUEST);
+            throw new BaseException(ErrorStatus.BAD_REQUEST);
         }
         
         if (password == null || password.trim().isEmpty()) {
-            throw new BaseException(ErrorStatus._BAD_REQUEST);
+            throw new BaseException(ErrorStatus.BAD_REQUEST);
         }
         
         // 이메일 중복 체크
         if (userRepository.existsByEmail(email)) {
-            throw new BaseException(ErrorStatus._EMAIL_ALREADY_EXISTS);
+            throw new BaseException(ErrorStatus.EMAIL_ALREADY_EXISTS);
         }
         
         // 비밀번호 평문 저장 (임시)
@@ -84,7 +84,7 @@ public class UserServiceImpl implements UserService {
 
         // 평문 비밀번호 비교 (임시)
         if (!loginRequestDTO.getPassword().equals(user.getPassword())) {
-            throw new BaseException(ErrorStatus._PASSWORD_NOT_MATCH);
+            throw new BaseException(ErrorStatus.PASSWORD_NOT_MATCH);
         }
         
         String token = jwtTokenProvider.createToken(user.getEmail(), user.getId());
@@ -246,10 +246,10 @@ public class UserServiceImpl implements UserService {
     public void changePassword(User user, PasswordChangeRequestDTO request) {
         // 평문 비밀번호 비교 (임시)
         if (!request.getCurrentPassword().equals(user.getPassword())) {
-            throw new BaseException(ErrorStatus._PASSWORD_NOT_MATCH);
+            throw new BaseException(ErrorStatus.PASSWORD_NOT_MATCH);
         }
         if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
-            throw new BaseException(ErrorStatus._PASSWORD_CONFIRM_NOT_MATCH);
+            throw new BaseException(ErrorStatus.PASSWORD_CONFIRM_NOT_MATCH);
         }
         // 평문으로 저장 (임시)
         user.changePassword(request.getNewPassword());

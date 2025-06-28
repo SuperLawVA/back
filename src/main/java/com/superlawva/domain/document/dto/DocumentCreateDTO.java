@@ -1,6 +1,6 @@
 package com.superlawva.domain.document.dto;
 
-import com.superlawva.domain.document.entity.Document;
+import com.superlawva.domain.document.entity.DocumentEntity;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,7 +21,7 @@ public class DocumentCreateDTO {
     @NotBlank(message = "원본 파일명은 필수입니다")
     private String originalFilename;
     
-    private Document.DocumentType documentType;
+    private DocumentEntity.DocumentType documentType;
     
     private String mimeType;
     

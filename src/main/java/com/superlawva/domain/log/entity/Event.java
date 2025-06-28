@@ -2,6 +2,7 @@ package com.superlawva.domain.log.entity;
 
 import com.superlawva.domain.user.entity.User;
 import jakarta.persistence.*;
+import jakarta.persistence.GenerationType;
 import lombok.*;
 
 import java.time.LocalDateTime;

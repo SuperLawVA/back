@@ -5,8 +5,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -16,4 +15,24 @@ public class AlarmRequestDTO {
     private AlarmType alarmType;
     private String extraInfo;
     private LocalDateTime alarmDate;
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public String getContractId() {
+        return contractId;
+    }
+    
+    public AlarmType getAlarmType() {
+        return alarmType;
+    }
+    
+    public String getExtraInfo() {
+        return extraInfo;
+    }
+    
+    public LocalDateTime getAlarmDate() {
+        return alarmDate;
+    }
 } 

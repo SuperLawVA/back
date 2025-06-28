@@ -1,89 +1,48 @@
 package com.superlawva.global.config;
 
-/*
-// 🚧 로컬 개발 시 GCP 설정 비활성화
-
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.util.ResourceUtils;
 
+// TODO: GCP 의존성 추가 후 활성화
+/*
 import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.documentai.v1.DocumentProcessorServiceClient;
 import com.google.cloud.documentai.v1.DocumentProcessorServiceSettings;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-import lombok.extern.slf4j.Slf4j;
+import java.io.IOException;
 
-@Slf4j
 @Configuration
 public class GcpConfig {
 
-    @Value("${gcp.project-id}")
+    @Value("${gcp.project.id}")
     private String projectId;
 
-    @Value("${gcp.location}")
-    private String location;
+    @Value("${gcp.credentials.file.path}")
+    private String credentialsFilePath;
 
-    @Value("${gcp.processor-id}")
+    @Value("${gcp.documentai.processor.id}")
     private String processorId;
 
-    @Value("${gcp.credentials.path:#{null}}")
-    private String credentialsPath;
+    @Value("${gcp.documentai.location}")
+    private String location;
 
     @Bean
-    @Primary
-    @ConditionalOnProperty(name = "gcp.enabled", havingValue = "true")
     public GoogleCredentials googleCredentials() throws IOException {
-        log.info("GCP 인증 정보 로드 중...");
-        GoogleCredentials credentials;
-        
-        if (credentialsPath != null && !credentialsPath.isEmpty()) {
-            log.info("지정된 경로에서 GCP 인증 정보 파일 로드: {}", credentialsPath);
-            try (InputStream in = new FileInputStream(ResourceUtils.getFile(credentialsPath))) {
-                credentials = GoogleCredentials.fromStream(in);
-            }
-        } else {
-            log.info("기본 Application Default Credentials 사용");
-            credentials = GoogleCredentials.getApplicationDefault();
-        }
-        
-        // Document AI API에 필요한 스코프 추가
-        return credentials.createScoped("https://www.googleapis.com/auth/cloud-platform");
+        return GoogleCredentials.fromStream(
+                getClass().getResourceAsStream(credentialsFilePath)
+        );
     }
 
     @Bean
-    @ConditionalOnProperty(name = "gcp.enabled", havingValue = "true")
     public DocumentProcessorServiceClient documentProcessorServiceClient(GoogleCredentials credentials) throws IOException {
-        try {
-            // us-central1 -> us-documentai.googleapis.com
-            String endpointRegion = location.startsWith("us") ? "us" : location;
-            String endpoint = String.format("%s-documentai.googleapis.com:443", endpointRegion);
-            log.info("Document AI 클라이언트 생성 중 - Endpoint: {}, Project: {}, Processor: {}", 
-                    endpoint, projectId, processorId);
-            
-            DocumentProcessorServiceSettings settings = DocumentProcessorServiceSettings.newBuilder()
-                    .setEndpoint(endpoint)
-                    .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
-                    .build();
-            
-            DocumentProcessorServiceClient client = DocumentProcessorServiceClient.create(settings);
-            log.info("Document AI 클라이언트 생성 성공");
-            return client;
-            
-        } catch (Exception e) {
-            log.error("Document AI 클라이언트 생성 실패: {}", e.getMessage(), e);
-            throw new IOException("Document AI 클라이언트 생성 실패: " + e.getMessage(), e);
-        }
+        DocumentProcessorServiceSettings settings = DocumentProcessorServiceSettings.newBuilder()
+                .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
+                .build();
+
+        return DocumentProcessorServiceClient.create(settings);
     }
 }
 */
-
-// 🚧 로컬 개발 환경에서는 GCP 설정이 비활성화됩니다.
-// 운영 환경에서는 위의 주석을 해제하고 사용하세요.

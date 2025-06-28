@@ -51,22 +51,14 @@ public class DocumentController {
     public ResponseEntity<List<DocumentResponseDTO>> getDocuments(
             @RequestParam(required = false) Long userId) {
         
-        List<DocumentResponseDTO> documents = documentService.getDocuments(userId != null ? userId : 1L);
+        List<DocumentResponseDTO> documents = documentService.getUserDocuments(userId != null ? userId : 1L);
         return ResponseEntity.ok(documents);
-    }
-
-    @Operation(summary = "문서 상세 조회", 
-              description = "특정 문서의 상세 정보를 조회합니다.")
-    @GetMapping("/{documentId}")
-    public ResponseEntity<DocumentResponseDTO> getDocument(@PathVariable String documentId) {
-        DocumentResponseDTO document = documentService.getDocument(documentId);
-        return ResponseEntity.ok(document);
     }
 
     @Operation(summary = "문서 삭제", 
               description = "문서를 삭제합니다.")
     @DeleteMapping("/{documentId}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable String documentId) {
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long documentId) {
         documentService.deleteDocument(documentId);
         return ResponseEntity.ok().build();
     }

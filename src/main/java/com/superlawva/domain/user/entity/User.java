@@ -1,9 +1,17 @@
 package com.superlawva.domain.user.entity;
 
 import jakarta.persistence.*;
+import jakarta.persistence.GenerationType;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.Collections;
 
 @Entity
 @Table(
@@ -15,12 +23,11 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_provider", columnList = "provider")
         }
 )
-@Getter
-@Setter
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Data
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,12 +58,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private Role role = Role.USER;
-    public enum Role { USER, ADMIN }
 
     /** 생성-수정 시각 */
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
@@ -65,9 +73,50 @@ public class User {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    public enum Role { USER, ADMIN }
+
+    // UserDetails 구현
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.name()));
+    }
+
+    @Override
+    public String getUsername() {
+        return email;
+    }
+
+    @Override
+    public String getPassword() {
+        return password != null ? password : "";
+    }
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
+
+    @Override
+    public boolean isEnabled() {
+        return deletedAt == null;
+    }
+
     /* ==================== JPA Life-cycle ==================== */
 
-       @PrePersist
+    @PrePersist
     protected void prePersist() {
         this.createdAt = this.updatedAt = LocalDateTime.now();
     }
@@ -96,6 +145,15 @@ public class User {
     public void updateSnsInfo(String nickname, String provider) {
         this.nickname = nickname;
         this.provider = provider;
+    }
+
+    // 명시적으로 getId() 메서드 추가
+    public Long getId() {
+        return this.id;
+    }
+    
+    public void setId(Long id) {
+        this.id = id;
     }
 }
 

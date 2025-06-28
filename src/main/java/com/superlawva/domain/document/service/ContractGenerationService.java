@@ -2,8 +2,8 @@ package com.superlawva.domain.document.service;
 
 import com.superlawva.domain.document.dto.ContractGenerationRequestDTO;
 import com.superlawva.domain.document.dto.DocumentResponseDTO;
-import com.superlawva.domain.document.entity.Document;
-import com.superlawva.domain.document.entity.GeneratedDocument;
+import com.superlawva.domain.document.entity.DocumentEntity;
+import com.superlawva.domain.document.entity.GeneratedDocumentEntity;
 import com.superlawva.domain.document.repository.DocumentRepository;
 import com.superlawva.domain.document.repository.GeneratedDocumentRepository;
 
@@ -38,28 +38,28 @@ public class ContractGenerationService {
         long startTime = System.currentTimeMillis();
         
         try {
-            // 1. 기본 Document 엔티티 생성
-            Document document = Document.builder()
+            // 1. 기본 DocumentEntity 생성
+            DocumentEntity document = DocumentEntity.builder()
                 .userId(request.getUserId())
                 .originalFilename(generateContractFilename(request))
                 .encryptedFileKey(UUID.randomUUID().toString())
                 .documentType(mapContractTypeToDocumentType(request.getContractType()))
                 .mimeType("application/pdf")
                 .fileSizeBytes(0L) // 생성 후 업데이트
-                .status(Document.DocumentStatus.OCR_PROCESSING) // 생성 중
+                .status(DocumentEntity.DocumentStatus.OCR_PROCESSING) // 생성 중
                 .build();
             
             document = documentRepository.save(document);
             
-            // 2. GeneratedDocument 메타데이터 생성
-            GeneratedDocument generatedDocument = GeneratedDocument.builder()
+            // 2. GeneratedDocumentEntity 메타데이터 생성
+            GeneratedDocumentEntity generatedDocument = GeneratedDocumentEntity.builder()
                 .userId(request.getUserId())
-                .documentId(document.getId()) // MongoDB ObjectId 참조
-                .generationType(GeneratedDocument.GenerationType.CONTRACT_GENERATION)
+                .documentId(document.getId()) // JPA ID 참조
+                .generationType(GeneratedDocumentEntity.DocGenerationType.CONTRACT_GENERATION)
                 .requestData(convertRequestToJson(request)) // TODO: JSON 변환 구현
                 .modelName("contract-generator-v1") // TODO: 실제 모델명으로 변경
                 .modelVersion("1.0.0")
-                .status(GeneratedDocument.DocumentStatus.GENERATING)
+                .status(GeneratedDocumentEntity.DocumentStatus.GENERATING)
                 .build();
             
             generatedDocument = generatedDocumentRepository.save(generatedDocument);
@@ -73,12 +73,12 @@ public class ContractGenerationService {
             double generationTime = (endTime - startTime) / 1000.0;
             
             // 문서 상태 업데이트
-            document.setStatus(Document.DocumentStatus.OCR_COMPLETED);
+            document.setStatus(DocumentEntity.DocumentStatus.OCR_COMPLETED);
             document.setFileSizeBytes((long) generatedContent.length());
             documentRepository.save(document);
             
             // 생성 메타데이터 업데이트
-            generatedDocument.setStatus(GeneratedDocument.DocumentStatus.GENERATED);
+            generatedDocument.setStatus(GeneratedDocumentEntity.DocumentStatus.GENERATED);
             generatedDocument.setGenerationTimeSeconds(generationTime);
             generatedDocument.setTokenCount(estimateTokenCount(generatedContent));
             generatedDocument.setQualityScore(calculateQualityScore(generatedContent));
@@ -102,12 +102,12 @@ public class ContractGenerationService {
      */
     @Transactional(readOnly = true)
     public List<DocumentResponseDTO> getGeneratedDocuments(Long userId) {
-        List<GeneratedDocument> generatedDocs = generatedDocumentRepository
+        List<GeneratedDocumentEntity> generatedDocs = generatedDocumentRepository
                 .findByUserIdOrderByCreatedAtDesc(userId);
         
         return generatedDocs.stream()
                 .map(genDoc -> {
-                    Document document = documentRepository.findById(genDoc.getDocumentId())
+                    DocumentEntity document = documentRepository.findById(genDoc.getDocumentId())
                             .orElse(null);
                     return document != null ? DocumentResponseDTO.fromEntity(document) : null;
                 })
@@ -119,11 +119,11 @@ public class ContractGenerationService {
      * 생성된 문서 상세 조회 (메타데이터 포함)
      */
     @Transactional(readOnly = true)
-    public DocumentResponseDTO getGeneratedDocument(String documentId) {
-        Document document = documentRepository.findById(documentId)
+    public DocumentResponseDTO getGeneratedDocument(Long documentId) {
+        DocumentEntity document = documentRepository.findById(documentId)
                 .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
         
-        // TODO: GeneratedDocument 정보도 포함한 확장된 DTO 반환
+        // TODO: GeneratedDocumentEntity 정보도 포함한 확장된 DTO 반환
         return DocumentResponseDTO.fromEntity(document);
     }
 
@@ -135,11 +135,11 @@ public class ContractGenerationService {
                 LocalDateTime.now().toString().substring(0, 10));
     }
 
-    private Document.DocumentType mapContractTypeToDocumentType(String contractType) {
+    private DocumentEntity.DocumentType mapContractTypeToDocumentType(String contractType) {
         return switch (contractType) {
-            case "전세" -> Document.DocumentType.LEASE_JEONSE;
-            case "월세" -> Document.DocumentType.LEASE_MONTHLY;
-            default -> Document.DocumentType.OTHER;
+            case "전세" -> DocumentEntity.DocumentType.LEASE_JEONSE;
+            case "월세" -> DocumentEntity.DocumentType.LEASE_MONTHLY;
+            default -> DocumentEntity.DocumentType.OTHER;
         };
     }
 

@@ -2,218 +2,173 @@ package com.superlawva.domain.document.service;
 
 import com.superlawva.domain.document.dto.DocumentCreateDTO;
 import com.superlawva.domain.document.dto.DocumentResponseDTO;
-import com.superlawva.domain.document.entity.Document;
+import com.superlawva.domain.document.entity.DocumentEntity;
 import com.superlawva.domain.document.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Slf4j
+@Transactional
 public class DocumentService {
 
     private final DocumentRepository documentRepository;
-    private final GridFSService gridFSService;
 
     /**
-     * 문서 생성 (GridFS 연동)
+     * 문서 생성
      */
     public DocumentResponseDTO createDocument(DocumentCreateDTO request) {
-        log.info("MongoDB에 문서 생성: {}", request.getOriginalFilename());
+        log.info("데이터베이스에 문서 생성: {}", request.getOriginalFilename());
         
         // Document 엔티티 생성
-        Document document = Document.builder()
+        DocumentEntity document = DocumentEntity.builder()
             .userId(request.getUserId())
             .originalFilename(request.getOriginalFilename())
             .encryptedFileKey(UUID.randomUUID().toString())
             .documentType(request.getDocumentType() != null ? 
-                request.getDocumentType() : Document.DocumentType.OTHER)
+                request.getDocumentType() : DocumentEntity.DocumentType.OTHER)
             .mimeType(request.getMimeType() != null ? 
                 request.getMimeType() : "application/pdf")
             .fileSizeBytes(request.getFileSizeBytes() != null ? 
                 request.getFileSizeBytes() : 0L)
-            .status(Document.DocumentStatus.UPLOADED)
-            .storageType(Document.StorageType.GRIDFS) // 기본적으로 GridFS 사용
-            .metadata(createDefaultMetadata(request))
+            .status(DocumentEntity.DocumentStatus.UPLOADED)
+            .storageType(DocumentEntity.StorageType.INLINE) // 기본적으로 INLINE 사용
+            .createdAt(LocalDateTime.now())
+            .metadataJson(createDefaultMetadataJson(request))
             .build();
         
         document = documentRepository.save(document);
         
-        log.info("MongoDB 문서 생성 완료 - Document ID: {}", document.getId());
+        log.info("데이터베이스 문서 생성 완료 - Document ID: {}", document.getId());
         return DocumentResponseDTO.fromEntity(document);
     }
 
     /**
      * 파일 내용과 함께 문서 생성
      */
-    public DocumentResponseDTO createDocumentWithFile(DocumentCreateDTO request, byte[] fileContent) {
-        log.info("파일과 함께 MongoDB 문서 생성: {}, 크기: {} bytes", 
+    public DocumentResponseDTO createDocumentWithContent(DocumentCreateDTO request, byte[] fileContent) {
+        log.info("파일 내용과 함께 문서 생성: {}, 크기: {} bytes", 
                 request.getOriginalFilename(), fileContent.length);
-        
-        // 파일 크기에 따라 저장 방식 결정
-        Document.StorageType storageType = gridFSService.shouldUseGridFS(fileContent.length) 
-                ? Document.StorageType.GRIDFS 
-                : Document.StorageType.INLINE;
-        
-        String gridfsFileId = null;
-        byte[] inlineContent = null;
-        
-        if (storageType == Document.StorageType.GRIDFS) {
-            // GridFS에 파일 저장
-            gridfsFileId = gridFSService.storeFile(
-                fileContent, 
-                request.getOriginalFilename(), 
-                request.getMimeType()
-            );
-        } else {
-            // 인라인으로 저장 (소용량 파일)
-            inlineContent = fileContent;
-        }
-        
-        // Document 엔티티 생성
-        Document document = Document.builder()
-            .userId(request.getUserId())
-            .originalFilename(request.getOriginalFilename())
-            .encryptedFileKey(UUID.randomUUID().toString())
-            .documentType(request.getDocumentType() != null ? 
-                request.getDocumentType() : Document.DocumentType.OTHER)
-            .mimeType(request.getMimeType() != null ? 
-                request.getMimeType() : "application/pdf")
-            .fileSizeBytes((long) fileContent.length)
-            .status(Document.DocumentStatus.UPLOADED)
-            .storageType(storageType)
-            .gridfsFileId(gridfsFileId)
-            .fileContent(inlineContent)
-            .metadata(createFileMetadata(request, fileContent))
-            .build();
-        
+
+        DocumentEntity.StorageType storageType = shouldUseExternalStorage(fileContent.length)
+                ? DocumentEntity.StorageType.EXTERNAL
+                : DocumentEntity.StorageType.INLINE;
+
+        DocumentEntity document = DocumentEntity.builder()
+                .userId(request.getUserId())
+                .originalFilename(request.getOriginalFilename())
+                .encryptedFileKey(UUID.randomUUID().toString())
+                .documentType(request.getDocumentType() != null ?
+                        request.getDocumentType() : DocumentEntity.DocumentType.OTHER)
+                .mimeType(request.getMimeType() != null ?
+                        request.getMimeType() : "application/pdf")
+                .fileSizeBytes((long) fileContent.length)
+                .status(DocumentEntity.DocumentStatus.UPLOADED)
+                .storageType(storageType)
+                .createdAt(LocalDateTime.now())
+                .fileContent(storageType == DocumentEntity.StorageType.INLINE ? fileContent : null)
+                .metadataJson(createDefaultMetadataJson(request))
+                .build();
+
         document = documentRepository.save(document);
-        
-        log.info("파일과 함께 MongoDB 문서 생성 완료 - Document ID: {}, 저장 방식: {}", 
-                document.getId(), storageType);
+
+        log.info("파일 내용과 함께 문서 생성 완료 - Document ID: {}", document.getId());
         return DocumentResponseDTO.fromEntity(document);
     }
 
     /**
      * 문서 파일 내용 조회
      */
-    public byte[] getDocumentFile(String documentId) {
+    @Transactional(readOnly = true)
+    public byte[] getDocumentContent(Long documentId) {
         log.info("문서 파일 내용 조회 - Document ID: {}", documentId);
         
-        Document document = documentRepository.findById(documentId)
-            .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
-        
-        if (document.getStorageType() == Document.StorageType.GRIDFS) {
-            if (document.getGridfsFileId() == null) {
-                throw new RuntimeException("GridFS 파일 ID가 없습니다: " + documentId);
-            }
-            return gridFSService.getFile(document.getGridfsFileId());
-        } else if (document.getStorageType() == Document.StorageType.INLINE) {
+        DocumentEntity document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다: " + documentId));
+
+        if (document.getStorageType() == DocumentEntity.StorageType.INLINE) {
             if (document.getFileContent() == null) {
-                throw new RuntimeException("인라인 파일 내용이 없습니다: " + documentId);
+                throw new RuntimeException("파일 내용이 없습니다: " + documentId);
             }
             return document.getFileContent();
         } else {
-            throw new RuntimeException("지원하지 않는 저장 방식: " + document.getStorageType());
+            throw new RuntimeException("외부 저장소는 아직 구현되지 않았습니다: " + documentId);
         }
-    }
-
-    public List<DocumentResponseDTO> getDocuments(Long userId) {
-        List<Document> documents = documentRepository.findByUserIdOrderByCreatedAtDesc(userId);
-        return documents.stream()
-            .map(DocumentResponseDTO::fromEntity)
-            .collect(Collectors.toList());
-    }
-
-    public DocumentResponseDTO getDocument(String documentId) {
-        Document document = documentRepository.findById(documentId)
-            .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
-        return DocumentResponseDTO.fromEntity(document);
     }
 
     /**
-     * 문서 삭제 (GridFS 파일도 함께 삭제)
+     * 사용자의 문서 목록 조회
      */
-    public void deleteDocument(String documentId) {
-        Document document = documentRepository.findById(documentId)
-            .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
+    @Transactional(readOnly = true)
+    public List<DocumentResponseDTO> getUserDocuments(Long userId) {
+        log.info("사용자 문서 목록 조회 - User ID: {}", userId);
         
-        // GridFS 파일 삭제
-        if (document.getStorageType() == Document.StorageType.GRIDFS && 
-            document.getGridfsFileId() != null) {
-            try {
-                gridFSService.deleteFile(document.getGridfsFileId());
-            } catch (Exception e) {
-                log.warn("GridFS 파일 삭제 실패 (계속 진행): {}", e.getMessage());
-            }
-        }
+        List<DocumentEntity> documents = documentRepository.findByUserIdOrderByCreatedAtDesc(userId);
         
+        return documents.stream()
+                .map(DocumentResponseDTO::fromEntity)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 문서 삭제
+     */
+    public void deleteDocument(Long documentId) {
+        log.info("문서 삭제 - Document ID: {}", documentId);
+        
+        DocumentEntity document = documentRepository.findById(documentId)
+                .orElseThrow(() -> new RuntimeException("문서를 찾을 수 없습니다: " + documentId));
+
         // 문서 삭제
         documentRepository.delete(document);
-        log.info("문서 삭제 완료: {}", documentId);
+        
+        log.info("문서 삭제 완료 - Document ID: {}", documentId);
     }
 
     /**
-     * 문서 상태 업데이트
+     * 기본 메타데이터 생성
      */
-    public void updateDocumentStatus(String documentId, Document.DocumentStatus status) {
-        Document document = documentRepository.findById(documentId)
-            .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
-        
-        document.setStatus(status);
-        documentRepository.save(document);
-        
-        log.info("문서 상태 업데이트 완료 - Document ID: {}, Status: {}", documentId, status);
-    }
-
-    /**
-     * 메타데이터 업데이트
-     */
-    public void updateDocumentMetadata(String documentId, Map<String, Object> metadata) {
-        Document document = documentRepository.findById(documentId)
-            .orElseThrow(() -> new RuntimeException("Document not found: " + documentId));
-        
-        if (document.getMetadata() == null) {
-            document.setMetadata(new HashMap<>());
-        }
-        
-        document.getMetadata().putAll(metadata);
-        documentRepository.save(document);
-        
-        log.info("문서 메타데이터 업데이트 완료 - Document ID: {}", documentId);
-    }
-
-    // ==================== Private Methods ====================
-
-    private Map<String, Object> createDefaultMetadata(DocumentCreateDTO request) {
+    private String createDefaultMetadataJson(DocumentCreateDTO request) {
         Map<String, Object> metadata = new HashMap<>();
-        metadata.put("uploadTime", System.currentTimeMillis());
-        metadata.put("version", "1.0");
-        if (request.getDocumentType() != null) {
-            metadata.put("documentType", request.getDocumentType().name());
+        metadata.put("upload_timestamp", LocalDateTime.now().toString());
+        metadata.put("original_filename", request.getOriginalFilename());
+        metadata.put("user_id", request.getUserId());
+        metadata.put("document_type", request.getDocumentType() != null ? 
+                request.getDocumentType().toString() : "OTHER");
+        
+        try {
+            // JSON 문자열로 변환 (간단한 구현)
+            StringBuilder json = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, Object> entry : metadata.entrySet()) {
+                if (!first) json.append(",");
+                json.append("\"").append(entry.getKey()).append("\":\"")
+                    .append(entry.getValue()).append("\"");
+                first = false;
+            }
+            json.append("}");
+            return json.toString();
+        } catch (Exception e) {
+            log.warn("메타데이터 JSON 생성 실패: {}", e.getMessage());
+            return "{}";
         }
-        return metadata;
     }
 
-    private Map<String, Object> createFileMetadata(DocumentCreateDTO request, byte[] fileContent) {
-        Map<String, Object> metadata = createDefaultMetadata(request);
-        metadata.put("fileSize", fileContent.length);
-        metadata.put("fileSizeFormatted", formatFileSize(fileContent.length));
-        metadata.put("hasContent", true);
-        return metadata;
-    }
-
-    private String formatFileSize(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        if (bytes < 1024 * 1024) return String.format("%.1f KB", bytes / 1024.0);
-        if (bytes < 1024 * 1024 * 1024) return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
-        return String.format("%.1f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+    /**
+     * 외부 저장소 사용 여부 결정
+     */
+    private boolean shouldUseExternalStorage(long fileSize) {
+        // 10MB 이상이면 외부 저장소 사용 (현재는 미구현)
+        return fileSize > 10 * 1024 * 1024;
     }
 } 

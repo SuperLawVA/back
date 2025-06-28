@@ -6,17 +6,15 @@ import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
 @Configuration
+@EnableJpaAuditing
 public class OcrConfiguration {
-    
-    /**
-     * OCR3 도메인 전용 ObjectMapper
-     * Snake case 네이밍 전략과 Java 8 시간 모듈을 포함
-     */
-    @Bean("ocrObjectMapper")
-    public ObjectMapper ocrObjectMapper() {
+
+    @Bean
+    public ObjectMapper objectMapper() {
         return Jackson2ObjectMapperBuilder.json()
                 .modules(new JavaTimeModule())
                 .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)

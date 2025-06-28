@@ -81,5 +81,80 @@ public class ChatSessionEntity {
         this.totalMessages++;
     }
     
-
+    // 명시적으로 필요한 getter 메서드들 추가
+    public String getSessionId() {
+        return sessionId;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    public Integer getTotalMessages() {
+        return totalMessages;
+    }
+    
+    public String getLastQuestionType() {
+        return lastQuestionType;
+    }
+    
+    // Builder 메서드 추가
+    public static ChatSessionEntityBuilder builder() {
+        return new ChatSessionEntityBuilder();
+    }
+    
+    public static class ChatSessionEntityBuilder {
+        private String sessionId;
+        private User user;
+        private LocalDateTime createdAt;
+        private LocalDateTime lastActiveAt;
+        private String lastQuestionType;
+        private Integer totalMessages = 0;
+        private SessionStatus status = SessionStatus.active;
+        private List<ChatMessageEntity> messages = new ArrayList<>();
+        
+        public ChatSessionEntityBuilder sessionId(String sessionId) {
+            this.sessionId = sessionId;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder user(User user) {
+            this.user = user;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder createdAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder lastActiveAt(LocalDateTime lastActiveAt) {
+            this.lastActiveAt = lastActiveAt;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder lastQuestionType(String lastQuestionType) {
+            this.lastQuestionType = lastQuestionType;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder totalMessages(Integer totalMessages) {
+            this.totalMessages = totalMessages;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder status(SessionStatus status) {
+            this.status = status;
+            return this;
+        }
+        
+        public ChatSessionEntityBuilder messages(List<ChatMessageEntity> messages) {
+            this.messages = messages;
+            return this;
+        }
+        
+        public ChatSessionEntity build() {
+            return new ChatSessionEntity(sessionId, user, createdAt, lastActiveAt, lastQuestionType, totalMessages, status, messages);
+        }
+    }
 } 

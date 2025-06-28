@@ -19,7 +19,7 @@ import java.util.Optional;
 public class ContractAlarmService {
     private final RestTemplate restTemplate;
     
-    @Value("${contract.api.base-url:http://localhost:8080}")
+    @Value("${api.servers.contract.base-url:${contract.api.base-url:http://localhost:8080}}")
     private String contractApiBaseUrl;
 
     public ContractAlarmService() {

@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 public class OcrResponse {
     @JsonProperty("contract_data")
     private ContractData contractData;
-    
+
     @JsonProperty("debug_mode")
     private boolean debugMode;
 }

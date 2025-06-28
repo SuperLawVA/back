@@ -17,7 +17,7 @@ public class StatusService {
     private final RestTemplate restTemplate;
     private final ChatSessionRepository chatSessionRepository;
     
-    @Value("${chatbot.api.base-url}")
+    @Value("${api.servers.chatbot.base-url:${chatbot.api.base-url}}")
     private String mlApiBaseUrl;
     
     /**

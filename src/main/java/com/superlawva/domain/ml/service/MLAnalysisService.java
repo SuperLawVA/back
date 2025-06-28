@@ -1,9 +1,10 @@
 package com.superlawva.domain.ml.service;
 
 import com.superlawva.domain.ml.client.MLApiClient;
+import com.superlawva.domain.ml.entity.MLAnalysisResult;
 import com.superlawva.domain.ocr3.entity.ContractData;
 import com.superlawva.domain.ocr3.repository.ContractDataRepository;
-import com.superlawva.domain.document.entity.GeneratedDocument;
+import com.superlawva.domain.document.entity.GeneratedDocumentEntity;
 import com.superlawva.domain.document.repository.GeneratedDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -28,9 +31,9 @@ public class MLAnalysisService {
      * 계약서 분석 및 결과 저장
      */
     @Transactional
-    public GeneratedDocument analyzeContract(String contractId, String userId) {
+    public GeneratedDocumentEntity analyzeContract(Long contractId, String userId) {
         log.info("🤖 계약서 분석 시작 - Contract ID: {}, User ID: {}", contractId, userId);
-
+        
         try {
             // 1. MongoDB에서 계약서 데이터 조회
             ContractData contractData = contractDataRepository.findById(contractId)
@@ -41,13 +44,13 @@ public class MLAnalysisService {
 
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.analyzeContract(mlRequest);
-
+            
             // 4. 분석 결과를 generated_contract 컬렉션에 저장
-            GeneratedDocument generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocument.GenerationType.DOCUMENT_MODIFICATION, contractId, userId);
-
+            GeneratedDocumentEntity generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocumentEntity.DocGenerationType.DOCUMENT_MODIFICATION, contractId.toString(), userId);
+            
             log.info("✅ 계약서 분석 완료 - Generated Document ID: {}", generatedDocument.getId());
             return generatedDocument;
-
+            
         } catch (Exception e) {
             log.error("❌ 계약서 분석 실패 - Contract ID: {}", contractId, e);
             throw new RuntimeException("계약서 분석 중 오류가 발생했습니다: " + e.getMessage());
@@ -58,9 +61,9 @@ public class MLAnalysisService {
      * 내용증명서 생성 및 결과 저장
      */
     @Transactional
-    public GeneratedDocument generateProofDocument(String contractId, String userId) {
+    public GeneratedDocumentEntity generateProofDocument(Long contractId, String userId) {
         log.info("📝 내용증명서 생성 시작 - Contract ID: {}, User ID: {}", contractId, userId);
-
+        
         try {
             // 1. MongoDB에서 계약서 데이터 조회
             ContractData contractData = contractDataRepository.findById(contractId)
@@ -71,13 +74,13 @@ public class MLAnalysisService {
 
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.generateProofDocument(mlRequest);
-
+            
             // 4. 생성 결과를 generated_contract 컬렉션에 저장
-            GeneratedDocument generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocument.GenerationType.PROOF_CONTENT, contractId, userId);
-
+            GeneratedDocumentEntity generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocumentEntity.DocGenerationType.PROOF_CONTENT, contractId.toString(), userId);
+            
             log.info("✅ 내용증명서 생성 완료 - Generated Document ID: {}", generatedDocument.getId());
             return generatedDocument;
-
+            
         } catch (Exception e) {
             log.error("❌ 내용증명서 생성 실패 - Contract ID: {}", contractId, e);
             throw new RuntimeException("내용증명서 생성 중 오류가 발생했습니다: " + e.getMessage());
@@ -88,9 +91,9 @@ public class MLAnalysisService {
      * 특약사항 생성 및 결과 저장
      */
     @Transactional
-    public GeneratedDocument generateSpecialTerms(String contractId, String userId) {
+    public GeneratedDocumentEntity generateSpecialTerms(Long contractId, String userId) {
         log.info("⚖️ 특약사항 생성 시작 - Contract ID: {}, User ID: {}", contractId, userId);
-
+        
         try {
             // 1. MongoDB에서 계약서 데이터 조회
             ContractData contractData = contractDataRepository.findById(contractId)
@@ -101,13 +104,13 @@ public class MLAnalysisService {
 
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.generateSpecialTerms(mlRequest);
-
+            
             // 4. 생성 결과를 generated_contract 컬렉션에 저장
-            GeneratedDocument generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocument.GenerationType.TEMPLATE_BASED, contractId, userId);
-
+            GeneratedDocumentEntity generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocumentEntity.DocGenerationType.TEMPLATE_BASED, contractId.toString(), userId);
+            
             log.info("✅ 특약사항 생성 완료 - Generated Document ID: {}", generatedDocument.getId());
             return generatedDocument;
-
+            
         } catch (Exception e) {
             log.error("❌ 특약사항 생성 실패 - Contract ID: {}", contractId, e);
             throw new RuntimeException("특약사항 생성 중 오류가 발생했습니다: " + e.getMessage());
@@ -117,7 +120,7 @@ public class MLAnalysisService {
     /**
      * 생성된 문서 결과 조회
      */
-    public GeneratedDocument getGeneratedResult(String generatedDocumentId) {
+    public GeneratedDocumentEntity getGeneratedResult(Long generatedDocumentId) {
         log.info("📄 생성된 문서 결과 조회 - Generated Document ID: {}", generatedDocumentId);
         
         return generatedDocumentRepository.findById(generatedDocumentId)
@@ -138,6 +141,84 @@ public class MLAnalysisService {
     }
 
     /**
+     * 계약서 ID로 분석 결과 조회
+     */
+    public MLAnalysisResult getAnalysisByContractId(Long contractId) {
+        log.info("계약서 분석 결과 조회 - Contract ID: {}", contractId);
+        // TODO: 실제 구현 필요
+        return null;
+    }
+
+    /**
+     * 모든 분석 결과 조회
+     */
+    public List<MLAnalysisResult> getAllAnalyses() {
+        log.info("모든 분석 결과 조회");
+        // TODO: 실제 구현 필요
+        return new ArrayList<>();
+    }
+
+    /**
+     * 계약서 ID로 분석 결과 삭제
+     */
+    public void deleteAnalysisByContractId(Long contractId) {
+        log.info("계약서 분석 결과 삭제 - Contract ID: {}", contractId);
+        // TODO: 실제 구현 필요
+    }
+
+    /**
+     * 전체 분석 수 조회
+     */
+    public int getTotalAnalyses() {
+        // TODO: 실제 구현 필요
+        return 0;
+    }
+
+    /**
+     * 완료된 분석 수 조회
+     */
+    public int getCompletedAnalyses() {
+        // TODO: 실제 구현 필요
+        return 0;
+    }
+
+    /**
+     * 대기 중인 분석 수 조회
+     */
+    public int getPendingAnalyses() {
+        // TODO: 실제 구현 필요
+        return 0;
+    }
+
+    /**
+     * 실패한 분석 수 조회
+     */
+    public int getFailedAnalyses() {
+        // TODO: 실제 구현 필요
+        return 0;
+    }
+
+    /**
+     * 평균 위험도 점수 조회
+     */
+    public double getAverageRiskScore() {
+        // TODO: 실제 구현 필요
+        return 0.0;
+    }
+
+    /**
+     * 위험도 분포 조회
+     */
+    public Map<String, Integer> getRiskDistribution() {
+        // TODO: 실제 구현 필요
+        Map<String, Integer> distribution = new HashMap<>();
+        distribution.put("LOW", 0);
+        distribution.put("MEDIUM", 0);
+        distribution.put("HIGH", 0);
+        return distribution;
+    }
+
+    /**
      * 계약서 분석용 ML 요청 데이터 구성
      */
     private Map<String, Object> buildContractAnalysisRequest(ContractData contractData, String userId) {
@@ -153,8 +234,8 @@ public class MLAnalysisService {
         contractInfo.put("payment", contractData.getPayment());
         contractInfo.put("lessor", contractData.getLessor());
         contractInfo.put("lessee", contractData.getLessee());
-        contractInfo.put("articles", contractData.getArticles());
-        contractInfo.put("agreements", contractData.getAgreements());
+        contractInfo.put("articles_json", contractData.getArticlesJson());
+        contractInfo.put("agreements_json", contractData.getAgreementsJson());
 
         request.put("contract_data", contractInfo);
 
@@ -178,8 +259,8 @@ public class MLAnalysisService {
         contractInfo.put("payment", contractData.getPayment());
         contractInfo.put("lessor", contractData.getLessor());
         contractInfo.put("lessee", contractData.getLessee());
-        contractInfo.put("articles", contractData.getArticles());
-        contractInfo.put("agreements", contractData.getAgreements());
+        contractInfo.put("articles_json", contractData.getArticlesJson());
+        contractInfo.put("agreements_json", contractData.getAgreementsJson());
 
         request.put("contract_data", contractInfo);
 
@@ -211,25 +292,24 @@ public class MLAnalysisService {
     /**
      * ML 분석 결과를 generated_contract 컬렉션에 저장
      */
-    private GeneratedDocument saveAnalysisResult(Map<String, Object> mlResponse, GeneratedDocument.GenerationType generationType, String contractId, String userId) {
+    private GeneratedDocumentEntity saveAnalysisResult(Map<String, Object> mlResponse, GeneratedDocumentEntity.DocGenerationType generationType, String contractId, String userId) {
         Map<String, Object> additionalMetadata = new HashMap<>();
         additionalMetadata.put("content", extractContent(mlResponse));
         
-        GeneratedDocument generatedDocument = GeneratedDocument.builder()
+        GeneratedDocumentEntity generatedDocument = GeneratedDocumentEntity.builder()
                 .userId(Long.parseLong(userId))
-                .documentId(contractId)
+                .documentId(null) // TODO: 실제 Document ID 연결
                 .generationType(generationType)
                 .requestData(buildRequestDataJson(mlResponse, contractId, userId))
                 .generationMetadata(buildGenerationMetadataJson(mlResponse))
                 .modelName("Claude-Sonnet-4")
                 .modelVersion("v1.0.0")
                 .generationTimeSeconds(extractProcessingTime(mlResponse))
-                .status(GeneratedDocument.DocumentStatus.GENERATED)
-                .additionalMetadata(additionalMetadata)
-                .createdAt(LocalDateTime.now(ZoneOffset.UTC))
-                .updatedAt(LocalDateTime.now(ZoneOffset.UTC))
+                .status(GeneratedDocumentEntity.DocumentStatus.GENERATED)
+                .tokenCount(0) // TODO: 토큰 수 계산
+                .qualityScore(0) // TODO: 품질 점수 계산
                 .build();
-
+        
         return generatedDocumentRepository.save(generatedDocument);
     }
 

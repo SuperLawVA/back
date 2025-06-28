@@ -30,6 +30,8 @@ public class AlarmDTO {
     @Getter
     @Setter
     @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class ContractDates {
         @JsonProperty("contract_date")
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -47,6 +49,8 @@ public class AlarmDTO {
     @Getter
     @Setter
     @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
     public static class PaymentInfo {
         private Long deposit;
         
@@ -70,5 +74,45 @@ public class AlarmDTO {
         
         @JsonProperty("monthly_rent_date")
         private String monthlyRentDate;
+        
+        public Long getIntermediatePayment() {
+            return intermediatePayment;
+        }
+        
+        public String getIntermediatePaymentDate() {
+            return intermediatePaymentDate;
+        }
+        
+        public Long getRemainingBalance() {
+            return remainingBalance;
+        }
+        
+        public String getRemainingBalanceDate() {
+            return remainingBalanceDate;
+        }
+        
+        public Long getMonthlyRent() {
+            return monthlyRent;
+        }
+        
+        public String getMonthlyRentDate() {
+            return monthlyRentDate;
+        }
+    }
+    
+    public String getId() {
+        return id;
+    }
+    
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public ContractDates getDates() {
+        return dates;
+    }
+    
+    public PaymentInfo getPayment() {
+        return payment;
     }
 } 

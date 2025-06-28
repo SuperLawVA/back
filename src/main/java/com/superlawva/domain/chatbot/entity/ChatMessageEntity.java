@@ -2,6 +2,7 @@ package com.superlawva.domain.chatbot.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.persistence.GenerationType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -76,5 +77,86 @@ public class ChatMessageEntity {
                 .questionType(questionType)
                 .responseTimeSeconds(responseTimeSeconds)
                 .build();
+    }
+    
+    // 명시적으로 필요한 getter 메서드들 추가
+    public String getContent() {
+        return content;
+    }
+    
+    public String getQuestionType() {
+        return questionType;
+    }
+    
+    public BigDecimal getResponseTimeSeconds() {
+        return responseTimeSeconds;
+    }
+    
+    public ChatSessionEntity getSession() {
+        return session;
+    }
+    
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+    
+    // Builder 메서드 추가
+    public static ChatMessageEntityBuilder builder() {
+        return new ChatMessageEntityBuilder();
+    }
+    
+    public static class ChatMessageEntityBuilder {
+        private Long id;
+        private ChatSessionEntity session;
+        private MessageRole role;
+        private String content;
+        private String questionType;
+        private BigDecimal responseTimeSeconds;
+        private String tokenUsage;
+        private LocalDateTime createdAt;
+        
+        public ChatMessageEntityBuilder id(Long id) {
+            this.id = id;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder session(ChatSessionEntity session) {
+            this.session = session;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder role(MessageRole role) {
+            this.role = role;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder content(String content) {
+            this.content = content;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder questionType(String questionType) {
+            this.questionType = questionType;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder responseTimeSeconds(BigDecimal responseTimeSeconds) {
+            this.responseTimeSeconds = responseTimeSeconds;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder tokenUsage(String tokenUsage) {
+            this.tokenUsage = tokenUsage;
+            return this;
+        }
+        
+        public ChatMessageEntityBuilder createdAt(LocalDateTime createdAt) {
+            this.createdAt = createdAt;
+            return this;
+        }
+        
+        public ChatMessageEntity build() {
+            return new ChatMessageEntity(id, session, role, content, questionType, responseTimeSeconds, tokenUsage, createdAt);
+        }
     }
 } 

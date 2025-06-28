@@ -3,12 +3,15 @@ package com.superlawva.global.log;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import lombok.extern.slf4j.Slf4j;
+
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -21,13 +24,20 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
+@Component
 public class S3LogAppender extends AppenderBase<ILoggingEvent> {
 
-    // 환경변수에서 직접 읽기 (Spring @Value 대신)
+    @Value("${aws.s3.bucket-name}")
     private String bucketName;
+
+    @Value("${aws.s3.access-key}")
+    private String accessKey;
+
+    @Value("${aws.s3.secret-key}")
+    private String secretKey;
+
+    @Value("${aws.s3.region}")
     private String region;
-    private String accessKeyId;
-    private String secretAccessKey;
 
     private S3Client s3Client;
     private BlockingQueue<String> logBuffer;
@@ -58,8 +68,8 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
     private void loadEnvironmentVariables() {
         bucketName = getEnvOrDefault("AWS_S3_BUCKET_NAME", "superlawva-logs");
         region = getEnvOrDefault("AWS_REGION", "ap-northeast-2");
-        accessKeyId = System.getenv("AWS_ACCESS_KEY_ID");
-        secretAccessKey = System.getenv("AWS_SECRET_ACCESS_KEY");
+        accessKey = System.getenv("AWS_ACCESS_KEY_ID");
+        secretKey = System.getenv("AWS_SECRET_ACCESS_KEY");
         
         addInfo("S3LogAppender 설정 로드됨 - Bucket: " + bucketName + ", Region: " + region);
     }
@@ -70,11 +80,11 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
     }
 
     private boolean isValidConfiguration() {
-        if (accessKeyId == null || accessKeyId.trim().isEmpty()) {
+        if (accessKey == null || accessKey.trim().isEmpty()) {
             addWarn("AWS_ACCESS_KEY_ID 환경변수가 설정되지 않았습니다.");
             return false;
         }
-        if (secretAccessKey == null || secretAccessKey.trim().isEmpty()) {
+        if (secretKey == null || secretKey.trim().isEmpty()) {
             addWarn("AWS_SECRET_ACCESS_KEY 환경변수가 설정되지 않았습니다.");
             return false;
         }
@@ -91,16 +101,19 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
             if (scheduler != null) {
                 scheduler.shutdown();
             }
+            if (s3Client != null) {
+                s3Client.close();
+            }
             super.stop();
         }
     }
 
     private void initializeS3Client() {
         try {
-            AwsBasicCredentials awsCredentials = AwsBasicCredentials.create(accessKeyId, secretAccessKey);
             s3Client = S3Client.builder()
                     .region(Region.of(region))
-                    .credentialsProvider(StaticCredentialsProvider.create(awsCredentials))
+                    .credentialsProvider(StaticCredentialsProvider.create(
+                            AwsBasicCredentials.create(accessKey, secretKey)))
                     .build();
             addInfo("S3 클라이언트 초기화 성공 - Region: " + region);
         } catch (Exception e) {
@@ -186,17 +199,18 @@ public class S3LogAppender extends AppenderBase<ILoggingEvent> {
                     new ByteArrayInputStream(logs.getBytes(StandardCharsets.UTF_8)),
                     logs.length()
             ));
-
-            addInfo("Successfully uploaded " + logs.length() + " bytes to S3: " + key);
+            
+            addInfo("Logs uploaded to S3: " + key);
         } catch (Exception e) {
             addError("Failed to upload logs to S3", e);
         }
     }
 
     private String generateS3Key() {
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd/HH"));
-        String hostname = System.getProperty("user.name", "unknown");
-        return String.format("logs/%s/%s-%s.log", timestamp, hostname, System.currentTimeMillis());
+        LocalDateTime now = LocalDateTime.now();
+        String date = now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        String timestamp = now.format(DateTimeFormatter.ofPattern("HH-mm-ss"));
+        return String.format("logs/%s/%s.log", date, timestamp);
     }
 
     private void uploadRemainingLogs() {

@@ -20,7 +20,7 @@ public class ChatbotApiService {
     
     private final RestTemplate restTemplate;
     
-    @Value("${chatbot.api.base-url}")
+    @Value("${api.servers.chatbot.base-url:${chatbot.api.base-url}}")
     private String chatbotApiBaseUrl;
     
     @Value("${chatbot.api.timeout}")

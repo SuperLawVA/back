@@ -41,6 +41,7 @@ services:
       - LOGGING_LEVEL_ORG_SPRINGFRAMEWORK=WARN
       - LOGGING_LEVEL_ORG_HIBERNATE=WARN
       - LOGGING_LEVEL_ORG_SQL=WARN
+      - TZ=Asia/Seoul  # 시간대 설정 추가
     deploy:
       resources:
         limits:

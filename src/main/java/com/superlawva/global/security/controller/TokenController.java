@@ -115,7 +115,7 @@ public class TokenController {
     public ApiResponse<Map<String, String>> regenerateToken(@Parameter(hidden = true) @LoginUser User user) {
         // 인증된 사용자가 없는 경우 에러
         if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
+            throw new BaseException(ErrorStatus.UNAUTHORIZED);
         }
 
         // 새로운 액세스 토큰 생성

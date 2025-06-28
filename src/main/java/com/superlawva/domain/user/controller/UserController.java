@@ -38,23 +38,7 @@ public class UserController {
     @Operation(
         summary = "👤 내 정보 조회 (마이페이지)", 
         description = """
-        현재 로그인한 사용자의 상세 정보를 조회합니다.
         
-        **제공 정보:**
-        - 기본 정보: ID, 이메일, 닉네임
-        - 계정 정보: 가입일, 수정일, 인증 상태
-        - 로그인 방식: LOCAL, KAKAO, NAVER
-        
-        **사용법:**
-        ```javascript
-        const response = await fetch('/users/info', {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        const userInfo = await response.json();
-        ```
         """
     )
     @SecurityRequirement(name = "JWT")
@@ -64,7 +48,7 @@ public class UserController {
     })
     public ApiResponse<UserResponseDTO> getMyInfo(@Parameter(hidden = true) @LoginUser User user) {
         if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
+            throw new BaseException(ErrorStatus.UNAUTHORIZED);
         }
         return ApiResponse.onSuccess(userService.getMyInfo(user.getId()));
     }
@@ -94,7 +78,7 @@ public class UserController {
     })
     public ApiResponse<LoginResponseDTO> getUserDashboard(@Parameter(hidden = true) @LoginUser User user) {
         if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
+            throw new BaseException(ErrorStatus.UNAUTHORIZED);
         }
         return ApiResponse.onSuccess(userService.getUserDashboard(user.getId()));
     }
@@ -136,7 +120,7 @@ public class UserController {
     })
     public ApiResponse<UserResponseDTO> updateMyInfo(@Parameter(hidden = true) @LoginUser User user, @RequestBody @Valid UserRequestDTO.UpdateMyInfoDTO request) {
         if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
+            throw new BaseException(ErrorStatus.UNAUTHORIZED);
         }
         return ApiResponse.onSuccess(userService.updateMyInfo(user.getId(), request));
     }
@@ -183,7 +167,7 @@ public class UserController {
     })
     public ApiResponse<Void> deleteMyAccount(@Parameter(hidden = true) @LoginUser User user) {
         if (user == null) {
-            throw new BaseException(ErrorStatus._UNAUTHORIZED);
+            throw new BaseException(ErrorStatus.UNAUTHORIZED);
         }
         userService.deleteMyAccount(user.getId());
         return ApiResponse.onSuccess(null);

@@ -37,7 +37,6 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -57,22 +56,13 @@ dependencies {
     /* ── Database ──────────────────────────────── */
     runtimeOnly 'com.mysql:mysql-connector-j'
 
-    /* ── Google Cloud ──────────────────────────── */
-    // 🚧 로컬 개발 시 Google Cloud 의존성 주석처리
-    // implementation 'com.google.cloud:google-cloud-document-ai'
-    // implementation 'com.google.cloud:google-cloud-storage'
-    // implementation 'io.grpc:grpc-netty-shaded'
-    // implementation 'io.grpc:grpc-services'
-    // implementation 'com.google.protobuf:protobuf-java'
+    /* ── AWS S3 ────────────────────────────────── */
+    implementation 'software.amazon.awssdk:s3:2.24.12'
+    implementation 'software.amazon.awssdk:sts:2.24.12'
 
     /* ── Utils ─────────────────────────────────── */
     implementation 'io.lettuce:lettuce-core'
-
-    /* ── AWS SDK ───────────────────────────────── */
-    implementation 'software.amazon.awssdk:cloudwatchlogs:2.24.12'
-    implementation 'software.amazon.awssdk:s3:2.24.12'
-    implementation 'software.amazon.awssdk:sts:2.24.12'
-    implementation 'com.cwbase:logback-redis-appender:1.1.5'
+    implementation 'commons-io:commons-io:2.15.0'
 
     /* ── Lombok ────────────────────────────────── */
     compileOnly 'org.projectlombok:lombok:1.18.30'
@@ -93,7 +83,7 @@ tasks.named('test') {
     useJUnitPlatform()
 }
 
-// ✅ JAR 빌드 설정 추가
+// ✅ JAR 빌드 설정
 jar {
     enabled = false
     archiveClassifier = ''

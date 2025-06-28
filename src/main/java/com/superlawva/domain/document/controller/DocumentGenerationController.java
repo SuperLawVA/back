@@ -95,8 +95,11 @@ public class DocumentGenerationController {
         log.info("AI 증명 내용 생성 요청 - 사용자 ID: {}, 계약서 ID: {}, 증명 유형: {}", 
                 request.getUserId(), contractDocumentId, request.getProofType());
         
+        // String을 Long으로 변환
+        Long documentId = Long.parseLong(contractDocumentId);
+        
         // TODO: MLOps 팀의 AI 모델 연동 후 구현
-        DocumentResponseDTO response = proofContentService.generateProofContent(contractDocumentId, request);
+        DocumentResponseDTO response = proofContentService.generateProofContent(documentId, request);
         
         return ResponseEntity.ok(response);
     }
@@ -123,8 +126,11 @@ public class DocumentGenerationController {
     public ResponseEntity<DocumentResponseDTO> getGeneratedDocument(
             @PathVariable String documentId) {
         
+        // String을 Long으로 변환
+        Long docId = Long.parseLong(documentId);
+        
         // TODO: 생성 메타데이터 포함한 상세 정보 반환
-        DocumentResponseDTO document = contractGenerationService.getGeneratedDocument(documentId);
+        DocumentResponseDTO document = contractGenerationService.getGeneratedDocument(docId);
         
         return ResponseEntity.ok(document);
     }

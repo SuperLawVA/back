@@ -39,14 +39,7 @@ public class SocialCompleteController {
     @Operation(
         summary = "✅ 소셜 로그인 완료 (이메일 입력)", 
         description = """
-        소셜 로그인에서 이메일 정보가 제공되지 않은 경우, 사용자가 이메일을 입력하여 로그인을 완료합니다.
-        
-        **사용 시나리오:**
-        1. 카카오 로그인 시 이메일 정보가 제공되지 않음
-        2. 서버에서 임시 토큰(`tempToken`)과 함께 `needEmail: true` 응답
-        3. 사용자가 이메일을 입력
-        4. 이 API로 임시 토큰과 이메일을 전송
-        5. 최종 JWT 토큰 발급으로 로그인 완료
+     
         """
     )
     @ApiResponses({

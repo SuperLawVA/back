@@ -229,19 +229,20 @@ public class AlarmService {
                     alarm.getAlarmType() == AlarmType.잔금납부).count())
                 .todayAlarms((int) allAlarms.stream().filter(alarm -> 
                     alarm.getCreatedAt().toLocalDate().equals(LocalDateTime.now().toLocalDate())).count())
-                .thisWeekAlarms((int) allAlarms.stream().filter(alarm -> 
+                .weekAlarms((int) allAlarms.stream().filter(alarm -> 
                     alarm.getCreatedAt().isAfter(LocalDateTime.now().minusWeeks(1))).count())
-                .thisMonthAlarms((int) allAlarms.stream().filter(alarm -> 
+                .monthAlarms((int) allAlarms.stream().filter(alarm -> 
                     alarm.getCreatedAt().isAfter(LocalDateTime.now().minusMonths(1))).count())
                 .build();
     }
 
     @Transactional
-    public void markAllAsRead(Long userId) {
+    public int markAllAsRead(Long userId) {
         List<AlarmEntity> unreadAlarms = alarmRepository.findByUserIdAndIsReadFalseAndDeletedAtIsNull(userId);
         for (AlarmEntity alarm : unreadAlarms) {
             alarm.setRead(true);
         }
         alarmRepository.saveAll(unreadAlarms);
+        return unreadAlarms.size();
     }
 } 

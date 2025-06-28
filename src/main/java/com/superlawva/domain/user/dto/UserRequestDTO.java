@@ -12,17 +12,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Getter
 @Setter
 @NoArgsConstructor
+@Schema(description = "사용자 요청 DTO")
 public class UserRequestDTO {
 
     @NotBlank(message = "닉네임은 필수 입력 항목입니다.")
-    @Schema(description = "사용자 닉네임", example = "홍길동")
+    @Schema(description = "사용자 닉네임", example = "홍길동", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nickname;
 
     @NotBlank(message = "이메일은 필수 입력 항목입니다.")
     @Email(message = "유효한 이메일 주소를 입력해주세요.")
+    @Schema(description = "사용자 이메일", example = "test@example.com", requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
 
     @NotBlank(message = "비밀번호는 필수 입력 항목입니다.")
+    @Schema(description = "사용자 비밀번호", example = "password123", requiredMode = Schema.RequiredMode.REQUIRED)
     private String password;
 
     public User toEntity() {

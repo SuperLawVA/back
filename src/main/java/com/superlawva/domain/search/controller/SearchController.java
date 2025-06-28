@@ -37,68 +37,13 @@ public class SearchController {
         ## 📖 API 설명
         ML 팀의 벡터 검색 엔진을 사용하여 법령과 판례를 검색합니다.
         검색 결과는 **유사도(similarity) 기준 내림차순**으로 정렬되어 반환됩니다.
-        
-        ## 🎯 프론트엔드 구현 가이드
-        
-        ### 1. 요청 방법
-        ```javascript
-        const searchData = {
-            query: "임대차 보증금 반환",    // 필수: 검색어
-            search_type: "both",           // 선택: law/case/both (기본값: both)
-            k: 10                          // 선택: 결과 개수 1-20 (기본값: 10)
-        };
-        
-        fetch('/search/search', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + JWT토큰
-            },
-            body: JSON.stringify(searchData)
-        })
-        ```
-        
+    
         ### 2. 검색 유형 설명
         - **`law`**: 법령만 검색 (법률, 시행령, 시행규칙 등)
         - **`case`**: 판례만 검색 (대법원, 고등법원 판결문)
         - **`both`**: 법령 + 판례 모두 검색 (추천)
         
-        ### 3. 응답 데이터 활용 (법령/판례 구분)
-        ```javascript
-        // 검색 결과가 있는 경우
-        if (response.total_results > 0) {
-                                        // 법령 결과 처리 (유사도 높은 순으로 정렬됨)
-                            if (response.laws.length > 0) {
-                                console.log('=== 법령 결과 (유사도 내림차순) ===');
-                                response.laws.forEach((law, index) => {
-                                    console.log(`${index + 1}. 법령:`, law.title);
-                                    console.log('   내용:', law.content);
-                                    console.log('   유사도:', law.similarity);
-                                });
-                            }
-                            
-                            // 판례 결과 처리 (유사도 높은 순으로 정렬됨)
-                            if (response.cases.length > 0) {
-                                console.log('=== 판례 결과 (유사도 내림차순) ===');
-                                response.cases.forEach((caseDoc, index) => {
-                                    console.log(`${index + 1}. 판례:`, caseDoc.title);
-                                    console.log('   내용:', caseDoc.content);
-                                    console.log('   유사도:', caseDoc.similarity);
-                                    console.log('   판례ID:', caseDoc.metadata.caseId);
-                                });
-                            }
-            
-            // 전체 결과 처리 (하위 호환)
-            response.documents.forEach(doc => {
-                console.log('문서타입:', doc.metadata.type);
-            });
-        } else {
-            // 검색 결과가 없는 경우
-            console.log('검색 결과가 없습니다.');
-            showNoResultsMessage();
-        }
-        ```
-        
+
         ### 4. 에러 처리
         - **400**: 검색어가 비어있거나 잘못된 파라미터
         - **401**: JWT 토큰이 없거나 만료됨 → 로그인 페이지로 이동
@@ -197,21 +142,10 @@ public class SearchController {
                     name = "검색어 누락 오류",
                     value = """
                     {
-                        "documents": [
-                            {
-                                "title": "오류 발생",
-                                "content": "검색어는 필수입니다.",
-                                "similarity": 0.0,
-                                "metadata": {
-                                    "type": "error",
-                                    "source": "system",
-                                    "section": "",
-                                    "url": ""
-                                }
-                            }
-                        ],
-                        "search_time_seconds": 0.0,
-                        "total_results": 0
+                        "isSuccess": false,
+                        "code": "SEARCH400",
+                        "message": "검색어를 입력해주세요.",
+                        "result": null
                     }
                     """
                 )
@@ -242,21 +176,10 @@ public class SearchController {
                     name = "서버 오류",
                     value = """
                     {
-                        "documents": [
-                            {
-                                "title": "오류 발생",
-                                "content": "검색 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-                                "similarity": 0.0,
-                                "metadata": {
-                                    "type": "error",
-                                    "source": "system",
-                                    "section": "",
-                                    "url": ""
-                                }
-                            }
-                        ],
-                        "search_time_seconds": 0.0,
-                        "total_results": 0
+                        "isSuccess": false,
+                        "code": "SEARCH500",
+                        "message": "검색 처리에 실패했습니다.",
+                        "result": null
                     }
                     """
                 )

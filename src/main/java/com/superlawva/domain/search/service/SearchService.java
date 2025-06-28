@@ -30,14 +30,14 @@ public class SearchService {
     private final RestTemplate restTemplate;
     private final CasesRepository casesRepository;
 
-    @Value("${ml.api.base-url}")
+    @Value("${api.servers.search.base-url:${ml.api.base-url}}")
     private String searchApiBaseUrl;
 
     public SearchResponseDTO search(SearchRequestDTO request, @Nullable User user) {
         long startTime = System.currentTimeMillis();
 
-        if (request.query() == null || request.query().isBlank()) {
-            throw new BaseException(ErrorStatus._BAD_REQUEST);
+        if (request.query() == null || request.query().trim().isEmpty()) {
+            throw new BaseException(ErrorStatus.BAD_REQUEST);
         }
 
         try {

@@ -3,6 +3,7 @@ package com.superlawva.domain.log.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.superlawva.domain.chatbot.entity.ChatMessageEntity;
 import jakarta.persistence.*;
+import jakarta.persistence.GenerationType;
 import lombok.*;
 
 import java.math.BigDecimal;

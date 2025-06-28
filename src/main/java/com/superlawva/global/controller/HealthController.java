@@ -1,6 +1,14 @@
 package com.superlawva.global.controller;
 
 import com.superlawva.domain.ml.client.MLApiClient;
+import com.superlawva.global.response.ApiResponse;
+import com.superlawva.global.response.status.SuccessStatus;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +26,7 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "🏥 Health Check", description = "서비스 상태 확인 API")
 public class HealthController {
 
     private final DataSource dataSource;
@@ -31,8 +40,35 @@ public class HealthController {
      * 기본 헬스체크 - Actuator 대체용 (구동 우선)
      * GET /health
      */
+    @Operation(summary = "기본 헬스체크", description = "애플리케이션의 기본 상태를 확인합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "헬스체크 성공",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = @ExampleObject(
+                    name = "성공 응답",
+                    value = """
+                    {
+                        "success": true,
+                        "message": "애플리케이션이 정상적으로 실행 중입니다.",
+                        "data": {
+                            "status": "UP",
+                            "timestamp": "2024-01-15T10:30:00",
+                            "service": "SuperLawVA Backend",
+                            "version": "1.0.0",
+                            "message": "애플리케이션이 정상적으로 실행 중입니다."
+                        }
+                    }
+                    """
+                )
+            )
+        )
+    })
     @GetMapping("/health")
-    public ResponseEntity<Map<String, Object>> basicHealthCheck() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> basicHealthCheck() {
         try {
             Map<String, Object> health = new HashMap<>();
             health.put("status", "UP");
@@ -42,7 +78,7 @@ public class HealthController {
             health.put("message", "애플리케이션이 정상적으로 실행 중입니다.");
             
             log.info("헬스체크 요청 성공");
-            return ResponseEntity.ok(health);
+            return ResponseEntity.ok(ApiResponse.of(SuccessStatus._OK, health));
         } catch (Exception e) {
             log.error("헬스체크 중 오류 발생", e);
             Map<String, Object> health = new HashMap<>();
@@ -50,7 +86,7 @@ public class HealthController {
             health.put("timestamp", LocalDateTime.now());
             health.put("service", "SuperLawVA Backend");
             health.put("message", "기본 헬스체크 성공");
-            return ResponseEntity.ok(health);
+            return ResponseEntity.ok(ApiResponse.of(SuccessStatus._OK, health));
         }
     }
 
@@ -58,8 +94,48 @@ public class HealthController {
      * 상세 헬스체크 - 모든 의존성 확인 (구동 우선)
      * GET /health/detailed
      */
+    @Operation(summary = "상세 헬스체크", description = "모든 의존성(데이터베이스, Redis, ML API)의 상태를 확인합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "상세 헬스체크 성공",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = @ExampleObject(
+                    name = "성공 응답",
+                    value = """
+                    {
+                        "success": true,
+                        "message": "상세 헬스체크가 완료되었습니다.",
+                        "data": {
+                            "status": "UP",
+                            "timestamp": "2024-01-15T10:30:00",
+                            "service": "SuperLawVA Backend",
+                            "version": "1.0.0",
+                            "components": {
+                                "database": {
+                                    "status": "UP",
+                                    "details": "MySQL connection successful"
+                                },
+                                "redis": {
+                                    "status": "UP",
+                                    "details": "Redis connection successful"
+                                },
+                                "ml-api": {
+                                    "status": "UP",
+                                    "details": "ML API connection successful"
+                                }
+                            }
+                        }
+                    }
+                    """
+                )
+            )
+        )
+    })
     @GetMapping("/health/detailed")
-    public ResponseEntity<Map<String, Object>> detailedHealthCheck() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> detailedHealthCheck() {
         Map<String, Object> health = new HashMap<>();
         Map<String, Object> components = new HashMap<>();
         
@@ -123,15 +199,47 @@ public class HealthController {
         health.put("version", "1.0.0");
         health.put("components", components);
         
-        return ResponseEntity.ok(health);
+        return ResponseEntity.ok(ApiResponse.of(SuccessStatus._OK, health));
     }
     
     /**
      * 루트 경로 헬스체크 - 브라우저 접근용
      * GET /
      */
+    @Operation(summary = "루트 경로 헬스체크", description = "브라우저 접근용 기본 상태 확인 및 API 엔드포인트 정보를 제공합니다.")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200", 
+            description = "루트 경로 접근 성공",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class),
+                examples = @ExampleObject(
+                    name = "성공 응답",
+                    value = """
+                    {
+                        "success": true,
+                        "message": "백엔드 서비스가 정상적으로 실행 중입니다.",
+                        "data": {
+                            "service": "SuperLawVA Backend API",
+                            "status": "running",
+                            "timestamp": "2024-01-15T10:30:00",
+                            "message": "백엔드 서비스가 정상적으로 실행 중입니다.",
+                            "endpoints": {
+                                "health": "/health",
+                                "detailed-health": "/health/detailed",
+                                "status": "/status",
+                                "docs": "/swagger-ui/index.html"
+                            }
+                        }
+                    }
+                    """
+                )
+            )
+        )
+    })
     @GetMapping("/")
-    public ResponseEntity<Map<String, Object>> rootHealthCheck() {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> rootHealthCheck() {
         Map<String, Object> response = new HashMap<>();
         response.put("service", "SuperLawVA Backend API");
         response.put("status", "running");
@@ -145,6 +253,6 @@ public class HealthController {
         ));
         
         log.info("루트 경로 접근");
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(ApiResponse.of(SuccessStatus._OK, response));
     }
 } 

@@ -36,57 +36,6 @@ public class SessionController {
         summary = "🔍 JWT 토큰 유효성 검증", 
         description = """
         JWT 토큰이 유효한지 간단하게 확인합니다.
-        
-        **사용 목적:**
-        - 페이지 로드 시 로그인 상태 확인
-        - JWT 토큰 유효성 검증만 수행
-        - 간단한 true/false 응답
-        
-        **사용법:**
-        ```javascript
-        // 페이지 로드 시 로그인 상태 확인
-        const checkAuth = async () => {
-            const token = localStorage.getItem('access_token');
-            if (!token) {
-                console.log('토큰 없음 - 로그인 필요');
-                return false;
-            }
-            
-            try {
-                const response = await fetch('/auth/verify', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('✅ 로그인 상태 유효:', data.result);
-                    return data.result;
-                } else {
-                    console.log('❌ 토큰 만료 - 로그인 필요');
-                    localStorage.removeItem('access_token');
-                    return false;
-                }
-            } catch (error) {
-                console.error('토큰 검증 실패:', error);
-                return false;
-            }
-        };
-        
-        // 사용 예시
-        if (await checkAuth()) {
-            // 로그인 상태 - 페이지 로드 계속
-        } else {
-            // 로그인 필요 - 로그인 페이지로 이동
-            window.location.href = '/login';
-        }
-        ```
-        
-        **특징:**
-        - 단순히 토큰 유효성만 확인
-        - 사용자 정보는 반환하지 않음  
-        - 빠른 응답속도
         """
     )
     @SecurityRequirement(name = "JWT")

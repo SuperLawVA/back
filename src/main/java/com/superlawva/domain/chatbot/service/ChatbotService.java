@@ -42,21 +42,17 @@ public class ChatbotService {
     public ChatbotResponseDTO sendMessage(ChatbotRequestDTO request, User user) {
         log.info("사용자 {}의 챗봇 메시지 전송: {}", user != null ? user.getId() : "Anonymous", request.message());
         
-        // 1. 세션 조회 또는 생성
         ChatSessionEntity session = getOrCreateSession(request.session_id(), user);
         
-        // 2. 사용자 메시지 저장
         ChatMessageEntity userMessage = ChatMessageEntity.createUserMessage(session, request.message());
         chatMessageRepository.save(userMessage);
         
-        // 3. ML 팀 API 호출
         ChatbotApiService.ChatbotApiResult apiResult = chatbotApiService.sendMessage(
                 request.message(),
                 session.getSessionId(),
                 user != null ? user.getId() : null
         );
         
-        // 4. 봇 응답 저장
         String botAnswer = apiResult.success() ? apiResult.answer() :
                           "죄송합니다. 일시적인 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
         
@@ -70,11 +66,9 @@ public class ChatbotService {
         
         chatMessageRepository.save(botMessage);
         
-        // 5. 세션 활동 업데이트
         session.updateActivity(apiResult.questionType());
         chatSessionRepository.save(session);
         
-        // 6. ML 팀 스펙 응답 반환
         String finalSessionId = apiResult.sessionId() != null ?
                                apiResult.sessionId() : session.getSessionId();
         
@@ -84,11 +78,12 @@ public class ChatbotService {
             log.error("챗봇 API 호출 실패 - 세션: {}, 오류: {}", finalSessionId, apiResult.error());
         }
         
-        return ChatbotResponseDTO.from(
+        return new ChatbotResponseDTO(
                 botAnswer,
                 finalSessionId,
                 apiResult.questionType(),
-                apiResult.responseTimeSeconds()
+                apiResult.responseTimeSeconds(),
+                botMessage
         );
     }
     
@@ -150,18 +145,29 @@ public class ChatbotService {
     }
     
     /**
-     * 사용자별 세션 목록 조회 (기존)
+     * 사용자별 세션 목록 조회 (페이징)
      */
     @Transactional(readOnly = true)
     public Page<ChatSessionEntity> getUserSessions(User user, Pageable pageable) {
         log.info("사용자 {}의 세션 목록 조회", user.getId());
         return chatSessionRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageable);
     }
+
+    /**
+     * 사용자별 세션 목록 조회 (페이징 없음)
+     */
+    @Transactional(readOnly = true)
+    public List<ChatSessionEntity> getUserSessions(User user) {
+        log.info("사용자 {}의 전체 세션 목록 조회", user.getId());
+        return chatSessionRepository.findByUserIdOrderByLastActiveAtDesc(user.getId());
+    }
     
     /**
      * 사용자별 세션 목록 조회 (간소화된 응답)
+     * @deprecated 컨트롤러에서 직접 DTO로 변환하므로 더 이상 사용되지 않음
      */
     @Transactional(readOnly = true)
+    @Deprecated
     public List<SessionListResponseDTO> getUserSessionList(Long userId) {
         if (userId == null) {
             log.warn("사용자 ID가 null이므로 빈 세션 목록을 반환합니다.");
@@ -233,7 +239,7 @@ public class ChatbotService {
      * 새 세션 생성
      */
     @Transactional
-    public ChatSessionResponseDTO createSession(User user) {
+    public ChatSessionEntity createSession(User user) {
         ChatSessionEntity.ChatSessionEntityBuilder builder = ChatSessionEntity.builder()
                 .sessionId(UUID.randomUUID().toString())
                 .status(ChatSessionEntity.SessionStatus.active);
@@ -246,8 +252,7 @@ public class ChatbotService {
         }
         
         ChatSessionEntity newSession = builder.build();
-        ChatSessionEntity savedSession = chatSessionRepository.save(newSession);
-        return ChatSessionResponseDTO.fromEntity(savedSession);
+        return chatSessionRepository.save(newSession);
     }
 
     /**
