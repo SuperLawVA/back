@@ -79,9 +79,9 @@ jobs:
           target: "/home/ubuntu/"
 
       # 8-1. GCP 서비스 계정 키 처리 및 환경변수 주입
-      - name: ⬇️ Decode & export GCP key
+      - name: ⬇️ Export GCP key (no base64)
         run: |
-          echo "${{ secrets.GCP_SERVICE_KEY_JSON }}" | base64 -d > /tmp/gcp-key.json
+          echo '${{ secrets.GCP_SERVICE_KEY_JSON }}' > /tmp/gcp-key.json
           echo "::add-mask::${{ secrets.GCP_SERVICE_KEY_JSON }}"
           echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
           GCP_PROJECT_ID=$(jq -r '.project_id' /tmp/gcp-key.json)
