@@ -115,6 +115,9 @@ public class SecurityConfig {
                 // 챗봇 API는 인증 없이 접근 허용
                 .requestMatchers("/chtbot/**").permitAll()
                 
+                // Swagger UI 관련 경로 허용
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                
                 // 그 외 모든 요청은 인증 없이 허용
                 .anyRequest().permitAll()
             )

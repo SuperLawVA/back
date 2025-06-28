@@ -141,6 +141,22 @@ management:
     health:
       show-details: always
 
+# SpringDoc OpenAPI 설정
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: alpha
+    tags-sorter: alpha
+    try-it-out-enabled: true
+    display-request-duration: true
+  show-actuator: true
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
 # OAuth2 소셜 로그인 기능 활성화 여부 (기본: 비활성화)
 oauth2:
   enabled: false
@@ -153,7 +169,7 @@ server:
 # AWS S3 설정
 aws:
   s3:
-    bucket-name: ${AWS_S3_BUCKET_NAME:}
+    bucket-name: ${AWS_S3_BUCKET_NAME:superlawva-logs}
     access-key: ${AWS_ACCESS_KEY_ID:}
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
     region: ${AWS_REGION:ap-northeast-2}
