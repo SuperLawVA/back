@@ -28,6 +28,7 @@ public class GcpConfig {
     @Bean
     public DocumentProcessorServiceClient documentProcessorServiceClient(GoogleCredentials credentials) throws IOException {
         DocumentProcessorServiceSettings settings = DocumentProcessorServiceSettings.newBuilder()
+                .setEndpoint("us-documentai.googleapis.com:443")
                 .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
                 .build();
 
