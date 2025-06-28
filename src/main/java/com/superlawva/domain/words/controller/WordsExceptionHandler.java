@@ -30,7 +30,7 @@ public class WordsExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
-        log.warn("Validation 오류 발생: {}", errors);
+        log.warn("[WordsExceptionHandler] Validation 오류 발생: {}", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
 
@@ -48,7 +48,7 @@ public class WordsExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
-        log.warn("Constraint Violation 오류 발생: {}", errors);
+        log.warn("[WordsExceptionHandler] Constraint Violation 오류 발생: {}", errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errors);
     }
 
@@ -61,7 +61,7 @@ public class WordsExceptionHandler {
         error.put("error", "서버 내부 오류가 발생했습니다.");
         error.put("message", ex.getMessage());
 
-        log.error("예상치 못한 오류 발생", ex);
+        log.error("[WordsExceptionHandler] 예상치 못한 오류 발생", ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }

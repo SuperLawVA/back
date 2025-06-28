@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -18,7 +19,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BaseException.class)
     protected ResponseEntity<Object> handleBaseException(BaseException e) {
-        log.error("BaseException occurred: ", e);
+        log.error("[GlobalExceptionHandler] BaseException: ", e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure(
                 e.getCode().getCode(),
                 e.getMessage(),
@@ -29,7 +30,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
-        log.error("Validation error: ", e);
+        log.error("[GlobalExceptionHandler] Validation error: ", e);
         String errorMessage = e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         ApiResponse<Object> responseBody = ApiResponse.onFailure("400", errorMessage, null);
         return new ResponseEntity<>(responseBody, HttpStatus.BAD_REQUEST);
@@ -37,7 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BindException.class)
     protected ResponseEntity<Object> handleBindException(BindException e) {
-        log.error("Bind error: ", e);
+        log.error("[GlobalExceptionHandler] Bind error: ", e);
         String errorMessage = e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
         ApiResponse<Object> responseBody = ApiResponse.onFailure("400", errorMessage, null);
         return new ResponseEntity<>(responseBody, HttpStatus.BAD_REQUEST);
@@ -45,21 +46,31 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataAccessException.class)
     protected ResponseEntity<Object> handleDataAccessException(DataAccessException e) {
-        log.error("Database error: ", e);
+        log.error("[GlobalExceptionHandler] Database error: ", e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure("500", "데이터베이스 오류가 발생했습니다.", null);
         return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(RuntimeException.class)
     protected ResponseEntity<Object> handleRuntimeException(RuntimeException e) {
-        log.error("Runtime error: ", e);
+        log.error("[GlobalExceptionHandler] Runtime error: ", e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure("500", "서버 내부 오류가 발생했습니다: " + e.getMessage(), null);
         return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Object>> handleNoResourceFoundException(NoResourceFoundException e, HttpServletRequest request) {
+        log.warn("[GlobalExceptionHandler] NoResourceFoundException for URI: {}", request.getRequestURI());
+        // 404 Not Found 응답 반환
+        return new ResponseEntity<>(
+            ApiResponse.onFailure("404", "요청한 리소스를 찾을 수 없습니다: " + request.getRequestURI(), null), 
+            HttpStatus.NOT_FOUND
+        );
+    }
+
     @ExceptionHandler(Exception.class)
     protected ResponseEntity<Object> handleGeneralException(Exception e, HttpServletRequest request) {
-        log.error("Unexpected error for URI: {}", request.getRequestURI(), e);
+        log.error("[GlobalExceptionHandler] Unexpected error for URI: {}", request.getRequestURI(), e);
         ApiResponse<Object> responseBody = ApiResponse.onFailure("500", "예상치 못한 오류가 발생했습니다.", null);
         return new ResponseEntity<>(responseBody, HttpStatus.INTERNAL_SERVER_ERROR);
     }
