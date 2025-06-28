@@ -150,7 +150,7 @@ jobs:
               docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
             echo "======> 2. gcp-key.json 및 .env 생성"
-            echo "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
+            printf '%s' "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
 
             cat > .env <<EOF
             DATABASE_URL=$DATABASE_URL
