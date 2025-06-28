@@ -112,10 +112,13 @@ public class SecurityConfig {
                 .requestMatchers(POST, "/auth/logout").authenticated()
                 .requestMatchers("/user/me").authenticated()
                 
+                // 챗봇 API는 인증 없이 접근 허용
+                .requestMatchers("/chtbot/**").permitAll()
+                
                 // 그 외 모든 요청은 인증 없이 허용
                 .anyRequest().permitAll()
-            );
-            // .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
+            )
+            .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 
         // Spring Security의 기본 로그아웃 처리 활성화
         http.logout(logout -> logout

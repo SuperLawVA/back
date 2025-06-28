@@ -135,8 +135,15 @@ public class ChatbotController {
     public ResponseEntity<ApiNewSessionResponseDTO> createSession(
             @Parameter(hidden = true) @LoginUser User user
     ) {
+        // 인증된 사용자가 없으면 익명 사용자로 처리
         if (user == null) {
-            throw new BaseException(ErrorStatus.UNAUTHORIZED);
+            // 익명 사용자용 기본 응답 (실제로는 세션 생성 없이 처리)
+            log.info("익명 사용자의 세션 생성 요청");
+            return ResponseEntity.ok(new ApiNewSessionResponseDTO(
+                    "anonymous_session_" + System.currentTimeMillis(),
+                    java.time.Instant.now().atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT),
+                    "익명 사용자 세션이 생성되었습니다."
+            ));
         }
         ChatSessionEntity session = chatbotService.createSession(user);
         return ResponseEntity.ok(new ApiNewSessionResponseDTO(
