@@ -2,6 +2,7 @@ package com.superlawva.domain.status.controller;
 
 import com.superlawva.domain.status.dto.StatusResponseDTO;
 import com.superlawva.domain.status.service.StatusService;
+import com.superlawva.global.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -16,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @Slf4j
 @RestController
-@RequestMapping("/status")
+@RequestMapping("/api/v1/status")
 @RequiredArgsConstructor
 @Tag(name = "📊 System Status", description = "시스템 상태 및 모니터링 API")
 public class StatusController {
@@ -24,74 +25,33 @@ public class StatusController {
     private final StatusService statusService;
     
     @Operation(
-        summary = "📊 ML 서비스 상태 확인", 
+        summary = "📊 시스템 상태 확인", 
         description = """
-        ##그냥 구현만 해놓은 것 사용 x##
         ## 📖 API 설명
-        ML 팀의 AI 서버 상태를 실시간으로 확인합니다.
-  
-        ### 5. 에러 처리
-        - **200**: 서비스 정상 → 챗봇/검색 기능 사용 가능
-        - **503**: 서비스 장애 → 사용자에게 점검 안내
+        시스템의 전반적인 상태를 확인합니다.
+        - ML 서비스 상태
+        - 활성 세션 수
+        - 벡터 검색 준비 상태
+        
+        ### 응답 상태
+        - **running**: 정상 작동
+        - **degraded**: 일부 기능 제한
+        - **down**: 서비스 불가
         """
     )
-    @ApiResponses({
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "200", 
-            description = "✅ 상태 확인 성공",
-            content = @Content(
-                examples = @ExampleObject(
-                    value = """
-                    {
-                        "status": "running",
-                        "active_sessions": 42,
-                        "models": {
-                            "light": "healthy",
-                            "heavy": "healthy",
-                            "last_health_check": "2025-06-20T15:49:00"
-                        },
-                        "vector_search_ready": true,
-                        "timestamp": "2025-06-20T15:49:27.843808"
-                    }
-                    """
-                )
-            )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "503", 
-            description = "⚠️ 서비스 장애",
-            content = @Content(
-                examples = @ExampleObject(
-                    value = """
-                    {
-                        "status": "degraded",
-                        "active_sessions": 15,
-                        "models": {
-                            "light": "warning",
-                            "heavy": "warning",
-                            "last_health_check": "2025-06-20T15:49:00"
-                        },
-                        "vector_search_ready": false,
-                        "timestamp": "2025-06-20T15:49:27.843808"
-                    }
-                    """
-                )
-            )
-        )
-    })
-    @GetMapping("/status")
-    public ResponseEntity<StatusResponseDTO> getStatus() {
-        log.info("ML 서비스 상태 확인 요청");
+    @GetMapping
+    public ResponseEntity<ApiResponse<StatusResponseDTO>> getStatus() {
+        log.info("시스템 상태 확인 요청");
         
         StatusResponseDTO status = statusService.getStatus();
         
         // 상태에 따른 HTTP 상태 코드 반환
         if ("running".equals(status.status())) {
-            return ResponseEntity.ok(status);
+            return ResponseEntity.ok(ApiResponse.success(status));
         } else if ("degraded".equals(status.status())) {
-            return ResponseEntity.status(503).body(status); // Service Unavailable
+            return ResponseEntity.status(503).body(ApiResponse.<StatusResponseDTO>onFailure("STATUS503", "서비스가 일부 제한됩니다", null));
         } else {
-            return ResponseEntity.status(503).body(status); // Service Unavailable
+            return ResponseEntity.status(503).body(ApiResponse.<StatusResponseDTO>onFailure("STATUS503", "서비스를 이용할 수 없습니다", null));
         }
     }
 } 

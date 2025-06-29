@@ -20,7 +20,13 @@ public record SearchRequestDTO(
         @Schema(description = "검색 결과 개수", example = "10")
         @Min(value = 1, message = "최소 1개 이상 검색해야 합니다.")
         @Max(value = 20, message = "최대 20개까지 검색 가능합니다.")
-        Integer k
+        Integer k,
+
+        @Schema(description = "페이지 번호", example = "1", defaultValue = "1")
+        Integer page,
+
+        @Schema(description = "페이지당 결과 수", example = "10", defaultValue = "10")
+        Integer pageSize
 ) {
     
     public SearchRequestDTO {
@@ -30,6 +36,12 @@ public record SearchRequestDTO(
         }
         if (k == null || k <= 0) {
             k = 10;
+        }
+        if (page == null || page < 1) {
+            page = 1;
+        }
+        if (pageSize == null || pageSize < 1) {
+            pageSize = 10;
         }
     }
 } 

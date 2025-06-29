@@ -17,7 +17,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,6 +36,8 @@ public class SearchService {
     @Value("${api.servers.search.base-url:${ml.api.base-url}}")
     private String searchApiBaseUrl;
 
+    @Cacheable(value = "search", key = "#request.query() + ':' + #request.search_type() + ':' + #request.k()")
+    @Transactional(readOnly = true)
     public SearchResponseDTO search(SearchRequestDTO request, @Nullable User user) {
         long startTime = System.currentTimeMillis();
 
@@ -57,16 +62,29 @@ public class SearchService {
                         .sorted(Comparator.comparing(SearchResponseDTO.DocumentResult::boostedSimilarity).reversed())
                         .collect(Collectors.toList());
 
-                List<SearchResponseDTO.DocumentResult> laws = allDocuments.stream()
+                // Manual Pagination
+                int totalResults = allDocuments.size();
+                int page = request.page();
+                int pageSize = request.pageSize();
+                int totalPages = (int) Math.ceil((double) totalResults / pageSize);
+                int start = (page - 1) * pageSize;
+                int end = Math.min(start + pageSize, totalResults);
+
+                List<SearchResponseDTO.DocumentResult> paginatedDocuments = (start > totalResults)
+                        ? Collections.emptyList()
+                        : allDocuments.subList(start, end);
+
+
+                List<SearchResponseDTO.DocumentResult> laws = paginatedDocuments.stream()
                         .filter(doc -> "law".equalsIgnoreCase(doc.source()))
                         .collect(Collectors.toList());
 
-                List<SearchResponseDTO.DocumentResult> cases = allDocuments.stream()
+                List<SearchResponseDTO.DocumentResult> cases = paginatedDocuments.stream()
                         .filter(doc -> "case".equalsIgnoreCase(doc.source()))
                         .collect(Collectors.toList());
 
                 double searchTimeSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
-                return new SearchResponseDTO(laws, cases, allDocuments, searchTimeSeconds, allDocuments.size());
+                return new SearchResponseDTO(laws, cases, paginatedDocuments, searchTimeSeconds, totalResults, page, pageSize, totalPages);
             } else {
                 log.error("ML 검색 API 호출 실패 - 상태코드: {}", response.getStatusCode());
                 throw new BaseException(ErrorStatus.ML_API_CONNECTION_FAILED);

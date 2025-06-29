@@ -20,7 +20,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 
 @RestController
-@RequestMapping("/LegalTerms")
+@RequestMapping("/api/v1/legal-terms")
 @RequiredArgsConstructor
 @Validated
 @Slf4j
@@ -88,7 +88,7 @@ public class WordsController {
             )
         )
     })
-    @GetMapping("/terms/search")
+    @GetMapping("/search")
     public ResponseEntity<ApiResponse<WordsSearchResponseDto>> searchTerms(
             @Parameter(description = "검색 키워드", example = "보증금") @RequestParam(value = "keyword", defaultValue = "") String keyword,
             @Parameter(description = "페이지 번호", example = "1") @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,

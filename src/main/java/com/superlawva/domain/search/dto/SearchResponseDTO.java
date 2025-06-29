@@ -24,7 +24,19 @@ public record SearchResponseDTO(
         
         @Schema(description = "총 검색 결과 개수", example = "15")
         @JsonProperty("total_results")
-        Integer totalResults
+        Integer totalResults,
+
+        @Schema(description = "현재 페이지 번호", example = "1")
+        @JsonProperty("current_page")
+        Integer currentPage,
+
+        @Schema(description = "페이지당 결과 수", example = "10")
+        @JsonProperty("page_size")
+        Integer pageSize,
+
+        @Schema(description = "총 페이지 수", example = "2")
+        @JsonProperty("total_pages")
+        Integer totalPages
 ) {
     
     @Schema(description = "검색된 개별 문서")
