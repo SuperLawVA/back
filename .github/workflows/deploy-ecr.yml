@@ -152,13 +152,13 @@ jobs:
             echo "======> 2. gcp-key.json 생성 및 검증"
             printf '%s' "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
             echo "✅ gcp-key.json 파일 생성 완료. 내용 일부를 검증합니다:"
-            echo "--- 파일 시작 부분 ---"
-            head -c 50 /home/ubuntu/gcp-key.json
+            echo "--- 파일 시작 문자 확인 (결과가 '{' 이어야 합니다) ---"
+            head -c 1 /home/ubuntu/gcp-key.json
             echo ""
-            echo "--- 파일 끝 부분 ---"
-            tail -c 50 /home/ubuntu/gcp-key.json
+            echo "--- 파일 끝 문자 확인 (결과가 '}' 이어야 합니다) ---"
+            tail -c 1 /home/ubuntu/gcp-key.json
             echo ""
-            echo "---------------------"
+            echo "----------------------------------------------------"
 
             echo "======> 3. .env 파일 생성"
             cat > .env <<EOF
