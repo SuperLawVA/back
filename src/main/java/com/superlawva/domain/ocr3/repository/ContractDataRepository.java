@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,4 +38,7 @@ public interface ContractDataRepository extends JpaRepository<ContractData, Long
 
     // 계약 타입과 사용자별 조회
     List<ContractData> findByContractTypeAndUserId(String contractType, String userId);
+
+    // 신규 추가: 종료일이 특정 날짜 이후인 모든 계약 조회 (String 타입으로 변경)
+    List<ContractData> findByDates_EndDateAfter(String date);
 }

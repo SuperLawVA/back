@@ -30,8 +30,10 @@ public enum ErrorStatus {
     // ✅ User 관련
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "USER404", "존재하지 않는 사용자입니다."),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "USER409", "이미 사용 중인 이메일입니다."),
-    PASSWORD_NOT_MATCH(HttpStatus.UNAUTHORIZED, "USER401", "비밀번호가 일치하지 않습니다."),
+    PASSWORD_NOT_MATCH(HttpStatus.BAD_REQUEST, "USER401", "비밀번호가 일치하지 않습니다."),
     PASSWORD_CONFIRM_NOT_MATCH(HttpStatus.BAD_REQUEST, "USER400", "비밀번호와 비밀번호 확인이 일치하지 않습니다."),
+    USER_ALREADY_SIGNED_UP(HttpStatus.CONFLICT, "U003", "이미 가입된 사용자입니다."),
+    INVALID_USER_ID(HttpStatus.BAD_REQUEST, "U005", "유효하지 않은 사용자 ID 형식입니다."),
 
     // ✅ Email Verification
     VERIFICATION_CODE_NOT_FOUND(HttpStatus.NOT_FOUND, "EMAIL404", "인증 코드를 찾을 수 없습니다."),
@@ -81,7 +83,13 @@ public enum ErrorStatus {
 
     // ✅ Search
     SEARCH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "SEARCH500", "검색 처리에 실패했습니다."),
-    SEARCH_QUERY_EMPTY(HttpStatus.BAD_REQUEST, "SEARCH400", "검색어를 입력해주세요.");
+    SEARCH_QUERY_EMPTY(HttpStatus.BAD_REQUEST, "SEARCH400", "검색어를 입력해주세요."),
+
+    // 인증 관련 에러
+    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
+
+    // 일반 에러
+    DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "DB001", "데이터베이스 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

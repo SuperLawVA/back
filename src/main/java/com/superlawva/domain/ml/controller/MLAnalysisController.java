@@ -1,8 +1,10 @@
 package com.superlawva.domain.ml.controller;
 
+import com.superlawva.domain.ml.dto.MLAnalysisRequest;
 import com.superlawva.domain.ml.service.MLAnalysisService;
 import com.superlawva.domain.ml.entity.MLAnalysisResult;
 import com.superlawva.domain.document.entity.GeneratedDocumentEntity;
+import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,26 +34,72 @@ public class MLAnalysisController {
 
     private final MLAnalysisService mlAnalysisService;
 
-    /**
-     * CREATE - 계약서 분석 생성
-     */
-    @PostMapping("/contract/{contractId}")
-    @Operation(summary = "계약서 분석 생성", description = "계약서 ID로 계약서를 조회하여 ML 분석을 수행하고 결과를 저장합니다.")
+    @PostMapping
+    @Operation(
+        summary = "🤖 AI 계약서 분석 시작", 
+        description = """
+        선택한 계약서에 대해 AI 분석을 시작합니다.
+        
+        ## 🎯 프론트엔드 구현 가이드
+        
+        ### 1. 기본 사용법
+        ```javascript
+        const startAnalysis = async (analysisData) => {
+            const response = await fetch('/analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    contractId: "123",
+                    analysisType: "COMPREHENSIVE",
+                    focusAreas: ["보증금 관련", "계약 기간"],
+                    options: {
+                        includeRecommendations: true,
+                        includeLegalBasis: true,
+                        detailLevel: "DETAILED"
+                    }
+                })
+            });
+            return await response.json();
+        };
+        ```
+        
+        ### 2. 분석 유형 (analysisType)
+        - `RISK_ANALYSIS`: 위험도 중심 분석
+        - `COMPLIANCE_CHECK`: 법적 준수성 검토
+        - `COMPREHENSIVE`: 종합 분석 (추천)
+        - `QUICK_REVIEW`: 빠른 검토
+        
+        ### 3. 상세도 레벨 (detailLevel)
+        - `SUMMARY`: 요약
+        - `DETAILED`: 상세 (기본값)
+        - `EXPERT`: 전문가 수준
+        """
+    )
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "JWT")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "200",
-            description = "분석 성공",
+            description = "✅ 분석 시작 성공",
             content = @Content(
                 mediaType = "application/json",
                 examples = @ExampleObject(
-                    name = "성공 예시",
-                    summary = "정상 응답 예시",
+                    name = "분석 시작 성공 예시",
+                    summary = "분석이 성공적으로 시작됨",
                     value = """
                     {
-                      \"isSuccess\": true,
-                      \"code\": \"200\",
-                      \"message\": \"요청에 성공했습니다.\",
-                      \"result\": 123
+                        "success": true,
+                        "data": {
+                            "analysisId": "456",
+                            "contractId": "123",
+                            "analysisType": "COMPREHENSIVE",
+                            "status": "PROCESSING",
+                            "estimatedTime": "2-3분",
+                            "startedAt": "2024-01-15T10:30:00Z"
+                        },
+                        "message": "계약서 분석이 시작되었습니다."
                     }
                     """
                 )
@@ -59,58 +107,62 @@ public class MLAnalysisController {
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "400",
-            description = "잘못된 요청",
+            description = "❌ 잘못된 요청",
             content = @Content(
                 mediaType = "application/json",
                 examples = @ExampleObject(
-                    name = "잘못된 요청 예시",
-                    summary = "계약서 ID 형식 오류",
+                    name = "유효성 검증 실패 예시",
+                    summary = "필수 필드 누락 또는 형식 오류",
                     value = """
                     {
-                      \"isSuccess\": false,
-                      \"code\": \"COMMON400\",
-                      \"message\": \"잘못된 계약서 ID 형식입니다: abc\",
-                      \"result\": null
-                    }
-                    """
-                )
-            )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "500",
-            description = "서버 오류",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(
-                    name = "서버 오류 예시",
-                    summary = "서버 내부 오류",
-                    value = """
-                    {
-                      \"isSuccess\": false,
-                      \"code\": \"COMMON500\",
-                      \"message\": \"서버 내부 오류\",
-                      \"result\": null
+                        "success": false,
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "입력값 검증에 실패했습니다.",
+                            "details": {
+                                "contractId": "계약서 ID는 필수입니다.",
+                                "analysisType": "분석 유형은 필수입니다."
+                            }
+                        }
                     }
                     """
                 )
             )
         )
     })
-    public ResponseEntity<ApiResponse<Long>> createAnalysis(
-            @Parameter(description = "계약서 ID", required = true) @PathVariable String contractId,
-            @Parameter(description = "사용자 ID", required = true) @RequestParam String userId) {
-        log.info("📊 계약서 분석 생성 요청 - Contract ID: {}, User ID: {}", contractId, userId);
+    public ResponseEntity<ApiResponse<Map<String, Object>>> createAnalysis(
+            @Parameter(hidden = true) @com.superlawva.global.security.annotation.LoginUser Long userId,
+            @Valid @RequestBody MLAnalysisRequest request) {
+        log.info("🤖 AI 계약서 분석 시작 요청 - User ID: {}, Contract ID: {}, Type: {}", 
+                userId, request.getContractId(), request.getAnalysisType());
+                
+        if (userId == null) {
+            throw new com.superlawva.global.exception.BaseException(
+                com.superlawva.global.response.status.ErrorStatus.UNAUTHORIZED, 
+                "인증이 필요합니다."
+            );
+        }
+        
         try {
-            Long contractIdLong = Long.parseLong(contractId);
-            GeneratedDocumentEntity result = mlAnalysisService.analyzeContract(contractIdLong, userId);
-            log.info("✅ 계약서 분석 생성 성공");
-            return ResponseEntity.ok(ApiResponse.success(result.getId()));
+            Long contractIdLong = Long.parseLong(request.getContractId());
+            GeneratedDocumentEntity result = mlAnalysisService.analyzeContract(contractIdLong, String.valueOf(userId));
+            
+            Map<String, Object> responseData = new HashMap<>();
+            responseData.put("analysisId", result.getId().toString());
+            responseData.put("contractId", request.getContractId());
+            responseData.put("analysisType", request.getAnalysisType());
+            responseData.put("status", "PROCESSING");
+            responseData.put("estimatedTime", "2-3분");
+            responseData.put("startedAt", java.time.LocalDateTime.now().toString());
+            
+            log.info("✅ 계약서 분석 시작 성공 - Analysis ID: {}", result.getId());
+            return ResponseEntity.ok(ApiResponse.success(responseData));
         } catch (NumberFormatException e) {
-            log.error("잘못된 계약서 ID 형식: {}", contractId);
-            return ResponseEntity.badRequest().body(ApiResponse.error("COMMON400", "잘못된 계약서 ID 형식입니다: " + contractId));
+            log.error("❌ 잘못된 계약서 ID 형식: {}", request.getContractId());
+            return ResponseEntity.badRequest().body(ApiResponse.error("VALIDATION_ERROR", "잘못된 계약서 ID 형식입니다: " + request.getContractId()));
         } catch (Exception e) {
-            log.error("계약서 분석 생성 중 오류 발생", e);
-            return ResponseEntity.internalServerError().body(ApiResponse.error("COMMON500", e.getMessage()));
+            log.error("❌ 계약서 분석 시작 중 오류 발생", e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("ANALYSIS_ERROR", "분석 시작 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
 

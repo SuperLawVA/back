@@ -6,6 +6,7 @@ import com.superlawva.domain.ml.dto.ContractResponse;
 import com.superlawva.domain.ml.dto.ContractUpdateRequest;
 import com.superlawva.domain.ocr3.entity.ContractData;
 import com.superlawva.domain.ocr3.repository.ContractDataRepository;
+import com.superlawva.domain.user.repository.UserRepository;
 import com.superlawva.global.exception.BaseException;
 import com.superlawva.global.response.status.ErrorStatus;
 import lombok.RequiredArgsConstructor;
@@ -25,24 +26,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ContractService {
     private final ContractDataRepository contractDataRepository;
+    private final UserRepository userRepository;
     private final MLApiClient mlApiClient;
 
     @Transactional
     public ContractResponse createContract(ContractCreateRequest request) {
         log.info("📝 계약서 생성 요청 - User ID: {}", request.getUserId());
         
+        // 1. 사용자 존재 여부 확인 (String -> Long 변환)
+        try {
+            if (!userRepository.existsById(Long.parseLong(request.getUserId()))) {
+                throw new BaseException(ErrorStatus.USER_NOT_FOUND);
+            }
+        } catch (NumberFormatException e) {
+            throw new BaseException(ErrorStatus.INVALID_USER_ID);
+        }
+
         try {
             // 1. ML API 호출
             Map<String, Object> mlRequest = Map.of(
-                    "user_id", String.valueOf(request.getUserId()),
-                    "user_query", request.getUserQuery()
+                    "user_id", request.getUserId(),
+                    "user_query", request.getUserQuery() != null ? request.getUserQuery() : Collections.emptyList(),
+                    "articles", request.getArticles()
             );
             Map<String, Object> mlResponse = mlApiClient.generateSpecialTerms(mlRequest);
 
             // 2. ContractData 생성 및 저장
             ContractData contract = new ContractData();
             contract.setUserId(request.getUserId());
-            contract.setContractType("임대차");
+            contract.setContractType(request.getContractType() != null ? request.getContractType() : "임대차");
+            
             // articles를 JSON으로 저장
             if (request.getArticles() != null) {
                 contract.setArticlesJson(convertListToJson(request.getArticles()));
@@ -66,6 +79,7 @@ public class ContractService {
         }
     }
 
+    @Transactional(readOnly = true)
     public ContractResponse getContractById(String id) {
         log.info("🔍 계약서 조회 요청 - Contract ID: {}", id);
         
@@ -89,20 +103,18 @@ public class ContractService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ContractResponse> getContractsByUserId(String userId) {
         log.info("👤 사용자별 계약서 조회 요청 - User ID: {}", userId);
-        
         try {
             List<ContractResponse> contracts = contractDataRepository.findByUserId(userId).stream()
                     .map(ContractResponse::fromEntity)
                     .collect(Collectors.toList());
-            
             log.info("✅ 사용자별 계약서 조회 완료 - User ID: {}, Count: {}", userId, contracts.size());
             return contracts;
-            
         } catch (Exception e) {
             log.error("❌ 사용자별 계약서 조회 실패 - User ID: {}, Error: {}", userId, e.getMessage());
-            throw new BaseException(ErrorStatus.INTERNAL_SERVER_ERROR, "사용자별 계약서 조회 중 오류가 발생했습니다: " + e.getMessage());
+            throw new BaseException(ErrorStatus.DATABASE_ERROR);
         }
     }
 
@@ -123,8 +135,8 @@ public class ContractService {
             }
             
             if (request.getUserQuery() != null) {
-                // userQuery를 별도 필드로 저장 (임시로 articles에 저장)
-                contract.setArticlesJson(convertListToJson(request.getUserQuery()));
+                // userQuery를 별도 필드로 저장 (임시로 agreements에 저장)
+                contract.setAgreementsJson(convertListToJson(request.getUserQuery()));
                 log.info("💬 사용자 쿼리 업데이트 - Count: {}", request.getUserQuery().size());
             }
             

@@ -4,8 +4,11 @@ import com.superlawva.domain.ml.dto.ContractCreateRequest;
 import com.superlawva.domain.ml.dto.ContractResponse;
 import com.superlawva.domain.ml.dto.ContractUpdateRequest;
 import com.superlawva.domain.ml.service.ContractService;
+import com.superlawva.global.exception.BaseException;
 import com.superlawva.global.response.ApiResponse;
+import com.superlawva.global.response.status.ErrorStatus;
 import com.superlawva.global.response.status.SuccessStatus;
+import com.superlawva.global.security.annotation.LoginUser;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,43 +32,122 @@ import java.util.List;
 public class ContractController {
     private final ContractService contractService;
 
-    @PostMapping("/create")
+    @PostMapping
     @Operation(
-        summary = "📝 계약서 생성", 
-        description = "사용자 ID, 사용자 쿼리, 계약 조항을 입력하여 계약서를 생성합니다."
+        summary = "📝 AI 계약서 생성", 
+        description = """
+        사용자의 요구사항을 기반으로 AI가 맞춤형 계약서를 생성합니다.
+        
+        ## 🎯 프론트엔드 구현 가이드
+        
+        ### 1. 기본 사용법
+        ```javascript
+        const createContract = async (contractData) => {
+            const response = await fetch('/contract', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    title: "우리집 임대차 계약서",
+                    contractType: "MONTHLY_RENT",
+                    requirements: [
+                        "반려동물 키우기 허용",
+                        "소음 관련 제한사항 추가"
+                    ],
+                    propertyInfo: {
+                        address: "서울시 강남구 테헤란로 123",
+                        propertyType: "아파트",
+                        area: 84.5,
+                        floor: 5
+                    }
+                })
+            });
+            return await response.json();
+        };
+        ```
+        
+        ### 2. 계약서 유형 (contractType)
+        - `JEONSE`: 전세 계약
+        - `MONTHLY_RENT`: 월세 계약  
+        - `SALE`: 매매 계약
+        - `CUSTOM`: 커스텀 계약
+        """
     )
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "JWT")
     @ApiResponses({
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "201",
-            description = "계약서 생성 성공",
+            description = "✅ 계약서 생성 성공",
             content = @Content(
                 mediaType = "application/json",
-                schema = @Schema(implementation = ApiResponse.class),
                 examples = @ExampleObject(
                     name = "계약서 생성 성공 예시",
-                    summary = "계약서가 성공적으로 생성됨",
-                    value = "{\"success\": true, \"data\": {\"id\": \"123\", \"userId\": \"user123\", \"contractType\": \"임대차\", \"articles\": [\"제1조 임대목적\", \"제2조 임대기간\"], \"createdDate\": \"2024-01-15T10:30:00\", \"modifiedDate\": \"2024-01-15T10:30:00\"}, \"status\": {\"httpStatus\": \"CREATED\", \"code\": \"201\", \"message\": \"계약서가 성공적으로 생성되었습니다.\"}}"
+                    summary = "AI가 생성한 계약서 정보",
+                    value = """
+                    {
+                        "success": true,
+                        "data": {
+                            "id": "123",
+                            "title": "우리집 임대차 계약서",
+                            "contractType": "MONTHLY_RENT",
+                            "articles": [
+                                "제1조 (목적) 본 계약은 임대차에 관한 사항을 정함",
+                                "제2조 (임대료) 월 임대료는 50만원으로 한다"
+                            ],
+                            "specialTerms": [
+                                "반려동물 사육이 허용됨",
+                                "오후 10시 이후 소음 금지"
+                            ],
+                            "createdDate": "2024-01-15T10:30:00",
+                            "status": "DRAFT"
+                        },
+                        "message": "계약서가 성공적으로 생성되었습니다."
+                    }
+                    """
                 )
             )
         ),
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
             responseCode = "400",
-            description = "잘못된 요청",
+            description = "❌ 잘못된 요청",
             content = @Content(
                 mediaType = "application/json",
                 examples = @ExampleObject(
-                    name = "잘못된 요청 예시",
-                    summary = "필수 필드 누락",
-                    value = "{\"success\": false, \"error\": {\"httpStatus\": \"BAD_REQUEST\", \"code\": \"COMMON400\", \"message\": \"잘못된 요청입니다.\"}, \"status\": {\"httpStatus\": \"BAD_REQUEST\", \"code\": \"COMMON400\", \"message\": \"잘못된 요청입니다.\"}}"
+                    name = "유효성 검증 실패 예시",
+                    summary = "필수 필드 누락 또는 형식 오류",
+                    value = """
+                    {
+                        "success": false,
+                        "error": {
+                            "code": "VALIDATION_ERROR",
+                            "message": "입력값 검증에 실패했습니다.",
+                            "details": {
+                                "contractType": "계약서 유형은 필수입니다.",
+                                "requirements": "최소 1개 이상의 요구사항을 입력해주세요."
+                            }
+                        }
+                    }
+                    """
                 )
             )
         )
     })
     public ResponseEntity<ApiResponse<ContractResponse>> createContract(
+            @Parameter(hidden = true) @LoginUser Long userId,
             @Valid @RequestBody ContractCreateRequest request) {
-        log.info("📝 계약서 생성 요청 - User ID: {}", request.getUserId());
+        log.info("📝 AI 계약서 생성 요청 - User ID: {}", userId);
+        
+        if (userId == null) {
+            throw new BaseException(ErrorStatus.UNAUTHORIZED, "인증이 필요합니다.");
+        }
+        
+        // userId를 request에 설정
+        request.setUserId(String.valueOf(userId));
         
         ContractResponse response = contractService.createContract(request);
+        log.info("✅ 계약서 생성 완료 - Contract ID: {}", response.getId());
         return ResponseEntity.status(201).body(ApiResponse.success(response));
     }
 
@@ -172,6 +254,52 @@ public class ContractController {
         log.info("📝 계약서 수정 요청 - Contract ID: {}", id);
         
         ContractResponse response = contractService.updateContract(id, request);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/my")
+    @Operation(
+        summary = "📋 내 계약서 목록 조회", 
+        description = "현재 로그인한 사용자의 모든 계약서 목록을 조회합니다. JWT 토큰이 필요합니다."
+    )
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name = "JWT")
+    @ApiResponses({
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "내 계약서 목록 조회 성공",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "내 계약서 목록 예시",
+                    summary = "로그인한 사용자의 계약서 목록",
+                    value = "{\"success\": true, \"data\": [{\"id\": \"123\", \"userId\": \"user123\", \"contractType\": \"임대차\", \"articles\": [\"제1조 임대목적\"], \"createdDate\": \"2024-01-15T10:30:00\"}, {\"id\": \"124\", \"userId\": \"user123\", \"contractType\": \"월세\", \"articles\": [\"제1조 임대목적\"], \"createdDate\": \"2024-01-16T14:20:00\"}], \"status\": {\"httpStatus\": \"OK\", \"code\": \"200\", \"message\": \"내 계약서 목록을 성공적으로 조회했습니다.\"}}"
+                )
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "401",
+            description = "인증되지 않은 사용자",
+            content = @Content(
+                mediaType = "application/json",
+                examples = @ExampleObject(
+                    name = "인증 실패 예시",
+                    summary = "JWT 토큰이 없거나 유효하지 않음",
+                    value = "{\"success\": false, \"error\": {\"httpStatus\": \"UNAUTHORIZED\", \"code\": \"AUTH401\", \"message\": \"인증이 필요합니다.\"}, \"status\": {\"httpStatus\": \"UNAUTHORIZED\", \"code\": \"AUTH401\", \"message\": \"인증이 필요합니다.\"}}"
+                )
+            )
+        )
+    })
+    public ResponseEntity<ApiResponse<List<ContractResponse>>> getMyContracts(
+            @Parameter(hidden = true) @LoginUser Long userId) {
+        log.info("📋 내 계약서 목록 조회 요청 - User ID: {}", userId);
+        
+        if (userId == null) {
+            log.warn("❌ 인증되지 않은 사용자의 계약서 조회 시도");
+            throw new BaseException(ErrorStatus.UNAUTHORIZED, "인증이 필요합니다.");
+        }
+        
+        List<ContractResponse> response = contractService.getContractsByUserId(String.valueOf(userId));
+        log.info("✅ 내 계약서 목록 조회 완료 - User ID: {}, Count: {}", userId, response.size());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
