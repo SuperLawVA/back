@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.apache.tika.Tika;
+import com.superlawva.domain.ocr3.client.GeminiApiClient;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -32,10 +34,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class OcrService {
 
     private final ContractDataRepository contractDataRepository;
@@ -44,6 +48,7 @@ public class OcrService {
     private final S3Service s3Service;
     private final GoogleCredentials googleCredentials;
     private final DocumentProcessorServiceClient documentProcessorServiceClient;
+    private final GeminiApiClient geminiApiClient;
     @Value("${gcp.project-id}")
     private String projectId;
     @Value("${gcp.location}")
@@ -291,5 +296,20 @@ public class OcrService {
         return contractDataRepository.findByUserId(userId);
     }
 
+    /**
+     * FOR 종혁햄: 단순 텍스트 추출
+     */
+    public String extractTextSimple(MultipartFile file) throws IOException {
+        log.info("단순 텍스트 추출 시작 - 파일: {}", file.getOriginalFilename());
+        
+        byte[] fileContent = file.getBytes();
+        String mimeType = file.getContentType();
 
+        // GCP Document AI 호출
+        String rawText = geminiApiClient.processDocument(fileContent, mimeType);
+        
+        log.info("단순 텍스트 추출 완료 - 추출된 텍스트 길이: {}", rawText.length());
+        
+        return rawText;
+    }
 }

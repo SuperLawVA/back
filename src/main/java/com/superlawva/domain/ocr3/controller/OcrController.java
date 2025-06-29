@@ -242,4 +242,28 @@ public class OcrController {
                     .body(ApiResponse.error("USER_CONTRACTS_ERROR", "사용자 계약서 조회 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
+
+    @Operation(
+        summary = "FOR 종혁햄 (단순 GCP 텍스트 추출)",
+        description = "GCP Document AI를 호출하여 파일에서 텍스트만 추출하고, 가공되지 않은 원본(raw) 텍스트를 반환합니다."
+    )
+    @PostMapping(value = "/upload/ocr_for_jh", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Map<String, String>>> extractTextSimple(
+            @Parameter(description = "텍스트를 추출할 이미지 또는 PDF 파일", required = true) @RequestParam("file") MultipartFile file) {
+        
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("FILE_EMPTY", "파일이 비어있습니다."));
+        }
+
+        try {
+            String extractedText = ocrService.extractTextSimple(file);
+            Map<String, String> result = new HashMap<>();
+            result.put("extractedText", extractedText);
+            return ResponseEntity.ok(ApiResponse.success(result));
+        } catch (Exception e) {
+            log.error("Simple text extraction failed", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("EXTRACTION_FAILED", "텍스트 추출 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 }
