@@ -149,10 +149,10 @@ jobs:
             aws ecr get-login-password --region "$AWS_REGION" |
               docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-            echo "======> 2. gcp-key.json 및 .env 생성"
-            # GitHub Actions가 추가하는 불필요한 따옴표를 제거
-            CLEANED_GCP_KEY=$(echo "$GCP_SERVICE_KEY_JSON" | sed -e 's/^"//' -e 's/"$//')
-            printf '%s' "$CLEANED_GCP_KEY" > /home/ubuntu/gcp-key.json
+            echo "======> 2. jq 설치 및 gcp-key.json 생성"
+            sudo apt-get update && sudo apt-get install -y jq
+            # jq를 사용하여 GitHub Secret의 JSON 문자열을 파싱하고, 따옴표 없이 파일로 저장
+            echo "$GCP_SERVICE_KEY_JSON" | jq -r '.' > /home/ubuntu/gcp-key.json
 
             cat > .env <<EOF
             DATABASE_URL=$DATABASE_URL
