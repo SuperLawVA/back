@@ -256,8 +256,8 @@ public class OcrController {
         }
 
         try {
-            // 사용자 ID가 없는 전체 처리 파이프라인 호출
-            OcrResponse response = ocrService.processContract(file);
+            // DB 저장 없이 OCR 및 AI 분석 결과만 반환
+            OcrResponse response = ocrService.processContractWithoutSaving(file);
             return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
             log.error("OCR (for JH) processing failed", e);

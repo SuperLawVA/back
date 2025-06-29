@@ -63,6 +63,7 @@ public class OcrService {
     @Value("${gemini.api-url}")
     private String geminiApiUrl;
 
+    @Transactional
     public OcrResponse processContract(MultipartFile file) throws Exception {
         log.info("Starting OCR processing for file: {}", file.getOriginalFilename());
 
@@ -88,6 +89,7 @@ public class OcrService {
                 .build();
     }
 
+    @Transactional
     public OcrResponse processContractWithUserId(MultipartFile file, String userId) throws Exception {
         log.info("Starting OCR processing for file: {} with userId: {}", file.getOriginalFilename(), userId);
 
@@ -109,6 +111,32 @@ public class OcrService {
         // Step 4: Return response
         return OcrResponse.builder()
                 .contractData(savedContract)
+                .debugMode(geminiResponse.isDebugMode())
+                .build();
+    }
+
+    /**
+     * FOR 종혁햄: DB 저장 없이 OCR 및 분석 결과만 반환
+     */
+    public OcrResponse processContractWithoutSaving(MultipartFile file) throws Exception {
+        log.info("Starting OCR processing without saving (for JH) for file: {}", file.getOriginalFilename());
+
+        // Step 1: Extract text using Document AI
+        String extractedText = extractTextFromImage(file);
+        log.info("Text extraction completed");
+
+        // Step 2: Analyze text with Gemini
+        long startTime = System.currentTimeMillis();
+        GeminiResponse geminiResponse = analyzeTextWithGemini(extractedText);
+        double generationTime = (System.currentTimeMillis() - startTime) / 1000.0;
+        log.info("Gemini analysis completed in {} seconds", generationTime);
+
+        // Step 3: Map Gemini response to ContractData object (BUT DO NOT SAVE)
+        ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, "temp-user", generationTime);
+        
+        // Step 4: Return response without saving to DB
+        return OcrResponse.builder()
+                .contractData(contractData) // 저장되지 않은 객체를 그대로 반환
                 .debugMode(geminiResponse.isDebugMode())
                 .build();
     }
