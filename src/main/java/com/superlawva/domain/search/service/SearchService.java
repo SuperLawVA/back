@@ -97,11 +97,13 @@ public class SearchService {
     }
 
     private SearchResponseDTO.DocumentResult convertToDocumentResult(MLSearchResponse.Document mlDoc) {
+        Double boostedSimilarity = mlDoc.boostedSimilarity() != null ? mlDoc.boostedSimilarity() : mlDoc.similarity();
+
         return new SearchResponseDTO.DocumentResult(
                 parseTitle(mlDoc.document()),
                 parseContent(mlDoc.document()),
                 mlDoc.similarity(),
-                mlDoc.boostedSimilarity(),
+                boostedSimilarity,
                 mlDoc.source(),
                 mlDoc.metadata()
         );

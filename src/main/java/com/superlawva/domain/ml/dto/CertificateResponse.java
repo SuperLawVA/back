@@ -86,10 +86,9 @@ public class CertificateResponse {
     public static CertificateResponse fromEntity(CertificateEntity entity) {
         if (entity == null) return null;
 
-        ObjectMapper mapper = new ObjectMapper();
         CertificateResponse response = new CertificateResponse();
 
-        // 기본 필드들
+        // 기본 필드들만 복사합니다. JSON 파싱은 서비스 레이어에서 처리합니다.
         response.setId(entity.getId().toString());
         response.setMlCertificateId(entity.getMlCertificateId());
         response.setContractId(entity.getContractId());
@@ -104,32 +103,9 @@ public class CertificateResponse {
         response.setStatus(entity.getStatus());
         response.setErrorMessage(entity.getErrorMessage());
 
-        // JSON 필드들 파싱
-        try {
-            if (entity.getReceiverJson() != null) {
-                response.setReceiver(mapper.readValue(entity.getReceiverJson(), ReceiverDto.class));
-            }
-            if (entity.getSenderJson() != null) {
-                response.setSender(mapper.readValue(entity.getSenderJson(), SenderDto.class));
-            }
-            if (entity.getLegalBasisJson() != null) {
-                response.setLegalBasis(mapper.readValue(entity.getLegalBasisJson(), 
-                    new TypeReference<List<LegalBasisDto>>() {}));
-            }
-            if (entity.getCaseBasisJson() != null) {
-                response.setCaseBasis(mapper.readValue(entity.getCaseBasisJson(), 
-                    new TypeReference<List<CaseBasisDto>>() {}));
-            }
-            if (entity.getCertificationMetadataJson() != null) {
-                response.setCertificationMetadata(mapper.readValue(entity.getCertificationMetadataJson(), 
-                    CertificationMetadataDto.class));
-            }
-        } catch (Exception e) {
-            log.warn("JSON 파싱 실패: {}", e.getMessage());
-            // 기본값들 설정
-            if (response.getLegalBasis() == null) response.setLegalBasis(Collections.emptyList());
-            if (response.getCaseBasis() == null) response.setCaseBasis(Collections.emptyList());
-        }
+        // JSON 필드들은 기본값으로 초기화
+        response.setLegalBasis(Collections.emptyList());
+        response.setCaseBasis(Collections.emptyList());
 
         return response;
     }

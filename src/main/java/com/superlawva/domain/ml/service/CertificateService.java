@@ -252,7 +252,32 @@ public class CertificateService {
     }
 
     private CertificateResponse convertToResponse(CertificateEntity certificate) {
-        return CertificateResponse.fromEntity(certificate);
+        // 1. 기본 정보 복사
+        CertificateResponse response = CertificateResponse.fromEntity(certificate);
+
+        try {
+            // 2. JSON 문자열 필드를 DTO의 객체/리스트 필드로 변환
+            if (certificate.getReceiverJson() != null) {
+                response.setReceiver(objectMapper.readValue(certificate.getReceiverJson(), CertificateResponse.ReceiverDto.class));
+            }
+            if (certificate.getSenderJson() != null) {
+                response.setSender(objectMapper.readValue(certificate.getSenderJson(), CertificateResponse.SenderDto.class));
+            }
+            if (certificate.getLegalBasisJson() != null) {
+                response.setLegalBasis(objectMapper.readValue(certificate.getLegalBasisJson(), new com.fasterxml.jackson.core.type.TypeReference<List<CertificateResponse.LegalBasisDto>>() {}));
+            }
+            if (certificate.getCaseBasisJson() != null) {
+                response.setCaseBasis(objectMapper.readValue(certificate.getCaseBasisJson(), new com.fasterxml.jackson.core.type.TypeReference<List<CertificateResponse.CaseBasisDto>>() {}));
+            }
+            if (certificate.getCertificationMetadataJson() != null) {
+                response.setCertificationMetadata(objectMapper.readValue(certificate.getCertificationMetadataJson(), CertificateResponse.CertificationMetadataDto.class));
+            }
+        } catch (JsonProcessingException e) {
+            log.error("❌ 내용증명서 DTO 변환 중 JSON 파싱 실패 - Certificate ID: {}, Error: {}", certificate.getId(), e.getMessage());
+            // fromEntity에서 이미 빈 리스트로 초기화했으므로 추가 처리는 생략
+        }
+
+        return response;
     }
 
     private String toJson(Object obj) {
