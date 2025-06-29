@@ -17,66 +17,48 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler
-    public ResponseEntity<Object> validation(MethodArgumentNotValidException e, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
-        Map<String, String> errors = new LinkedHashMap<>();
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        
+        Map<String, String> errors = ex.getBindingResult().getFieldErrors()
+                .stream()
+                .collect(Collectors.toMap(
+                        fieldError -> fieldError.getField(),
+                        fieldError -> Optional.ofNullable(fieldError.getDefaultMessage()).orElse(""),
+                        (existingValue, newValue) -> existingValue + ", " + newValue,
+                        LinkedHashMap::new
+                ));
 
-        e.getBindingResult().getFieldErrors().forEach(fieldError -> {
-            String fieldName = fieldError.getField();
-            String errorMessage = Optional.ofNullable(fieldError.getDefaultMessage()).orElse("");
-            errors.merge(fieldName, errorMessage, (existing, newMessage) -> existing + ", " + newMessage);
-        });
+        ApiResponse<Object> body = ApiResponse.onFailure(
+                ErrorStatus.BAD_REQUEST.getCode(),
+                ErrorStatus.BAD_REQUEST.getMessage(),
+                errors
+        );
 
-        return handleExceptionInternalArgs(e, HttpHeaders.EMPTY, ErrorStatus.valueOf("_BAD_REQUEST"), request, errors);
+        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(BaseException.class)
-    public ResponseEntity<Object> handleBaseException(BaseException e, WebRequest request) {
-        return handleExceptionInternal(e, e.getCode(), HttpHeaders.EMPTY, request);
+    public ResponseEntity<ApiResponse<Object>> handleBaseException(BaseException e) {
+        ApiResponse<Object> body = ApiResponse.onFailure(e.getCode().getCode(), e.getMessage(), null);
+        return new ResponseEntity<>(body, e.getCode().getHttpStatus());
     }
 
     @ExceptionHandler
-    public ResponseEntity<Object> exception(Exception e, WebRequest request) {
-        return handleExceptionInternal(e, ErrorStatus.INTERNAL_SERVER_ERROR, HttpHeaders.EMPTY, request);
-    }
-
-    protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body,
-                                                           HttpHeaders headers, WebRequest request) {
-        return handleExceptionInternal(e, body, headers, null, request);
-    }
-
-    protected ResponseEntity<Object> handleExceptionInternal(Exception e, Object body,
-                                                           HttpHeaders headers, HttpStatus status,
-                                                           WebRequest request) {
-        return handleExceptionInternalArgs(e, headers, status, request, null);
-    }
-
-    private ResponseEntity<Object> handleExceptionInternalArgs(Exception e, HttpHeaders headers, ErrorStatus status,
-                                                             WebRequest request, Map<String, String> errorArgs) {
-        ApiResponse<Object> body = ApiResponse.onFailure(status.getCode(), status.getMessage(), errorArgs);
-        return super.handleExceptionInternal(
-                e,
-                body,
-                headers,
-                status.getHttpStatus(),
-                request
+    public ResponseEntity<ApiResponse<Object>> exception(Exception e, WebRequest request) {
+        log.error("Unexpected error occurred", e);
+        ApiResponse<Object> body = ApiResponse.onFailure(
+                ErrorStatus.INTERNAL_SERVER_ERROR.getCode(),
+                ErrorStatus.INTERNAL_SERVER_ERROR.getMessage(),
+                null
         );
-    }
-
-    private ResponseEntity<Object> handleExceptionInternalArgs(Exception e, HttpHeaders headers, HttpStatus status,
-                                                             WebRequest request, Map<String, String> errorArgs) {
-        ApiResponse<Object> body = ApiResponse.onFailure(status.toString(), "Bad Request", errorArgs);
-        return super.handleExceptionInternal(
-                e,
-                body,
-                headers,
-                status,
-                request
-        );
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 } 

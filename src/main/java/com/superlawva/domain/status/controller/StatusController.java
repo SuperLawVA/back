@@ -40,7 +40,7 @@ public class StatusController {
         """
     )
     @GetMapping
-    public ResponseEntity<ApiResponse<StatusResponseDTO>> getStatus() {
+    public ResponseEntity<ApiResponse<?>> getStatus() {
         log.info("시스템 상태 확인 요청");
         
         StatusResponseDTO status = statusService.getStatus();
@@ -49,9 +49,9 @@ public class StatusController {
         if ("running".equals(status.status())) {
             return ResponseEntity.ok(ApiResponse.success(status));
         } else if ("degraded".equals(status.status())) {
-            return ResponseEntity.status(503).body(ApiResponse.<StatusResponseDTO>onFailure("STATUS503", "서비스가 일부 제한됩니다", null));
+            return ResponseEntity.status(503).body(ApiResponse.onFailure("STATUS503", "서비스가 일부 제한됩니다", null));
         } else {
-            return ResponseEntity.status(503).body(ApiResponse.<StatusResponseDTO>onFailure("STATUS503", "서비스를 이용할 수 없습니다", null));
+            return ResponseEntity.status(503).body(ApiResponse.onFailure("STATUS503", "서비스를 이용할 수 없습니다", null));
         }
     }
 } 
