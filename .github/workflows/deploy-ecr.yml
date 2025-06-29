@@ -149,9 +149,18 @@ jobs:
             aws ecr get-login-password --region "$AWS_REGION" |
               docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
-            echo "======> 2. gcp-key.json 및 .env 생성"
+            echo "======> 2. gcp-key.json 생성 및 검증"
             printf '%s' "$GCP_SERVICE_KEY_JSON" > /home/ubuntu/gcp-key.json
+            echo "✅ gcp-key.json 파일 생성 완료. 내용 일부를 검증합니다:"
+            echo "--- 파일 시작 부분 ---"
+            head -c 50 /home/ubuntu/gcp-key.json
+            echo ""
+            echo "--- 파일 끝 부분 ---"
+            tail -c 50 /home/ubuntu/gcp-key.json
+            echo ""
+            echo "---------------------"
 
+            echo "======> 3. .env 파일 생성"
             cat > .env <<EOF
             DATABASE_URL=$DATABASE_URL
             DB_USERNAME=$DB_USERNAME
@@ -189,7 +198,7 @@ jobs:
             EOF
             echo "✅ .env file created."
 
-            echo "======> 3. Docker 정리 및 재배포"
+            echo "======> 4. Docker 정리 및 재배포"
             mv docker-compose.prod.yml docker-compose.yml
             if command -v docker-compose &>/dev/null; then
               COMPOSE_CMD="docker-compose"
@@ -206,7 +215,7 @@ jobs:
             echo "======> Waiting for containers to initialize..."
             sleep 20
 
-            echo "======> 5. Health check"
+            echo "======> 6. Health check"
             HEALTH_CHECK_URL="http://localhost:8080/actuator/health"
             echo "Health checking at: $HEALTH_CHECK_URL"
             # 10초 간격으로 6번 (총 1분) 헬스체크
