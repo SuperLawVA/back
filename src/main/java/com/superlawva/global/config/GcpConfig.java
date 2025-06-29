@@ -21,24 +21,29 @@ public class GcpConfig {
 
     @Bean
     public GoogleCredentials googleCredentials() throws IOException {
+        // Document AI를 포함한 모든 GCP 서비스에 대한 권한 범위(Scope)
+        final String cloudPlatformScope = "https://www.googleapis.com/auth/cloud-platform";
+
         try {
             // 1. 배포 환경을 위한 ADC(Application Default Credentials) 시도
-            // GOOGLE_APPLICATION_CREDENTIALS 환경 변수를 자동으로 찾음
             GoogleCredentials credentials = GoogleCredentials.getApplicationDefault();
-            System.out.println("[GCP] GoogleCredentials loaded successfully via Application Default Credentials.");
-            return credentials;
+            System.out.println("[GCP] GoogleCredentials loaded successfully via ADC.");
+            // 로드된 인증 정보에 명시적으로 권한 범위를 부여하여 반환
+            return credentials.createScoped(cloudPlatformScope);
         } catch (IOException e) {
             // 2. ADC 실패 시, 로컬 환경을 위한 Classpath Resource 에서 로드
-            System.out.println("[GCP] Application Default Credentials failed. Falling back to classpath resource: " + credentialsPath.getFilename());
+            System.out.println("[GCP] ADC failed. Falling back to classpath resource: " + credentialsPath.getFilename());
             if (credentialsPath == null || !credentialsPath.exists()) {
                 throw new FileNotFoundException(
                         "GCP credential file not found at classpath:" + credentialsPath.getFilename() +
-                        ", and Application Default Credentials are not configured. Please check your local setup."
+                        ", and ADC are not configured."
                 );
             }
             try (InputStream inputStream = credentialsPath.getInputStream()) {
-                GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream);
-                System.out.println("[GCP] GoogleCredentials loaded successfully from " + credentialsPath.getFilename());
+                // 파일에서 읽은 인증 정보에 명시적으로 권한 범위를 부여하여 반환
+                GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream)
+                        .createScoped(cloudPlatformScope);
+                System.out.println("[GCP] GoogleCredentials loaded and scoped from " + credentialsPath.getFilename());
                 return credentials;
             }
         }
