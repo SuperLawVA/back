@@ -89,8 +89,13 @@ public class SecurityConfig {
         
         http
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(POST, "/upload/ocr_for_jh").permitAll() // "종혁햄" API는 인증 없이 허용
-                .requestMatchers("/actuator/**").permitAll() // Actuator 엔드포인트는 인증 없이 허용
+                .requestMatchers(
+                    "/swagger-ui.html",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/actuator/**",
+                    "/upload/ocr_for_jh"
+                ).permitAll()
                 .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
             );
         
