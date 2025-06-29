@@ -293,13 +293,4 @@ public class OcrService {
         log.info("Retrieving contracts for user: {}", userId);
         return contractDataRepository.findByUserId(userId);
     }
-
-    /**
-     * FOR 종혁햄: 단순 텍스트 추출
-     */
-    public String extractTextSimple(MultipartFile file) throws IOException {
-        log.info("단순 텍스트 추출 시작 - 파일: {}", file.getOriginalFilename());
-        // 이미 구현된 GCP 호출 메서드를 재사용합니다.
-        return extractTextFromImage(file);
-    }
 }

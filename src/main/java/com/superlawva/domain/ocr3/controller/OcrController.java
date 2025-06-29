@@ -244,26 +244,25 @@ public class OcrController {
     }
 
     @Operation(
-        summary = "FOR 종혁햄 (단순 GCP 텍스트 추출)",
-        description = "GCP Document AI를 호출하여 파일에서 텍스트만 추출하고, 가공되지 않은 원본(raw) 텍스트를 반환합니다."
+        summary = "FOR 종혁햄: 계약서 OCR 처리 (인증X)",
+        description = "인증 없이 계약서 이미지를 업로드하여 OCR 및 AI 분석을 통해 구조화된 데이터를 생성합니다. 기능은 /upload/ocr3와 동일합니다."
     )
     @PostMapping(value = "/upload/ocr_for_jh", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<Map<String, String>>> extractTextSimple(
-            @Parameter(description = "텍스트를 추출할 이미지 또는 PDF 파일", required = true) @RequestParam("file") MultipartFile file) {
+    public ResponseEntity<ApiResponse<OcrResponse>> processContractForJH(
+            @Parameter(description = "계약서 이미지 파일 (JPG, PNG, PDF)", required = true) @RequestParam("file") MultipartFile file) {
         
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(ApiResponse.error("FILE_EMPTY", "파일이 비어있습니다."));
         }
 
         try {
-            String extractedText = ocrService.extractTextSimple(file);
-            Map<String, String> result = new HashMap<>();
-            result.put("extractedText", extractedText);
-            return ResponseEntity.ok(ApiResponse.success(result));
+            // 사용자 ID가 없는 전체 처리 파이프라인 호출
+            OcrResponse response = ocrService.processContract(file);
+            return ResponseEntity.ok(ApiResponse.success(response));
         } catch (Exception e) {
-            log.error("Simple text extraction failed", e);
+            log.error("OCR (for JH) processing failed", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("EXTRACTION_FAILED", "텍스트 추출 중 오류가 발생했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("OCR_PROCESSING_FAILED", "OCR 처리 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
 }
