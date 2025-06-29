@@ -48,8 +48,18 @@ public class LoginArgumentResolver implements HandlerMethodArgumentResolver {
             return userRepository.findByEmail(email).orElse(null);
         }
 
-        // ✅ @LoginUser Long
+        // ✅ @LoginUser Long (우선 request attribute → 없으면 DB 조회)
         if (param.getParameterType().equals(Long.class)) {
+            Long uid = null;
+            var httpReq = webRequest.getNativeRequest(jakarta.servlet.http.HttpServletRequest.class);
+            if (httpReq != null) {
+                Object attr = httpReq.getAttribute("userId");
+                if (attr instanceof Long) {
+                    uid = (Long) attr;
+                }
+            }
+            if (uid != null) return uid;
+
             User user = userRepository.findByEmail(email).orElse(null);
             return user != null ? user.getId() : null;
         }

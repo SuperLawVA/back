@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import com.superlawva.global.security.annotation.LoginUser;
 
 @Slf4j
 @RestController
@@ -130,33 +131,30 @@ public class OcrController {
             )
         )
     })
-    @PostMapping(value = "/upload/ocr3/user/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<OcrResponse>> uploadAndProcessContractWithUserId(
-            @Parameter(description = "사용자 ID", example = "user123") @PathVariable String userId,
+    @PostMapping(value = "/upload/ocr3", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<OcrResponse>> uploadAndProcessContractAuth(
+            @Parameter(hidden = true) @LoginUser Long userId,
             @Parameter(description = "계약서 이미지 파일 (JPG, PNG, PDF)", required = true) @RequestParam("file") @NotNull MultipartFile file) {
 
-        log.info("Received OCR request for file: {} with userId: {}", file.getOriginalFilename(), userId);
+        // 인증되지 않은 경우 게스트 처리 가능
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("UNAUTHORIZED", "인증 정보가 없습니다."));
+        }
 
+        log.info("Received OCR request (auth) for userId: {}", userId);
         try {
-            // Validate file
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest()
                         .body(ApiResponse.error("OCR400", "파일이 비어있습니다."));
             }
 
-            // Process OCR with userId
-            OcrResponse response = ocrService.processContractWithUserId(file, userId);
-
-            log.info("OCR processing completed for userId: {} with contract ID: {}",
-                    userId, response.getContractData().getId());
-
+            OcrResponse response = ocrService.processContractWithUserId(file, String.valueOf(userId));
             return ResponseEntity.ok(ApiResponse.success(response));
-
         } catch (Exception e) {
-            log.error("Error processing OCR request for userId: {}", userId, e);
-
+            log.error("Error processing OCR (auth) for userId: {}", userId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("OCR500", "사용자 OCR 처리 중 오류가 발생했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("OCR500", "OCR 처리 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
 

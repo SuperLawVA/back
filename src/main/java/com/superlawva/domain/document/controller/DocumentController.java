@@ -6,20 +6,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.superlawva.domain.document.dto.DocumentResponseDTO;
-import com.superlawva.domain.document.dto.DocumentCreateDTO;
 import com.superlawva.domain.document.service.DocumentService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,18 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 public class DocumentController {
 
     private final DocumentService documentService;
-
-    @Operation(summary = "문서 생성", 
-              description = "새로운 문서를 생성합니다. (테스트용)")
-    @PostMapping
-    public ResponseEntity<DocumentResponseDTO> createDocument(
-            @Valid @RequestBody DocumentCreateDTO request) {
-        
-        log.info("Creating document: {}", request.getOriginalFilename());
-        
-        DocumentResponseDTO response = documentService.createDocument(request);
-        return ResponseEntity.ok(response);
-    }
 
     @Operation(summary = "문서 목록 조회", 
               description = "사용자의 모든 문서를 조회합니다.")
