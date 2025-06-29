@@ -48,19 +48,16 @@ public class ContractService {
                 contract.setArticlesJson(convertListToJson(request.getArticles()));
             }
             contract.setIsGenerated(true);
-            // ML 결과 필드들을 JSON으로 저장
-            ContractResponse mlDto = toContractResponseFromML(contract, mlResponse);
-            contract.setRecommendedAgreementsJson(convertListToJson(mlDto.getRecommendedAgreements()));
-            contract.setLegalBasisJson(convertListToJson(mlDto.getLegalBasis()));
-            contract.setCaseBasisJson(convertListToJson(mlDto.getCaseBasis()));
-            contract.setAnalysisMetadataJson(convertObjectToJson(mlDto.getAnalysisMetadata()));
             contract.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
             contract.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
+            
+            // ML 응답을 기반으로 엔티티 필드 설정
+            setContractDataFromML(contract, mlResponse);
+            
             ContractData saved = contractDataRepository.save(contract);
-
             log.info("✅ 계약서 생성 완료 - Contract ID: {}", saved.getId());
             
-            // 3. ML 응답을 ContractResponse로 변환하여 반환
+            // 3. 저장된 엔티티와 ML 응답을 ContractResponse로 변환하여 반환
             return toContractResponseFromML(saved, mlResponse);
             
         } catch (Exception e) {
@@ -185,19 +182,14 @@ public class ContractService {
 
     // ML API 응답을 ContractResponse로 변환
     private ContractResponse toContractResponseFromML(ContractData contract, Map<String, Object> mlResponse) {
-        ContractResponse dto = new ContractResponse();
-        dto.setId(contract.getId().toString());
-        dto.setUserId(contract.getUserId());
-        dto.setContractType(contract.getContractType());
-        // articles를 JSON에서 파싱
-        List<String> articles = parseJsonToStringList(contract.getArticlesJson());
-        dto.setArticles(articles);
-        dto.setCreatedDate(contract.getCreatedDate());
-        dto.setModifiedDate(contract.getModifiedDate());
+        // 먼저 기본 엔티티 정보로 DTO를 초기화합니다.
+        // fromEntity 메서드에서 이미 id.toString()을 처리합니다.
+        ContractResponse dto = ContractResponse.fromEntity(contract);
 
         Object dataObj = mlResponse.get("data");
         if (dataObj instanceof Map) {
             Map<String, Object> data = (Map<String, Object>) dataObj;
+            
             // recommended_agreements
             Object agreementsObj = data.get("recommended_agreements");
             if (agreementsObj instanceof List) {
@@ -254,6 +246,34 @@ public class ContractService {
             }
         }
         return dto;
+    }
+    
+    // ML 응답을 ContractData 엔티티에 채우는 헬퍼 메서드
+    private void setContractDataFromML(ContractData contract, Map<String, Object> mlResponse) {
+        Object dataObj = mlResponse.get("data");
+        if (dataObj instanceof Map) {
+            Map<String, Object> data = (Map<String, Object>) dataObj;
+            
+            Object agreementsObj = data.get("recommended_agreements");
+            if (agreementsObj instanceof List) {
+                contract.setRecommendedAgreementsJson(convertListToJson((List<?>) agreementsObj));
+            }
+
+            Object legalObj = data.get("legal_basis");
+            if (legalObj instanceof List) {
+                contract.setLegalBasisJson(convertListToJson((List<?>) legalObj));
+            }
+            
+            Object caseObj = data.get("case_basis");
+            if (caseObj instanceof List) {
+                contract.setCaseBasisJson(convertListToJson((List<?>) caseObj));
+            }
+            
+            Object metaObj = data.get("analysis_metadata");
+            if (metaObj instanceof Map) {
+                contract.setAnalysisMetadataJson(convertObjectToJson(metaObj));
+            }
+        }
     }
 
     private String convertListToJson(List<?> list) {
