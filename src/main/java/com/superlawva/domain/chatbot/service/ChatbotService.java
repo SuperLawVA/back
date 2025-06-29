@@ -264,20 +264,31 @@ public class ChatbotService {
         
         Optional<ChatSessionEntity> sessionOpt = chatSessionRepository.findById(sessionId);
         if (sessionOpt.isEmpty()) {
-            return false; // 혹은 예외 처리
+            log.warn("삭제하려는 세션 {}을 찾을 수 없습니다", sessionId);
+            return false;
         }
         
         ChatSessionEntity session = sessionOpt.get();
         
         // 익명 세션이거나, 세션 소유자가 현재 사용자와 일치할 경우에만 삭제 허용
         if (session.getUser() == null || session.getUser().getId().equals(user.getId())) {
-            chatMessageRepository.deleteBySession(session);
-            chatSessionRepository.delete(session);
-            log.info("세션 {}와 관련 메시지 삭제 완료", sessionId);
-            return true;
+            try {
+                // 1. 먼저 관련된 모든 메시지 삭제
+                chatMessageRepository.deleteBySessionSessionId(sessionId);
+                log.info("세션 {}의 모든 메시지 삭제 완료", sessionId);
+                
+                // 2. 세션 삭제
+                chatSessionRepository.deleteById(sessionId);
+                log.info("세션 {} 삭제 완료", sessionId);
+                
+                return true;
+            } catch (Exception e) {
+                log.error("세션 {} 삭제 중 오류 발생: {}", sessionId, e.getMessage(), e);
+                throw new BaseException(ErrorStatus.INTERNAL_SERVER_ERROR);
+            }
         } else {
             log.warn("사용자 {}가 권한 없는 세션 {} 삭제 시도", user.getId(), sessionId);
-            return false;
+            throw new BaseException(ErrorStatus.FORBIDDEN);
         }
     }
 

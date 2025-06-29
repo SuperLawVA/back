@@ -25,7 +25,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/search")
+@RequestMapping("/search")
 @RequiredArgsConstructor
 @Tag(name = "🔍 Search API", description = "통합 검색 API")
 public class SearchController {
@@ -54,7 +54,7 @@ public class SearchController {
         - **500**: 서버 오류 → "잠시 후 다시 시도해주세요" 안내
         """
     )
-    @PostMapping
+    @PostMapping("/search")
     public ResponseEntity<ApiResponse<SearchResponseDTO>> searchDocuments(
             @Valid @RequestBody SearchRequestDTO request,
             @Parameter(hidden = true) @LoginUser User user

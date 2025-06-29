@@ -20,11 +20,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 
 @RestController
-@RequestMapping("/api/v1/legal-terms")
+@RequestMapping("/LegalTerms")  // 기존 엔드포인트로 복원
 @RequiredArgsConstructor
 @Validated
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"}) // 프론트엔드 CORS 설정
+@CrossOrigin(origins = {"http://localhost:3000", "http://127.0.0.1:3000"})
 @Tag(name = "📚 Legal Terms", description = "법률 용어 검색 및 관리 API")
 public class WordsController {
 
@@ -67,28 +67,9 @@ public class WordsController {
                     """
                 )
             )
-        ),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(
-            responseCode = "400",
-            description = "❌ 잘못된 요청 (페이지 번호가 1보다 작음)",
-            content = @Content(
-                mediaType = "application/json",
-                examples = @ExampleObject(
-                    name = "잘못된 요청 예시",
-                    summary = "페이지 번호 오류",
-                    value = """
-                    {
-                      "isSuccess": false,
-                      "code": "WORDS400",
-                      "message": "페이지 번호는 1 이상이어야 합니다.",
-                      "result": null
-                    }
-                    """
-                )
-            )
         )
     })
-    @GetMapping("/search")
+    @GetMapping("/terms/search")  // 기존 엔드포인트로 복원
     public ResponseEntity<ApiResponse<WordsSearchResponseDto>> searchTerms(
             @Parameter(description = "검색 키워드", example = "보증금") @RequestParam(value = "keyword", defaultValue = "") String keyword,
             @Parameter(description = "페이지 번호", example = "1") @RequestParam(value = "page", defaultValue = "1") @Min(1) int page,

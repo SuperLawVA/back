@@ -23,7 +23,7 @@ import java.util.HashMap;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/certificate")
+@RequestMapping("/certificate")
 @RequiredArgsConstructor
 @Tag(name = "Certificate", description = "내용증명서 CRUD API")
 public class CertificateController {
