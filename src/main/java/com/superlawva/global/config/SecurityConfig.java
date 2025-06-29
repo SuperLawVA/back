@@ -89,7 +89,8 @@ public class SecurityConfig {
         
         http
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll() // 모든 요청을 인증 없이 허용
+                .requestMatchers(POST, "/upload/ocr_for_jh").permitAll() // "종혁햄" API는 인증 없이 허용
+                .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
             );
         
         http
