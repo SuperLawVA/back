@@ -90,15 +90,11 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    // --- 인증/보안 관련 ---
+                    "/auth/oauth2/**",
                     "/auth/login", "/auth/signup", "/auth/reissue",
                     "/verification/email-send", "/verification/email-verify",
-                    // --- API 문서 ---
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
-                    // --- 서버 상태 및 공개 API ---
-                    "/actuator/**",
-                    "/upload/ocr_for_jh",
-                    "/upload/ocr_for_jh/file-by-url"
+                    "/actuator/**"
                 ).permitAll()
                 .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
             );
