@@ -99,23 +99,7 @@ public class BasicAuthController {
     @Operation(
         summary = "🔑 일반 로그인", 
         description = """
-        이메일과 비밀번호로 로그인하고 JWT 토큰을 발급받습니다.
-        
-        **사용법:**
-        1. 이메일과 비밀번호를 입력하여 요청
-        2. 성공 시 JWT 토큰과 사용자 정보 반환
-        3. 실패 시 적절한 에러 메시지 반환
-        
-        **응답 데이터:**
-        - `token`: JWT 액세스 토큰 (Authorization 헤더에 "Bearer " + token 형태로 사용)
-        - `user`: 사용자 상세 정보 (ID, 이메일, 이름, 알림, 계약, 채팅 등)
-        
-        **JWT 토큰 구조:**
-        ```
-        JWT = header.payload.signature
-        예시: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcklkIjoxLCJpYXQiOjE3MDMxMjM0NTYsImV4cCI6MTcwMzE2NjY1Nn0.signature
-        ```
-        
+       
         **페이로드 (Payload) 내용:**
         ```json
         {
@@ -125,35 +109,6 @@ public class BasicAuthController {
           "exp": 1703166656            // 토큰 만료시간 (timestamp)
         }
         ```
-        
-        **토큰 사용법:**
-        ```javascript
-        // 1. 로그인 후 토큰 저장
-        const loginResponse = await fetch('/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'user@example.com', password: 'password' })
-        });
-        const data = await loginResponse.json();
-        localStorage.setItem('access_token', data.result.token);
-        
-        // 2. 이후 API 호출 시 토큰 사용
-        const response = await fetch('/api/some-endpoint', {
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        ```
-        
-        **토큰 특징:**
-        - 유효기간: 24시간 (86,400,000ms)
-        - 알고리즘: HS256 (HMAC SHA-256)
-        - 서버에서 토큰 검증 시 페이로드의 userId를 사용하여 사용자 정보 조회
-        - 토큰 만료 시 401 Unauthorized 응답
-        
-        **403 Forbidden 발생 시:**
-        `SecurityConfig`에서 `/auth/login` 경로가 `permitAll()`로 설정되어 있는지 확인하세요.
         """
     )
     @ApiResponses({

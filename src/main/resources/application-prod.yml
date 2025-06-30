@@ -120,7 +120,7 @@ gcp:
 # 🟢 운영 환경 Gemini API 설정
 gemini:
   api-key: ${GEMINI_API_KEY}
-  model-name: ${GEMINI_MODEL_NAME:gemini-2.0-flash-exp}
+  model-name: gemini-2.5-flash
   api-url: ${GEMINI_API_URL:https://generativelanguage.googleapis.com}
 
 # 계약 API 설정
