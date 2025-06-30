@@ -49,7 +49,10 @@ public class SearchService {
             String url = searchApiBaseUrl + "/api/v1/search";
             log.info("Attempting to call ML search API at: {}", url);
             
-            HttpEntity<SearchRequestDTO> httpEntity = new HttpEntity<>(request, new HttpHeaders());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+            HttpEntity<SearchRequestDTO> httpEntity = new HttpEntity<>(request, headers);
             ResponseEntity<MLSearchResponse> response = restTemplate.postForEntity(url, httpEntity, MLSearchResponse.class);
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {

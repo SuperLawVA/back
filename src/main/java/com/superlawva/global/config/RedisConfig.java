@@ -9,6 +9,12 @@ import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.data.redis.cache.RedisCacheConfiguration;
+import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializationContext;
+import java.time.Duration;
 
 @Configuration
 public class RedisConfig {
@@ -36,5 +42,22 @@ public class RedisConfig {
         tpl.setHashValueSerializer(new StringRedisSerializer());
         tpl.afterPropertiesSet();
         return tpl;
+    }
+
+    /**
+     * RedisCacheManager 설정 - 값(JSON) 직렬화로 GenericJackson2JsonRedisSerializer 사용
+     * JDK 직렬화에 필요한 Serializable 구현 없이 그대로 캐시 가능
+     */
+    @Bean
+    public RedisCacheManager cacheManager(RedisConnectionFactory cf, ObjectMapper objectMapper) {
+        var jsonSerializer = new GenericJackson2JsonRedisSerializer(objectMapper);
+
+        RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer))
+                .entryTtl(Duration.ofMinutes(10)); // 기본 TTL 10분
+
+        return RedisCacheManager.builder(cf)
+                .cacheDefaults(config)
+                .build();
     }
 }
