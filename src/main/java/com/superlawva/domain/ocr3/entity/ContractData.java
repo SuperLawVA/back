@@ -136,9 +136,11 @@ public class ContractData {
     @Embeddable
     @Data
     public static class Property {
+        @Convert(converter = AriaCryptoConverter.class)
         @Column(name = "property_address")
         private String address;
 
+        @Convert(converter = AriaCryptoConverter.class)
         @Column(name = "property_detail_address")
         private String detailAddress;
 
@@ -243,8 +245,10 @@ public class ContractData {
         @Column(name = "id_number")
         private String idNumber;
 
+        @Convert(converter = AriaCryptoConverter.class)
         private String address;
 
+        @Convert(converter = AriaCryptoConverter.class)
         @Column(name = "detail_address")
         private String detailAddress;
 
@@ -267,6 +271,7 @@ public class ContractData {
         @Column(name = "license_number")
         private String licenseNumber;
 
+        @Convert(converter = AriaCryptoConverter.class)
         private String address;
         private String representative;
 
