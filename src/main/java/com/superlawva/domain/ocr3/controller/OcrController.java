@@ -325,23 +325,6 @@ public class OcrController {
         }
     }
 
-    @GetMapping("/upload/ocr_for_jh/file")
-    public ResponseEntity<ByteArrayResource> downloadTempImage(@RequestParam String s3Key) {
-        try {
-            byte[] encrypted = s3Service.downloadBytes(s3Key);
-            String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
-            byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
-            ByteArrayResource resource = new ByteArrayResource(original);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=temp_image")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(original.length)
-                    .body(resource);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
     @Operation(
         summary = "계약서 이미지 복호화 다운로드 (fileUrl로)",
         description = "fileUrl 전체를 파라미터로 넘기면 원본 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr3/file-by-url?fileUrl=https://my-bucket.s3.ap-northeast-2.amazonaws.com/contracts/2024/07/01/guest_xxx.jpg"
@@ -376,13 +359,27 @@ public class OcrController {
             String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
             byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
             ByteArrayResource resource = new ByteArrayResource(original);
+
+            // Content-Type 동적 지정 (확장자 기반)
+            String contentType = "application/octet-stream";
+            if (fileUrl.toLowerCase().endsWith(".jpg") || fileUrl.toLowerCase().endsWith(".jpeg")) {
+                contentType = MediaType.IMAGE_JPEG_VALUE;
+            } else if (fileUrl.toLowerCase().endsWith(".png")) {
+                contentType = MediaType.IMAGE_PNG_VALUE;
+            } else if (fileUrl.toLowerCase().endsWith(".pdf")) {
+                contentType = "application/pdf";
+            }
+
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=temp_image")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=temp_image" + fileUrl.substring(fileUrl.lastIndexOf('.')))
+                    .contentType(MediaType.parseMediaType(contentType))
                     .contentLength(original.length)
                     .body(resource);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(new ByteArrayResource(("[잘못된 fileUrl] " + e.getMessage()).getBytes()));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ByteArrayResource(("[복호화/디코딩 오류] " + e.getMessage()).getBytes()));
         }
     }
 }
