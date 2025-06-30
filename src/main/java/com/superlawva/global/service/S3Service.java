@@ -195,6 +195,12 @@ public class S3Service {
         initializeS3Client();
         try {
             return s3Client.getObject(builder -> builder.bucket(bucketName).key(s3Key).build()).readAllBytes();
+        } catch (software.amazon.awssdk.services.s3.model.S3Exception e) {
+            if (e.statusCode() == 403) {
+                log.error("S3 접근 권한 오류(403): S3 Key = {}", s3Key);
+            }
+            log.error("S3 다운로드 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("S3 다운로드 실패: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("S3 다운로드 실패: {}", e.getMessage(), e);
             throw new RuntimeException("S3 다운로드 실패: " + e.getMessage(), e);
