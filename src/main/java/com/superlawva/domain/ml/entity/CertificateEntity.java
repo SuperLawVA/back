@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.persistence.GenerationType;
 import lombok.*;
 import java.time.LocalDateTime;
+import com.superlawva.global.security.converter.AesCryptoConverter;
 
 @Entity
 @Table(name = "certificates")
@@ -27,6 +28,7 @@ public class CertificateEntity {
     @Column(name = "user_id")
     private String userId;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "user_query", columnDefinition = "TEXT")
     private String userQuery;
@@ -40,38 +42,47 @@ public class CertificateEntity {
     @Column(name = "title")
     private String title;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "receiver_json", columnDefinition = "TEXT")
     private String receiverJson; // JSON 문자열로 저장
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "sender_json", columnDefinition = "TEXT")
     private String senderJson; // JSON 문자열로 저장
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "body", columnDefinition = "TEXT")
     private String body;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "strategy_summary", columnDefinition = "TEXT")
     private String strategySummary;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "followup_strategy", columnDefinition = "TEXT")
     private String followupStrategy;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "legal_basis_json", columnDefinition = "TEXT")
     private String legalBasisJson;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "case_basis_json", columnDefinition = "TEXT")
     private String caseBasisJson;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "certification_metadata_json", columnDefinition = "TEXT")
     private String certificationMetadataJson;
 
+    @Convert(converter = AesCryptoConverter.class)
     @Lob
     @Column(name = "raw_ml_response_json", columnDefinition = "TEXT")
     private String rawMlResponseJson;

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.persistence.GenerationType;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.superlawva.global.security.converter.AriaCryptoConverter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -231,6 +232,7 @@ public class ContractData {
     public static class Party {
         private String name;
 
+        @Convert(converter = AriaCryptoConverter.class)
         @Column(name = "id_number")
         private String idNumber;
 
@@ -239,10 +241,10 @@ public class ContractData {
         @Column(name = "detail_address")
         private String detailAddress;
 
-        @Column(name = "phone_number")
+        @Convert(converter = AriaCryptoConverter.class)
         private String phoneNumber;
 
-        @Column(name = "mobile_number")
+        @Convert(converter = AriaCryptoConverter.class)
         private String mobileNumber;
 
         @Column(name = "agent_name", insertable = false, updatable = false)
@@ -254,6 +256,7 @@ public class ContractData {
     public static class Broker {
         private String office;
 
+        @Convert(converter = AriaCryptoConverter.class)
         @Column(name = "license_number")
         private String licenseNumber;
 

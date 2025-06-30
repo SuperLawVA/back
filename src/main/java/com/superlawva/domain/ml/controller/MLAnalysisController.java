@@ -3,7 +3,7 @@ package com.superlawva.domain.ml.controller;
 import com.superlawva.domain.ml.dto.MLAnalysisRequest;
 import com.superlawva.domain.ml.service.MLAnalysisService;
 import com.superlawva.domain.ml.entity.MLAnalysisResult;
-import com.superlawva.domain.document.entity.GeneratedDocumentEntity;
+import com.superlawva.domain.ml.entity.CertificateEntity;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -145,7 +145,7 @@ public class MLAnalysisController {
         
         try {
             Long contractIdLong = Long.parseLong(request.getContractId());
-            GeneratedDocumentEntity result = mlAnalysisService.analyzeContract(contractIdLong, String.valueOf(userId));
+            CertificateEntity result = mlAnalysisService.analyzeContract(contractIdLong, String.valueOf(userId));
             
             Map<String, Object> responseData = new HashMap<>();
             responseData.put("analysisId", result.getId().toString());

@@ -21,7 +21,6 @@ spring:
       max-request-size: 100MB
       enabled: true
 
-  # 🟢 MongoDB 설정 (새로 추가된 document, words 도메인용)
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -121,6 +120,10 @@ jwt:
 # AES 양방향 암호화 설정
 aes:
   secret-key: ${AES_SECRET_KEY:temporary_aes_key_32_chars_long}
+
+# ARIA 양방향 암호화 설정
+aria:
+  secret-key: ${ARIA_SECRET_KEY:temporary_aria_key_32_chars}
 
 # 로깅 설정
 logging:

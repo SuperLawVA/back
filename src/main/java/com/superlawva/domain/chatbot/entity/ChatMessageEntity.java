@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import com.superlawva.global.security.converter.AesCryptoConverter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -33,6 +34,7 @@ public class ChatMessageEntity {
     @Column(name = "role")
     private MessageRole role;
     
+    @Convert(converter = AesCryptoConverter.class)
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
     

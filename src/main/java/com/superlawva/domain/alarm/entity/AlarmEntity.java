@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import jakarta.persistence.GenerationType;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import com.superlawva.global.security.converter.AesCryptoConverter;
 
 import java.time.LocalDateTime;
 
@@ -29,9 +30,11 @@ public class AlarmEntity {
     @Column(name = "alarm_type", nullable = false)
     private AlarmType alarmType;
     
+    @Convert(converter = AesCryptoConverter.class)
     @Column(name = "note", length = 500)
     private String note;
     
+    @Convert(converter = AesCryptoConverter.class)
     @Column(name = "extra_info", columnDefinition = "TEXT")
     private String extraInfo;
     

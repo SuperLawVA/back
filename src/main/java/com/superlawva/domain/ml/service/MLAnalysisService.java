@@ -1,11 +1,12 @@
 package com.superlawva.domain.ml.service;
 
 import com.superlawva.domain.ml.client.MLApiClient;
+import com.superlawva.domain.ml.entity.CertificateEntity;
 import com.superlawva.domain.ml.entity.MLAnalysisResult;
 import com.superlawva.domain.ocr3.entity.ContractData;
 import com.superlawva.domain.ocr3.repository.ContractDataRepository;
-import com.superlawva.domain.document.entity.GeneratedDocumentEntity;
-import com.superlawva.domain.document.repository.GeneratedDocumentRepository;
+import com.superlawva.domain.ml.repository.CertificateRepository;
+import com.superlawva.domain.ml.repository.MLAnalysisResultRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,13 +26,15 @@ public class MLAnalysisService {
 
     private final MLApiClient mlApiClient;
     private final ContractDataRepository contractDataRepository;
-    private final GeneratedDocumentRepository generatedDocumentRepository;
+    private final CertificateRepository certificateRepository;
+    private final MLAnalysisResultRepository analysisResultRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * 계약서 분석 및 결과 저장
      */
     @Transactional
-    public GeneratedDocumentEntity analyzeContract(Long contractId, String userId) {
+    public CertificateEntity analyzeContract(Long contractId, String userId) {
         log.info("🤖 계약서 분석 시작 - Contract ID: {}, User ID: {}", contractId, userId);
         
         try {
@@ -45,11 +48,11 @@ public class MLAnalysisService {
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.analyzeContract(mlRequest);
             
-            // 4. 분석 결과를 generated_contract 컬렉션에 저장
-            GeneratedDocumentEntity generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocumentEntity.DocGenerationType.DOCUMENT_MODIFICATION, contractId.toString(), userId);
+            // 4. 분석 결과를 analysis_result 컬렉션에 저장
+            MLAnalysisResult analysisResult = saveAnalysisResult(mlResponse, contractId, userId);
             
-            log.info("✅ 계약서 분석 완료 - Generated Document ID: {}", generatedDocument.getId());
-            return generatedDocument;
+            log.info("✅ 계약서 분석 완료 - Analysis Result ID: {}", analysisResult.getId());
+            return analysisResult.getCertificate();
             
         } catch (Exception e) {
             log.error("❌ 계약서 분석 실패 - Contract ID: {}", contractId, e);
@@ -61,7 +64,7 @@ public class MLAnalysisService {
      * 내용증명서 생성 및 결과 저장
      */
     @Transactional
-    public GeneratedDocumentEntity generateProofDocument(Long contractId, String userId) {
+    public CertificateEntity generateProofDocument(Long contractId, String userId) {
         log.info("📝 내용증명서 생성 시작 - Contract ID: {}, User ID: {}", contractId, userId);
         
         try {
@@ -75,11 +78,11 @@ public class MLAnalysisService {
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.generateProofDocument(mlRequest);
             
-            // 4. 생성 결과를 generated_contract 컬렉션에 저장
-            GeneratedDocumentEntity generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocumentEntity.DocGenerationType.PROOF_CONTENT, contractId.toString(), userId);
+            // 4. 생성 결과를 analysis_result 컬렉션에 저장
+            MLAnalysisResult analysisResult = saveAnalysisResult(mlResponse, contractId, userId);
             
-            log.info("✅ 내용증명서 생성 완료 - Generated Document ID: {}", generatedDocument.getId());
-            return generatedDocument;
+            log.info("✅ 내용증명서 생성 완료 - Analysis Result ID: {}", analysisResult.getId());
+            return analysisResult.getCertificate();
             
         } catch (Exception e) {
             log.error("❌ 내용증명서 생성 실패 - Contract ID: {}", contractId, e);
@@ -91,7 +94,7 @@ public class MLAnalysisService {
      * 특약사항 생성 및 결과 저장
      */
     @Transactional
-    public GeneratedDocumentEntity generateSpecialTerms(Long contractId, String userId) {
+    public CertificateEntity generateSpecialTerms(Long contractId, String userId) {
         log.info("⚖️ 특약사항 생성 시작 - Contract ID: {}, User ID: {}", contractId, userId);
         
         try {
@@ -105,11 +108,11 @@ public class MLAnalysisService {
             // 3. ML API 호출
             Map<String, Object> mlResponse = mlApiClient.generateSpecialTerms(mlRequest);
             
-            // 4. 생성 결과를 generated_contract 컬렉션에 저장
-            GeneratedDocumentEntity generatedDocument = saveAnalysisResult(mlResponse, GeneratedDocumentEntity.DocGenerationType.TEMPLATE_BASED, contractId.toString(), userId);
+            // 4. 생성 결과를 analysis_result 컬렉션에 저장
+            MLAnalysisResult analysisResult = saveAnalysisResult(mlResponse, contractId, userId);
             
-            log.info("✅ 특약사항 생성 완료 - Generated Document ID: {}", generatedDocument.getId());
-            return generatedDocument;
+            log.info("✅ 특약사항 생성 완료 - Analysis Result ID: {}", analysisResult.getId());
+            return analysisResult.getCertificate();
             
         } catch (Exception e) {
             log.error("❌ 특약사항 생성 실패 - Contract ID: {}", contractId, e);
@@ -120,11 +123,11 @@ public class MLAnalysisService {
     /**
      * 생성된 문서 결과 조회
      */
-    public GeneratedDocumentEntity getGeneratedResult(Long generatedDocumentId) {
-        log.info("📄 생성된 문서 결과 조회 - Generated Document ID: {}", generatedDocumentId);
+    public MLAnalysisResult getGeneratedResult(Long analysisResultId) {
+        log.info("📄 생성된 문서 결과 조회 - Analysis Result ID: {}", analysisResultId);
         
-        return generatedDocumentRepository.findById(generatedDocumentId)
-                .orElseThrow(() -> new RuntimeException("생성된 문서를 찾을 수 없습니다: " + generatedDocumentId));
+        return analysisResultRepository.findById(analysisResultId)
+                .orElseThrow(() -> new RuntimeException("생성된 문서를 찾을 수 없습니다: " + analysisResultId));
     }
 
     /**
@@ -290,33 +293,32 @@ public class MLAnalysisService {
     }
 
     /**
-     * ML 분석 결과를 generated_contract 컬렉션에 저장
+     * ML 분석 결과를 analysis_result 컬렉션에 저장
      */
-    private GeneratedDocumentEntity saveAnalysisResult(Map<String, Object> mlResponse, GeneratedDocumentEntity.DocGenerationType generationType, String contractId, String userId) {
+    private MLAnalysisResult saveAnalysisResult(Map<String, Object> mlResponse, Long contractId, String userId) {
         Map<String, Object> additionalMetadata = new HashMap<>();
         additionalMetadata.put("content", extractContent(mlResponse));
         
-        GeneratedDocumentEntity generatedDocument = GeneratedDocumentEntity.builder()
-                .userId(Long.parseLong(userId))
-                .documentId(null) // TODO: 실제 Document ID 연결
-                .generationType(generationType)
+        MLAnalysisResult analysisResult = MLAnalysisResult.builder()
+                .contractId(String.valueOf(contractId))
+                .userId(userId)
                 .requestData(buildRequestDataJson(mlResponse, contractId, userId))
                 .generationMetadata(buildGenerationMetadataJson(mlResponse))
                 .modelName("Claude-Sonnet-4")
                 .modelVersion("v1.0.0")
                 .generationTimeSeconds(extractProcessingTime(mlResponse))
-                .status(GeneratedDocumentEntity.DocumentStatus.GENERATED)
+                .analysisStatus(MLAnalysisResult.AnalysisStatus.GENERATED)
                 .tokenCount(0) // TODO: 토큰 수 계산
                 .qualityScore(0) // TODO: 품질 점수 계산
                 .build();
         
-        return generatedDocumentRepository.save(generatedDocument);
+        return analysisResultRepository.save(analysisResult);
     }
 
     /**
      * 요청 데이터 JSON 구성
      */
-    private String buildRequestDataJson(Map<String, Object> mlResponse, String contractId, String userId) {
+    private String buildRequestDataJson(Map<String, Object> mlResponse, Long contractId, String userId) {
         Map<String, Object> requestData = new HashMap<>();
         requestData.put("contract_id", contractId);
         requestData.put("user_id", userId);

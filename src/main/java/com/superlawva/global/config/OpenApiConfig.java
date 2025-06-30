@@ -18,7 +18,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI openAPI() {
 
-        final String securitySchemeName = "bearerAuth";
+        final String securitySchemeName = "JWT";
 
         Info info = new Info()
                 .title("SuperLawVA API 명세서")

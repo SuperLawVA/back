@@ -21,17 +21,20 @@ public class AESUtil {
     private static final String ALGORITHM = "AES";
     private static final String TRANSFORMATION = "AES/ECB/PKCS5Padding";
     
+    private static String secretKey;
+
     @Value("${aes.secret-key}")
-    private String secretKey;
+    public void setSecretKey(String key) {
+        AESUtil.secretKey = key;
+    }
 
     /**
      * 텍스트를 AES로 암호화
      * @param plainText 평문
      * @return Base64 인코딩된 암호문
      */
-    public String encrypt(String plainText) {
+    public static String encrypt(String plainText) {
         try {
-            // null 체크 추가
             if (plainText == null) {
                 plainText = "";
             }
@@ -43,7 +46,7 @@ public class AESUtil {
             byte[] encryptedBytes = cipher.doFinal(plainText.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(encryptedBytes);
         } catch (Exception e) {
-            throw new RuntimeException("암호화 실패: " + e.getMessage(), e);
+            throw new RuntimeException("AES 암호화 실패: " + e.getMessage(), e);
         }
     }
 
@@ -52,9 +55,8 @@ public class AESUtil {
      * @param encryptedText Base64 인코딩된 암호문
      * @return 평문
      */
-    public String decrypt(String encryptedText) {
+    public static String decrypt(String encryptedText) {
         try {
-            // null 체크 추가
             if (encryptedText == null || encryptedText.trim().isEmpty()) {
                 return "";
             }
@@ -67,7 +69,7 @@ public class AESUtil {
             byte[] decryptedBytes = cipher.doFinal(decodedBytes);
             return new String(decryptedBytes, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw new RuntimeException("복호화 실패: " + e.getMessage(), e);
+            throw new RuntimeException("AES 복호화 실패: " + e.getMessage(), e);
         }
     }
 
@@ -113,17 +115,20 @@ public class AESUtil {
         }
     }
 
-    private SecretKeySpec createSecretKey() {
+    private static SecretKeySpec createSecretKey() {
         try {
-            // Base64로 인코딩된 키를 디코딩
-            byte[] keyBytes = Base64.getDecoder().decode(secretKey);
-            return new SecretKeySpec(keyBytes, ALGORITHM);
+            byte[] keyBytes;
+            try {
+                keyBytes = Base64.getDecoder().decode(secretKey);
+            } catch (IllegalArgumentException e) {
+                // Base64가 아니라면 평문 키 사용
+                keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+            }
+            byte[] key32 = new byte[32];
+            System.arraycopy(keyBytes, 0, key32, 0, Math.min(keyBytes.length, 32));
+            return new SecretKeySpec(key32, ALGORITHM);
         } catch (IllegalArgumentException e) {
-            // Base64가 아닌 경우 기존 방식 사용 (fallback)
-            byte[] keyBytes = new byte[32];
-            byte[] secretBytes = secretKey.getBytes(StandardCharsets.UTF_8);
-            System.arraycopy(secretBytes, 0, keyBytes, 0, Math.min(secretBytes.length, 32));
-            return new SecretKeySpec(keyBytes, ALGORITHM);
+            throw e;
         }
     }
 

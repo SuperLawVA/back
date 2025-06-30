@@ -68,6 +68,9 @@ dependencies {
     implementation 'io.lettuce:lettuce-core'
     implementation 'commons-io:commons-io:2.15.0'
 
+    // 🔐 암호화 (ARIA/SEED) 지원용 Bouncy Castle
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+
     /* ── Lombok ────────────────────────────────── */
     compileOnly 'org.projectlombok:lombok:1.18.30'
     annotationProcessor 'org.projectlombok:lombok:1.18.30'
