@@ -165,4 +165,60 @@ public class S3Service {
         }
         throw new IllegalArgumentException("유효하지 않은 S3 URL: " + s3Url);
     }
+
+    public String uploadImage(MultipartFile file, String userId, String baseDir) throws IOException {
+        log.info("이미지 업로드 시작(커스텀 경로) - 파일명: {}, 사용자: {}, baseDir: {}", file.getOriginalFilename(), userId, baseDir);
+        initializeS3Client();
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String fileExtension = getFileExtension(originalFilename);
+            String fileName = generateFileName(userId, fileExtension);
+            String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+            // key : {baseDir}/{date}/{userId}/{fileName}
+            String s3Key = String.format("%s/%s/%s/%s", baseDir, date, userId, fileName);
+
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .contentType(file.getContentType())
+                    .contentLength(file.getSize())
+                    .build();
+            s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
+            return generateS3Url(s3Key);
+        } catch (Exception e) {
+            log.error("이미지 업로드 실패(커스텀 경로): {}", e.getMessage(), e);
+            throw new RuntimeException("이미지 업로드 실패: " + e.getMessage(), e);
+        }
+    }
+
+    public byte[] downloadBytes(String s3Key) {
+        initializeS3Client();
+        try {
+            return s3Client.getObject(builder -> builder.bucket(bucketName).key(s3Key).build()).readAllBytes();
+        } catch (Exception e) {
+            log.error("S3 다운로드 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("S3 다운로드 실패: " + e.getMessage(), e);
+        }
+    }
+
+    public String uploadBytes(byte[] data, String userId, String baseDir, String fileExtension, String contentType) {
+        initializeS3Client();
+        try {
+            String fileName = generateFileName(userId, fileExtension);
+            String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+            String s3Key = String.format("%s/%s/%s/%s", baseDir, date, userId, fileName);
+
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .contentType(contentType)
+                    .contentLength((long) data.length)
+                    .build();
+            s3Client.putObject(request, RequestBody.fromBytes(data));
+            return generateS3Url(s3Key);
+        } catch (Exception e) {
+            log.error("업로드 실패(uploadBytes): {}", e.getMessage(), e);
+            throw new RuntimeException("S3 업로드 실패: " + e.getMessage(), e);
+        }
+    }
 } 

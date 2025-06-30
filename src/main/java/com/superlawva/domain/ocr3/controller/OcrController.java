@@ -17,6 +17,10 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.superlawva.global.service.S3Service;
+import com.superlawva.global.security.util.AESUtil;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
@@ -34,6 +38,7 @@ import com.superlawva.global.security.annotation.LoginUser;
 public class OcrController {
 
     private final OcrService ocrService;
+    private final S3Service s3Service;
 
     @Operation(
         summary = "📄 계약서 OCR 처리 (사용자별)", 
@@ -263,6 +268,40 @@ public class OcrController {
             log.error("OCR (for JH) processing failed", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("OCR_PROCESSING_FAILED", "OCR 처리 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/upload/ocr3/file")
+    public ResponseEntity<ByteArrayResource> downloadContractImage(@RequestParam String s3Key) {
+        try {
+            byte[] encrypted = s3Service.downloadBytes(s3Key);
+            String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
+            byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
+            ByteArrayResource resource = new ByteArrayResource(original);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contract_image")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(original.length)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/upload/ocr_for_jh/file")
+    public ResponseEntity<ByteArrayResource> downloadTempImage(@RequestParam String s3Key) {
+        try {
+            byte[] encrypted = s3Service.downloadBytes(s3Key);
+            String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
+            byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
+            ByteArrayResource resource = new ByteArrayResource(original);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=temp_image")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(original.length)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 }

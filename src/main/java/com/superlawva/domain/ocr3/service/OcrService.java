@@ -67,6 +67,9 @@ public class OcrService {
     public OcrResponse processContract(MultipartFile file) throws Exception {
         log.info("Starting OCR processing for file: {}", file.getOriginalFilename());
 
+        // 🟢 0. 파일 S3 업로드 (guest -> contracts)
+        String s3Url = uploadEncryptedToS3(file, "guest", "contracts");
+
         // Step 1: Extract text using Document AI
         String extractedText = extractTextFromImage(file);
         log.info("Text extraction completed");
@@ -79,6 +82,7 @@ public class OcrService {
 
         // Step 3: Prepare contract data (MySQL)
         ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, null, generationTime);
+        contractData.setFileUrl(s3Url);
         ContractData savedContract = contractDataRepository.save(contractData);
         log.info("Contract saved with ID: {}", savedContract.getId());
 
@@ -93,6 +97,8 @@ public class OcrService {
     public OcrResponse processContractWithUserId(MultipartFile file, String userId) throws Exception {
         log.info("Starting OCR processing for file: {} with userId: {}", file.getOriginalFilename(), userId);
 
+        String s3Url = uploadEncryptedToS3(file, userId, "contracts");
+
         // Step 1: Extract text using Document AI
         String extractedText = extractTextFromImage(file);
         log.info("Text extraction completed");
@@ -105,6 +111,7 @@ public class OcrService {
 
         // Step 3: Prepare contract data with userId (MySQL)
         ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, userId, generationTime);
+        contractData.setFileUrl(s3Url);
         ContractData savedContract = contractDataRepository.save(contractData);
         log.info("Contract saved with ID: {} for userId: {}", savedContract.getId(), userId);
 
@@ -121,6 +128,8 @@ public class OcrService {
     public OcrResponse processContractWithoutSaving(MultipartFile file) throws Exception {
         log.info("Starting OCR processing without saving (for JH) for file: {}", file.getOriginalFilename());
 
+        String s3Url = uploadEncryptedToS3(file, "temp-user", "temp");
+
         // Step 1: Extract text using Document AI
         String extractedText = extractTextFromImage(file);
         log.info("Text extraction completed");
@@ -133,10 +142,11 @@ public class OcrService {
 
         // Step 3: Map Gemini response to ContractData object (BUT DO NOT SAVE)
         ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, "temp-user", generationTime);
+        contractData.setFileUrl(s3Url);
         
         // Step 4: Return response without saving to DB
         return OcrResponse.builder()
-                .contractData(contractData) // 저장되지 않은 객체를 그대로 반환
+                .contractData(contractData)
                 .debugMode(geminiResponse.isDebugMode())
                 .build();
     }
@@ -323,5 +333,22 @@ public class OcrService {
     public List<ContractData> getContractsByUserId(String userId) {
         log.info("Retrieving contracts for user: {}", userId);
         return contractDataRepository.findByUserId(userId);
+    }
+
+    // ==================== Helper Methods ====================
+    private String uploadEncryptedToS3(MultipartFile file, String userId, String baseDir) throws IOException {
+        byte[] originalBytes = file.getBytes();
+        String base64 = java.util.Base64.getEncoder().encodeToString(originalBytes);
+        String encrypted = com.superlawva.global.security.util.AESUtil.encrypt(base64);
+        byte[] encryptedBytes = encrypted.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        String ext = "";
+        String original = file.getOriginalFilename();
+        if (original != null && original.lastIndexOf('.') != -1) {
+            ext = original.substring(original.lastIndexOf('.'));
+        }
+        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+
+        return s3Service.uploadBytes(encryptedBytes, userId, baseDir, ext, contentType);
     }
 }
