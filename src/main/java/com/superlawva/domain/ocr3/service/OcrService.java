@@ -165,6 +165,9 @@ public class OcrService {
         contractData.setCaseBasisJson(objectMapper.writeValueAsString(geminiData.getCaseBasisJson()));
         contractData.setAnalysisMetadataJson(objectMapper.writeValueAsString(geminiData.getAnalysisMetadataJson()));
 
+        // 전체 계약 JSON 저장 (DB not null 컬럼 대비)
+        contractData.setContractJson(objectMapper.writeValueAsString(geminiData));
+
         // ContractMetadata 세팅
         ContractData.ContractMetadata metadata = new ContractData.ContractMetadata();
         metadata.setModel(String.format("doc-ai:%s + gemini:%s", this.processorId, this.geminiModelName));

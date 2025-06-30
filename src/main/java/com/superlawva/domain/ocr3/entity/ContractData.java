@@ -5,6 +5,7 @@ import jakarta.persistence.GenerationType;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.superlawva.global.security.converter.AriaCryptoConverter;
+import com.superlawva.global.security.converter.AesCryptoConverter;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -112,6 +113,12 @@ public class ContractData {
 
     @Embedded
     private ContractMetadata contractMetadata;
+
+    /* 전체 계약 JSON 원본 */
+    @Convert(converter = AesCryptoConverter.class)
+    @Lob
+    @Column(name = "contract_json", columnDefinition = "LONGTEXT")
+    private String contractJson;
 
     @Embeddable
     @Data
