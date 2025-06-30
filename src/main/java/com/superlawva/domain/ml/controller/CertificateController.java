@@ -25,7 +25,17 @@ import java.util.HashMap;
 @RestController
 @RequestMapping("/certificate")
 @RequiredArgsConstructor
-@Tag(name = "Certificate", description = "내용증명서 CRUD API")
+@Tag(
+    name = "Certificate",
+    description = """
+    📄 내용증명서(Certificate) 관련 API입니다.
+
+    - 임대차, 매매 등 각종 계약 분쟁 상황에서 상대방에게 공식적으로 요구사항을 전달하는 '내용증명서'를 생성/조회/수정/삭제할 수 있습니다.
+    - AI가 계약서와 사용자의 요청을 바탕으로 내용증명서 초안을 자동으로 작성해줍니다.
+    - 생성된 내용증명서는 DB에 저장되며, 언제든 조회/수정/삭제가 가능합니다.
+    - 본 API를 통해 법적 분쟁 예방 및 증거 확보에 활용할 수 있습니다.
+    """
+)
 public class CertificateController {
 
     private final CertificateService certificateService;
@@ -34,7 +44,10 @@ public class CertificateController {
      * CREATE - 내용증명서 생성
      */
     @PostMapping("/create")
-    @Operation(summary = "내용증명서 생성", description = "계약서 ID와 사용자 요청사항을 받아 내용증명서를 생성합니다.")
+    @Operation(
+        summary = "내용증명서 생성",
+        description = "계약서 ID와 사용자의 요청(문장/사유/요구사항 등)을 입력받아 AI가 자동으로 내용증명서(문서 초안)를 생성합니다.\n\n- 계약서 ID는 사전에 등록된 계약서의 고유값입니다.\n- userQuery에는 상대방에게 전달하고 싶은 요구사항, 사유, 상황 설명 등을 자유롭게 입력하세요.\n- 생성된 내용증명서는 DB에 저장되며, 이후 조회/수정/삭제가 가능합니다.\n- 예시: '임대차 계약 해지 및 보증금 반환을 요청합니다.'"
+    )
     @ApiResponse(responseCode = "201", description = "생성 성공")
     @ApiResponse(responseCode = "400", description = "잘못된 요청")
     @ApiResponse(responseCode = "404", description = "계약서를 찾을 수 없음")
