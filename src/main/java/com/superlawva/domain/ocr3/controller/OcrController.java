@@ -273,31 +273,41 @@ public class OcrController {
 
     @Operation(
         summary = "계약서 ID로 이미지 복호화 다운로드",
-        description = "contractId만 넘기면 해당 계약서의 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr3/file?contractId=123"
+        description = "contractId를 path variable로 받아 해당 계약서의 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr3/file/123"
     )
-    @GetMapping("/upload/ocr3/file")
-    public ResponseEntity<ByteArrayResource> downloadContractImageById(@RequestParam Long contractId) {
+    @GetMapping("/upload/ocr3/file/{contractId}")
+    public ResponseEntity<ByteArrayResource> downloadContractImageById(@PathVariable Long contractId) {
+        log.info("Downloading contract image for contractId: {}", contractId);
+        
         try {
             com.superlawva.domain.ocr3.entity.ContractData contract = ocrService.getContractById(contractId);
             if (contract == null || contract.getFileUrl() == null) {
                 return ResponseEntity.notFound().build();
             }
+            
             String fileUrl = contract.getFileUrl();
             String s3Key = s3Service.extractS3KeyFromUrl(fileUrl);
             byte[] encrypted = s3Service.downloadBytes(s3Key);
             String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
             byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
+            
             ByteArrayResource resource = new ByteArrayResource(original);
+            
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contract_image")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(original.length)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contract_" + contractId + ".jpg\"")
+                    .contentType(MediaType.IMAGE_JPEG)
                     .body(resource);
+                    
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            log.error("Error downloading contract image for contractId: {}", contractId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
+    @Operation(
+        summary = "S3 Key로 이미지 복호화 다운로드",
+        description = "s3Key를 쿼리 파라미터로 받아 해당 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr3/file?s3Key=contracts/2024/07/01/user_xxx.jpg"
+    )
     @GetMapping("/upload/ocr3/file")
     public ResponseEntity<ByteArrayResource> downloadContractImage(@RequestParam String s3Key) {
         try {
