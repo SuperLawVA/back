@@ -271,6 +271,33 @@ public class OcrController {
         }
     }
 
+    @Operation(
+        summary = "계약서 ID로 이미지 복호화 다운로드",
+        description = "contractId만 넘기면 해당 계약서의 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr3/file?contractId=123"
+    )
+    @GetMapping("/upload/ocr3/file")
+    public ResponseEntity<ByteArrayResource> downloadContractImageById(@RequestParam Long contractId) {
+        try {
+            com.superlawva.domain.ocr3.entity.ContractData contract = ocrService.getContractById(contractId);
+            if (contract == null || contract.getFileUrl() == null) {
+                return ResponseEntity.notFound().build();
+            }
+            String fileUrl = contract.getFileUrl();
+            String s3Key = s3Service.extractS3KeyFromUrl(fileUrl);
+            byte[] encrypted = s3Service.downloadBytes(s3Key);
+            String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
+            byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
+            ByteArrayResource resource = new ByteArrayResource(original);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contract_image")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(original.length)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
     @GetMapping("/upload/ocr3/file")
     public ResponseEntity<ByteArrayResource> downloadContractImage(@RequestParam String s3Key) {
         try {
@@ -291,6 +318,50 @@ public class OcrController {
     @GetMapping("/upload/ocr_for_jh/file")
     public ResponseEntity<ByteArrayResource> downloadTempImage(@RequestParam String s3Key) {
         try {
+            byte[] encrypted = s3Service.downloadBytes(s3Key);
+            String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
+            byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
+            ByteArrayResource resource = new ByteArrayResource(original);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=temp_image")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(original.length)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @Operation(
+        summary = "계약서 이미지 복호화 다운로드 (fileUrl로)",
+        description = "fileUrl 전체를 파라미터로 넘기면 원본 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr3/file-by-url?fileUrl=https://my-bucket.s3.ap-northeast-2.amazonaws.com/contracts/2024/07/01/guest_xxx.jpg"
+    )
+    @GetMapping("/upload/ocr3/file-by-url")
+    public ResponseEntity<ByteArrayResource> downloadContractImageByUrl(@RequestParam String fileUrl) {
+        try {
+            String s3Key = s3Service.extractS3KeyFromUrl(fileUrl);
+            byte[] encrypted = s3Service.downloadBytes(s3Key);
+            String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
+            byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);
+            ByteArrayResource resource = new ByteArrayResource(original);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=contract_image")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .contentLength(original.length)
+                    .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @Operation(
+        summary = "임시(JH) 이미지 복호화 다운로드 (fileUrl로)",
+        description = "fileUrl 전체를 파라미터로 넘기면 원본 이미지를 복호화하여 반환합니다.\n예시: /upload/ocr_for_jh/file-by-url?fileUrl=https://my-bucket.s3.ap-northeast-2.amazonaws.com/temp/2024/07/01/temp-user_xxx.jpg"
+    )
+    @GetMapping("/upload/ocr_for_jh/file-by-url")
+    public ResponseEntity<ByteArrayResource> downloadTempImageByUrl(@RequestParam String fileUrl) {
+        try {
+            String s3Key = s3Service.extractS3KeyFromUrl(fileUrl);
             byte[] encrypted = s3Service.downloadBytes(s3Key);
             String decryptedBase64 = AESUtil.decrypt(new String(encrypted, java.nio.charset.StandardCharsets.UTF_8));
             byte[] original = java.util.Base64.getDecoder().decode(decryptedBase64);

@@ -158,7 +158,7 @@ public class S3Service {
     /**
      * S3 URL에서 키 추출
      */
-    private String extractS3KeyFromUrl(String s3Url) {
+    public String extractS3KeyFromUrl(String s3Url) {
         String prefix = String.format("https://%s.s3.%s.amazonaws.com/", bucketName, region);
         if (s3Url.startsWith(prefix)) {
             return s3Url.substring(prefix.length());
