@@ -151,6 +151,53 @@ public class OcrService {
                 .build();
     }
 
+    /**
+     * FOR 종혁햄: DB 저장 없이 OCR 및 분석 결과 원본 JSON만 반환
+     */
+    public String processContractWithoutSavingRawJson(MultipartFile file) throws Exception {
+        log.info("Starting OCR processing without saving (for JH, raw JSON) for file: {}", file.getOriginalFilename());
+
+        // 1. S3 업로드
+        String fileUrl = uploadEncryptedToS3(file, "temp-user", "temp");
+
+        // 2. Gemini 분석 결과 원본 JSON
+        String prompt = buildGeminiPrompt(extractedTextFromImage(file));
+        Map<String, Object> requestBody = new HashMap<>();
+        List<Map<String, String>> partsList = new ArrayList<>();
+        Map<String, String> part = new HashMap<>();
+        part.put("text", prompt);
+        partsList.add(part);
+        List<Map<String, Object>> contentsList = new ArrayList<>();
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", partsList);
+        contentsList.add(content);
+        requestBody.put("contents", contentsList);
+        Map<String, String> generationConfig = new HashMap<>();
+        generationConfig.put("response_mime_type", "application/json");
+        requestBody.put("generationConfig", generationConfig);
+        String url = String.format("%s/v1beta/models/%s:generateContent?key=%s",
+                geminiApiUrl, geminiModelName, geminiApiKey);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+        if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+            Map<String, Object> responseBody = response.getBody();
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
+            Map<String, Object> candidate = candidates.get(0);
+            Map<String, Object> candidateContent = (Map<String, Object>) candidate.get("content");
+            List<Map<String, String>> parts = (List<Map<String, String>>) candidateContent.get("parts");
+            String jsonText = parts.get(0).get("text");
+            // file_url 필드만 추가
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.node.ObjectNode root = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(jsonText);
+            root.put("file_url", fileUrl);
+            return mapper.writeValueAsString(root);
+        } else {
+            throw new RuntimeException("Failed to get valid response from Gemini API");
+        }
+    }
+
     private ContractData mapGeminiToContractData(ContractData geminiData, MultipartFile file, String userId, double generationTime) throws JsonProcessingException {
         ContractData contractData = new ContractData();
         contractData.setUserId(userId != null ? userId : geminiData.getUserId());
@@ -350,5 +397,10 @@ public class OcrService {
         String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
         return s3Service.uploadBytes(encryptedBytes, userId, baseDir, ext, contentType);
+    }
+
+    // 기존 extractTextFromImage를 한 줄로 래핑
+    private String extractedTextFromImage(MultipartFile file) throws Exception {
+        return extractTextFromImage(file);
     }
 }

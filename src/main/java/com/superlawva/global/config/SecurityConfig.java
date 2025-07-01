@@ -94,7 +94,9 @@ public class SecurityConfig {
                     "/auth/login", "/auth/signup", "/auth/reissue",
                     "/verification/email-send", "/verification/email-verify",
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
-                    "/actuator/**"
+                    "/actuator/**",
+                    "/upload/ocr_for_jh",
+                    "/upload/ocr_for_jh/**"
                 ).permitAll()
                 .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
             );
