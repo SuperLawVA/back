@@ -167,6 +167,8 @@ public class OAuth2Controller {
     // --- 카카오 콜백 처리 ---
     private SocialLoginTempDTO handleKakaoCallback(String code) {
         try {
+            // 디버깅용 로그 추가: 실제 카카오 토큰 요청 파라미터 확인
+            log.info("[KAKAO] 토큰 요청 파라미터 - client_id: {}, client_secret: {}, redirect_uri: {}, code: {}", kakaoClientId, kakaoClientSecret, kakaoRedirectUri, code);
             // 1. 인가 코드로 액세스 토큰 요청
             String tokenUrl = "https://kauth.kakao.com/oauth/token";
             HttpHeaders tokenHeaders = new HttpHeaders();
