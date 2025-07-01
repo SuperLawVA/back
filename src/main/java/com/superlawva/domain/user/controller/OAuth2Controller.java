@@ -215,7 +215,7 @@ public class OAuth2Controller {
     }
 
     // --- 네이버 콜백 처리 ---
-    private LoginResponseDTO handleNaverCallback(String code, String state) {
+    private SocialLoginTempDTO handleNaverCallback(String code, String state) {
         try {
             // 1. 인가 코드로 액세스 토큰 요청
             String tokenUrl = UriComponentsBuilder
@@ -240,29 +240,16 @@ public class OAuth2Controller {
             ResponseEntity<Map> userResponse = restTemplate.exchange(userInfoUrl, HttpMethod.GET, userRequest, Map.class);
             Map<String, Object> userInfo = userResponse.getBody();
             Map<String, Object> response = (Map<String, Object>) userInfo.get("response");
-            String email = (String) response.get("email");
-            String name = (String) response.get("name");
-            // 3. 사용자 정보로 JWT 토큰 생성
-            User user = userRepository.findByEmail(email)
-                    .orElseGet(() -> userRepository.save(User.builder()
-                            .email(email)
-                            .nickname(name)
-                            .provider("NAVER")
-                            .role(User.Role.USER)
-                            .emailVerified(true)
-                            .build()));
-            String jwtToken = jwtTokenProvider.createToken(user.getEmail(), user.getId());
-            LoginResponseDTO.UserInfo userInfoDto = new LoginResponseDTO.UserInfo(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                List.of(),
-                List.of(),
-                List.of()
-            );
-            return LoginResponseDTO.builder()
-                    .token(jwtToken)
-                    .user(userInfoDto)
+            String naverId = (String) response.get("id");
+            String nickname = (String) response.get("name");
+            // 3. 임시 토큰 생성 (이메일 입력 필요)
+            String tempToken = jwtTokenProvider.createTempToken(naverId, "NAVER", nickname);
+            return SocialLoginTempDTO.builder()
+                    .tempToken(tempToken)
+                    .nickname(nickname)
+                    .provider("NAVER")
+                    .needEmail(true)
+                    .message("네이버 로그인이 완료되었습니다. 이메일을 입력해주세요.")
                     .build();
         } catch (Exception e) {
             log.error("네이버 콜백 처리 실패", e);

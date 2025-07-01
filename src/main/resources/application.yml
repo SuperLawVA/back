@@ -46,16 +46,16 @@ spring:
       client:
         registration:
           kakao:
-            client-id: ${KAKAO_CLIENT_ID:dummy}
-            client-secret: ${KAKAO_CLIENT_SECRET:dummy}
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
             redirect-uri: ${KAKAO_REDIRECT_URI:http://localhost:8080/login/oauth2/code/kakao}
             authorization-grant-type: authorization_code
             scope:
               - profile_nickname
             client-name: Kakao
           naver:
-            client-id: ${NAVER_CLIENT_ID:dummy}
-            client-secret: ${NAVER_CLIENT_SECRET:dummy}
+            client-id: ${NAVER_CLIENT_ID}
+            client-secret: ${NAVER_CLIENT_SECRET}
             redirect-uri: ${NAVER_REDIRECT_URI:http://localhost:5173/oauth/naver/callback}
             authorization-grant-type: authorization_code
             scope:
