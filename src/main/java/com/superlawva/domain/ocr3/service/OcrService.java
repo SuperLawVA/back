@@ -160,8 +160,8 @@ public class OcrService {
         // 1. S3 업로드
         String fileUrl = uploadEncryptedToS3(file, "temp-user", "temp");
 
-        // 2. Gemini 분석 결과 원본 JSON
-        String prompt = buildGeminiPrompt(extractedTextFromImage(file));
+        // 2. Gemini 분석 결과 원본 JSON (기존 프롬프트 사용)
+        String prompt = buildGeminiPromptForJH(extractedTextFromImage(file));
         Map<String, Object> requestBody = new HashMap<>();
         List<Map<String, String>> partsList = new ArrayList<>();
         Map<String, String> part = new HashMap<>();
@@ -221,8 +221,8 @@ public class OcrService {
         // Step 1: Extract text using Document AI
         String extractedText = extractTextFromImage(file);
         log.info("Text extraction completed");
-        // Step 2: Analyze text with Gemini (원본 JSON 그대로 반환)
-        String prompt = buildGeminiPrompt(extractedText);
+        // Step 2: Analyze text with Gemini (원본 JSON 그대로 반환, 기존 프롬프트 사용)
+        String prompt = buildGeminiPromptForJH(extractedText);
         Map<String, Object> requestBody = new HashMap<>();
         List<Map<String, String>> partsList = new ArrayList<>();
         Map<String, String> part = new HashMap<>();
@@ -493,7 +493,42 @@ public class OcrService {
         }
     }
 
+    /**
+     * 🟢 개선된 AI 프롬프트 (OCR3용)
+     */
     private String buildGeminiPrompt(String ocrText) {
+        String schemaExample = getJsonSchemaExample();
+
+        return String.format("""
+        당신은 한국 부동산 계약서를 분석하여 JSON으로 변환하는 AI 전문가입니다.
+        다음 OCR 텍스트를 분석하여, 아래에 명시된 상세한 JSON 구조에 맞춰 내용을 채워주세요.
+        ### 매우 중요한 규칙 ###
+        1.  **없는 정보는 반드시 `null`**: 텍스트에 명시적으로 존재하지 않는 정보는 **절대로** 추측하거나 만들어내지 말고, 반드시 `null` 값으로 채워야 합니다. 빈 문자열("")이나 기본값을 사용하지 마세요.
+        2.  **완전한 문장**: `articles`와 `agreements` 항목에 문자열을 추가할 때, 문장이 중간에 끊기지 않도록 완성된 전체 문장을 추출해야 합니다.
+        3.  **정확한 값 추출**: 텍스트에 있는 내용만 정확하게 추출합니다.
+        4.  **숫자 형식**: 금액, 면적 등은 반드시 따옴표 없는 숫자(Number) 형식으로 변환하세요.
+        5.  **완벽한 JSON 출력**: 최종 결과는 오직 JSON 객체만 반환해야 합니다. 설명이나 다른 텍스트 없이 순수한 JSON 형식이어야 합니다.
+        6.  **🟢 articles와 agreements 필수 추출**: 계약서에서 "제1조", "제2조" 등으로 시작하는 조항들을 `articles` 배열에, "기타사항", "특별약정" 등으로 시작하는 약정사항들을 `agreements` 배열에 반드시 포함시켜야 합니다.
+        7.  **🟢 날짜 형식 통일**: 모든 날짜는 "YYYY-MM-DD" 형식으로 통일하세요 (예: "2013-04-01").
+        8.  **🟢 contract_date 필수 추출**: 계약서에서 "계약일", "계약체결일", "작성일" 등으로 명시된 날짜를 `contract_date`에 반드시 포함시켜야 합니다. "2013년 03월 25일" → "2013-03-25" 형식으로 변환하세요.
+        9.  **🟢 payment_plan 정확 추출**: 계약서에서 "선지불", "후지불", "분할지불", "일시지불" 등 지불 방식을 `payment_plan`에 정확히 추출하세요.
+        10. **🟢 한글 금액 정확 추출**: "이천팔백만원정" → "이천팔백만원정" (오타 없이 정확히 추출)
+        ### 최종 출력 JSON 구조 및 예시 (이 구조를 반드시 따르세요) ###
+        %s
+        ---
+        ### 분석할 계약서 OCR 텍스트 ###
+        ```text
+        %s
+        ```
+        ---
+        이제, 위 규칙과 구조에 따라 OCR 텍스트를 분석하여 완벽한 JSON을 생성해주세요.
+        """, schemaExample, ocrText);
+    }
+
+    /**
+     * 🟢 기존 AI 프롬프트 (FOR JH용)
+     */
+    private String buildGeminiPromptForJH(String ocrText) {
         String schemaExample = getJsonSchemaExample();
 
         return String.format("""
@@ -526,7 +561,7 @@ public class OcrService {
             "contract_type": "전세",
             "dates": { "contract_date": "2025-06-14", "start_date": "2025-07-01", "end_date": "2027-06-30" },
             "property": { "address": "서울시 성동구 성수동 101-12", "detail_address": "B동 802호 8층", "rent_section": "전체", "rent_area": "70%", "land": { "land_type": "대지", "land_right_rate": "100분의 35", "land_area": 150.2 }, "building": { "building_constructure": "철근콘크리트", "building_type": "아파트", "building_area": "99.23" } },
-            "payment": { "deposit": 80000000, "deposit_kr": "팔천만원정", "down_payment": 20000000, "down_payment_kr": "이천만원정", "intermediate_payment": 30000000, "intermediate_payment_kr": "삼천만원정", "intermediate_payment_date": "2026-03-15", "remaining_balance": 30000000, "remaining_balance_kr": "삼천만원정", "remaining_balance_date": "2026-06-30", "monthly_rent": null, "monthly_rent_date": "5일", "payment_plan": null },
+            "payment": { "deposit": 80000000, "deposit_kr": "팔천만원정", "down_payment": 20000000, "down_payment_kr": "이천만원정", "intermediate_payment": 30000000, "intermediate_payment_kr": "삼천만원정", "intermediate_payment_date": "2026-03-15", "remaining_balance": 30000000, "remaining_balance_kr": "삼천만원정", "remaining_balance_date": "2026-06-30", "monthly_rent": null, "monthly_rent_date": "5일", "payment_plan": "선지불" },
             "articles": [ 
               "제1조 (목적) 위 부동산의 임대차에 대하여 임대인과 임차인은 합의에 의하여 임차보증금 등을 아래와 같이 지불하기로 한다.",
               "제2조 (존속기간) 임대인은 계약기간 내 임차인에게 해당 주택을 사용케 한다.",
