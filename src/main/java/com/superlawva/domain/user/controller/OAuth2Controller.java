@@ -167,16 +167,22 @@ public class OAuth2Controller {
     // --- 카카오 콜백 처리 ---
     private SocialLoginTempDTO handleKakaoCallback(String code) {
         try {
-            // 디버깅용 로그 추가: 실제 카카오 토큰 요청 파라미터 확인
             log.info("[KAKAO] 토큰 요청 파라미터 - client_id: {}, client_secret: {}, redirect_uri: {}, code: {}", kakaoClientId, kakaoClientSecret, kakaoRedirectUri, code);
-            // 1. 인가 코드로 액세스 토큰 요청
             String tokenUrl = "https://kauth.kakao.com/oauth/token";
             HttpHeaders tokenHeaders = new HttpHeaders();
             tokenHeaders.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-            String tokenBody = String.format(
-                "grant_type=authorization_code&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
-                kakaoClientId, kakaoClientSecret, kakaoRedirectUri, code
-            );
+            String tokenBody;
+            if (kakaoClientSecret == null || kakaoClientSecret.isBlank()) {
+                tokenBody = String.format(
+                    "grant_type=authorization_code&client_id=%s&redirect_uri=%s&code=%s",
+                    kakaoClientId, kakaoRedirectUri, code
+                );
+            } else {
+                tokenBody = String.format(
+                    "grant_type=authorization_code&client_id=%s&client_secret=%s&redirect_uri=%s&code=%s",
+                    kakaoClientId, kakaoClientSecret, kakaoRedirectUri, code
+                );
+            }
             HttpEntity<String> tokenRequest = new HttpEntity<>(tokenBody, tokenHeaders);
             ResponseEntity<Map> tokenResponse = restTemplate.postForEntity(tokenUrl, tokenRequest, Map.class);
             String accessToken = (String) tokenResponse.getBody().get("access_token");

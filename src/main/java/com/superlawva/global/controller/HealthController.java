@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -254,5 +256,15 @@ public class HealthController {
         
         log.info("루트 경로 접근");
         return ResponseEntity.ok(ApiResponse.of(SuccessStatus._OK, response));
+    }
+
+    @GetMapping("/health/time")
+    public Map<String, String> getServerTime() {
+        Map<String, String> result = new HashMap<>();
+        ZonedDateTime now = ZonedDateTime.now();
+        result.put("serverTime", now.format(DateTimeFormatter.ISO_ZONED_DATE_TIME));
+        result.put("timeZone", now.getZone().toString());
+        result.put("systemMillis", String.valueOf(System.currentTimeMillis()));
+        return result;
     }
 } 

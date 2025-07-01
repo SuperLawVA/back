@@ -96,7 +96,8 @@ public class SecurityConfig {
                     "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**",
                     "/actuator/**",
                     "/upload/ocr_for_jh",
-                    "/upload/ocr_for_jh/**"
+                    "/upload/ocr_for_jh/**",
+                    "/auth/social/complete"
                 ).permitAll()
                 .anyRequest().authenticated() // 나머지 모든 요청은 인증 필요
             );
