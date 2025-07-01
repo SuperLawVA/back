@@ -80,8 +80,8 @@ public class OcrService {
         double generationTime = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info("Gemini analysis completed in {} seconds", generationTime);
 
-        // Step 3: Prepare contract data (MySQL)
-        ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, null, generationTime);
+        // Step 3: Prepare contract data (MySQL) - AI 원본 JSON에서 articles/agreements 직접 추출
+        ContractData contractData = mapGeminiResponseToContractData(geminiResponse, file, null, generationTime);
         contractData.setFileUrl(s3Url);
         ContractData savedContract = contractDataRepository.save(contractData);
         log.info("Contract saved with ID: {}", savedContract.getId());
@@ -109,8 +109,8 @@ public class OcrService {
         double generationTime = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info("Gemini analysis completed in {} seconds", generationTime);
 
-        // Step 3: Prepare contract data with userId (MySQL)
-        ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, userId, generationTime);
+        // Step 3: Prepare contract data with userId (MySQL) - AI 원본 JSON에서 articles/agreements 직접 추출
+        ContractData contractData = mapGeminiResponseToContractData(geminiResponse, file, userId, generationTime);
         contractData.setFileUrl(s3Url);
         ContractData savedContract = contractDataRepository.save(contractData);
         log.info("Contract saved with ID: {} for userId: {}", savedContract.getId(), userId);
@@ -140,8 +140,8 @@ public class OcrService {
         double generationTime = (System.currentTimeMillis() - startTime) / 1000.0;
         log.info("Gemini analysis completed in {} seconds", generationTime);
 
-        // Step 3: Map Gemini response to ContractData object (BUT DO NOT SAVE)
-        ContractData contractData = mapGeminiToContractData(geminiResponse.getContractData(), file, "temp-user", generationTime);
+        // Step 3: Map Gemini response to ContractData object (BUT DO NOT SAVE) - AI 원본 JSON에서 articles/agreements 직접 추출
+        ContractData contractData = mapGeminiResponseToContractData(geminiResponse, file, "temp-user", generationTime);
         contractData.setFileUrl(s3Url);
         
         // Step 4: Return response without saving to DB
@@ -255,6 +255,90 @@ public class OcrService {
         }
     }
 
+    /**
+     * 🟢 AI 원본 JSON에서 articles/agreements를 직접 추출하는 새로운 매핑 메서드
+     */
+    private ContractData mapGeminiResponseToContractData(GeminiResponse geminiResponse, MultipartFile file, String userId, double generationTime) throws JsonProcessingException {
+        ContractData geminiData = geminiResponse.getContractData();
+        ContractData contractData = new ContractData();
+        
+        // 기본 필드 매핑
+        contractData.setUserId(userId != null ? userId : geminiData.getUserId());
+        contractData.setContractType(geminiData.getContractType());
+        contractData.setDates(geminiData.getDates());
+        contractData.setProperty(geminiData.getProperty());
+        contractData.setPayment(geminiData.getPayment());
+        contractData.setLessor(geminiData.getLessor());
+        contractData.setLessee(geminiData.getLessee());
+        contractData.setBroker1(geminiData.getBroker1());
+        contractData.setBroker2(geminiData.getBroker2());
+        contractData.setIsGenerated(false);
+        contractData.setFileUrl("file://" + file.getOriginalFilename());
+        contractData.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
+        contractData.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
+
+        // 🟢 AI 원본 JSON에서 articles와 agreements 직접 추출
+        try {
+            // 전체 GeminiResponse를 JSON으로 변환하여 articles/agreements 추출
+            String fullJson = objectMapper.writeValueAsString(geminiResponse);
+            Map<String, Object> jsonMap = objectMapper.readValue(fullJson, Map.class);
+            Map<String, Object> contractDataMap = (Map<String, Object>) jsonMap.get("contract_data");
+            
+            if (contractDataMap != null) {
+                // articles 배열 추출
+                Object articlesObj = contractDataMap.get("articles");
+                if (articlesObj != null) {
+                    String articlesJson = objectMapper.writeValueAsString(articlesObj);
+                    contractData.setArticlesJson(articlesJson);
+                    log.info("🟢 Articles 추출 성공: {}", articlesJson);
+                } else {
+                    contractData.setArticlesJson("[]");
+                    log.warn("⚠️ Articles가 AI 응답에 없음");
+                }
+                
+                // agreements 배열 추출
+                Object agreementsObj = contractDataMap.get("agreements");
+                if (agreementsObj != null) {
+                    String agreementsJson = objectMapper.writeValueAsString(agreementsObj);
+                    contractData.setAgreementsJson(agreementsJson);
+                    log.info("🟢 Agreements 추출 성공: {}", agreementsJson);
+                } else {
+                    contractData.setAgreementsJson("[]");
+                    log.warn("⚠️ Agreements가 AI 응답에 없음");
+                }
+            } else {
+                contractData.setArticlesJson("[]");
+                contractData.setAgreementsJson("[]");
+                log.error("❌ contract_data가 AI 응답에 없음");
+            }
+        } catch (Exception e) {
+            log.error("AI 원본 JSON에서 articles/agreements 추출 실패: {}", e.getMessage(), e);
+            contractData.setArticlesJson("[]");
+            contractData.setAgreementsJson("[]");
+        }
+        
+        contractData.setRecommendedAgreementsJson(objectMapper.writeValueAsString(geminiData.getRecommendedAgreementsJson()));
+        contractData.setLegalBasisJson(objectMapper.writeValueAsString(geminiData.getLegalBasisJson()));
+        contractData.setCaseBasisJson(objectMapper.writeValueAsString(geminiData.getCaseBasisJson()));
+        contractData.setAnalysisMetadataJson(objectMapper.writeValueAsString(geminiData.getAnalysisMetadataJson()));
+
+        // 전체 계약 JSON 저장 (DB not null 컬럼 대비)
+        contractData.setContractJson(objectMapper.writeValueAsString(geminiData));
+
+        // ContractMetadata 세팅
+        ContractData.ContractMetadata metadata = new ContractData.ContractMetadata();
+        metadata.setModel(String.format("doc-ai:%s + gemini:%s", this.processorId, this.geminiModelName));
+        metadata.setGenerationTime(generationTime);
+        metadata.setUserAgent(null);
+        metadata.setVersion("v3.1.0");
+        contractData.setContractMetadata(metadata);
+
+        return contractData;
+    }
+
+    /**
+     * 기존 매핑 메서드 (호환성 유지)
+     */
     private ContractData mapGeminiToContractData(ContractData geminiData, MultipartFile file, String userId, double generationTime) throws JsonProcessingException {
         ContractData contractData = new ContractData();
         contractData.setUserId(userId != null ? userId : geminiData.getUserId());
@@ -271,9 +355,21 @@ public class OcrService {
         contractData.setCreatedDate(LocalDateTime.now(ZoneOffset.UTC));
         contractData.setModifiedDate(LocalDateTime.now(ZoneOffset.UTC));
 
-        // JSON 변환이 필요한 필드 처리
-        contractData.setArticlesJson(objectMapper.writeValueAsString(geminiData.getArticlesJson() != null ? geminiData.getArticlesJson() : geminiData.getArticlesJson()));
-        contractData.setAgreementsJson(objectMapper.writeValueAsString(geminiData.getAgreementsJson() != null ? geminiData.getAgreementsJson() : geminiData.getAgreementsJson()));
+        // 🟢 articles와 agreements 데이터 제대로 매핑
+        if (geminiData.getArticlesJson() != null) {
+            contractData.setArticlesJson(geminiData.getArticlesJson());
+        } else {
+            // articles 필드가 null이면 빈 배열로 설정
+            contractData.setArticlesJson("[]");
+        }
+        
+        if (geminiData.getAgreementsJson() != null) {
+            contractData.setAgreementsJson(geminiData.getAgreementsJson());
+        } else {
+            // agreements 필드가 null이면 빈 배열로 설정
+            contractData.setAgreementsJson("[]");
+        }
+        
         contractData.setRecommendedAgreementsJson(objectMapper.writeValueAsString(geminiData.getRecommendedAgreementsJson()));
         contractData.setLegalBasisJson(objectMapper.writeValueAsString(geminiData.getLegalBasisJson()));
         contractData.setCaseBasisJson(objectMapper.writeValueAsString(geminiData.getCaseBasisJson()));
@@ -387,6 +483,8 @@ public class OcrService {
         3.  **정확한 값 추출**: 텍스트에 있는 내용만 정확하게 추출합니다.
         4.  **숫자 형식**: 금액, 면적 등은 반드시 따옴표 없는 숫자(Number) 형식으로 변환하세요.
         5.  **완벽한 JSON 출력**: 최종 결과는 오직 JSON 객체만 반환해야 합니다. 설명이나 다른 텍스트 없이 순수한 JSON 형식이어야 합니다.
+        6.  **🟢 articles와 agreements 필수 추출**: 계약서에서 "제1조", "제2조" 등으로 시작하는 조항들을 `articles` 배열에, "기타사항", "특별약정" 등으로 시작하는 약정사항들을 `agreements` 배열에 반드시 포함시켜야 합니다.
+        7.  **🟢 날짜 형식 통일**: 모든 날짜는 "YYYY-MM-DD" 형식으로 통일하세요 (예: "2013-04-01").
         ### 최종 출력 JSON 구조 및 예시 (이 구조를 반드시 따르세요) ###
         %s
         ---
@@ -406,9 +504,21 @@ public class OcrService {
             "contract_type": "전세",
             "dates": { "contract_date": "2025-06-14", "start_date": "2025-07-01", "end_date": "2027-06-30" },
             "property": { "address": "서울시 성동구 성수동 101-12", "detail_address": "B동 802호 8층", "rent_section": "전체", "rent_area": "70%", "land": { "land_type": "대지", "land_right_rate": "100분의 35", "land_area": 150.2 }, "building": { "building_constructure": "철근콘크리트", "building_type": "아파트", "building_area": "99.23" } },
-            "payment": { "deposit": 80000000, "deposit_kr": "팔천만원정", "down_payment": 20000000, "down_payment_kr": "이천만원정", "intermediate_payment": 30000000, "intermediate_payment_kr": "삼천만원정", "intermediate_payment_date": "2026년3월15일", "remaining_balance": 30000000, "remaining_balance_kr": "삼천만원정", "remaining_balance_date": "2026년6월30일", "monthly_rent": null, "monthly_rent_date": "5일", "payment_plan": null },
-            "articles": [ "제2조 (존속기간) 임대인은 계약기간 내 임차인에게 해당 주택을 사용케 한다.", "제4조 (계약의 해지) 임차인이 3기의 차임액에 달하도록 연체하거나 제 3조를 위반하였을 때 임대인은 즉시 본 계약을 해지할 수 있다.", "제6조 (계약의 해제) 임차인이 임대인에게 중도금(중도금이 없을 때는 잔금)을 지불하기 전까지, 임대인은 계약금의 배액을 상환하고, 임차인은 계약금을 포기하고 이 계약을 해제할 수 있다." ],
-            "agreements": [ "임차인은 반려동물 사육 시 손해 발생에 대한 책임을 진다.", "임차인의 고의 또는 과실로 인한 손상을 제외한 자연적 손상은 원상복구 의무를 면제한다.", "본 계약서에 명시되지 않은 사항은 주택임대차보호법 등 관련 법령에 따른다." ],
+            "payment": { "deposit": 80000000, "deposit_kr": "팔천만원정", "down_payment": 20000000, "down_payment_kr": "이천만원정", "intermediate_payment": 30000000, "intermediate_payment_kr": "삼천만원정", "intermediate_payment_date": "2026-03-15", "remaining_balance": 30000000, "remaining_balance_kr": "삼천만원정", "remaining_balance_date": "2026-06-30", "monthly_rent": null, "monthly_rent_date": "5일", "payment_plan": null },
+            "articles": [ 
+              "제1조 (목적) 위 부동산의 임대차에 대하여 임대인과 임차인은 합의에 의하여 임차보증금 등을 아래와 같이 지불하기로 한다.",
+              "제2조 (존속기간) 임대인은 계약기간 내 임차인에게 해당 주택을 사용케 한다.",
+              "제3조 (용도변경 및 전대 등) 임차인은 임대인의 동의없이 위 부동산의 용도나 구조를 변경하거나 전대·임차권 양도 또는 담보제공을 하지 못하며 임대차 목적 이외의 용도로 사용할 수 없다.",
+              "제4조 (계약의 해지) 임차인이 3기의 차임액에 달하도록 연체하거나 제 3조를 위반하였을 때 임대인은 즉시 본 계약을 해지할 수 있다.",
+              "제5조 (계약의 종료) 임대차계약이 종료된 경우에 임차인은 위 부동산을 원상으로 회복하여 임대인에게 반환한다.",
+              "제6조 (계약의 해제) 임차인이 임대인에게 중도금(중도금이 없을 때는 잔금)을 지불하기 전까지, 임대인은 계약금의 배액을 상환하고, 임차인은 계약금을 포기하고 이 계약을 해제할 수 있다."
+            ],
+            "agreements": [ 
+              "임차인은 반려동물 사육 시 손해 발생에 대한 책임을 진다.",
+              "임차인의 고의 또는 과실로 인한 손상을 제외한 자연적 손상은 원상복구 의무를 면제한다.",
+              "기타사항은 임대차관례에 따른다.",
+              "본 계약서에 명시되지 않은 사항은 주택임대차보호법 등 관련 법령에 따른다."
+            ],
             "lessor": { "name": "이영희", "id_number": "850212-2345678", "address": "서울시 서초구", "detail_address": "반포동 77-5", "phone_number": "02-555-6666", "mobile_number": "010-5555-6666", "agent": { "name": "이영희" } },
             "lessee": { "name": "김민준", "id_number": "920405-3456789", "address": "서울시 노원구", "detail_address": "중계동 12-34", "phone_number": "02-777-8888", "mobile_number": "010-7777-8888", "agent": { "name": "김민준" } },
             "broker1": { "office": "성수부동산중개법인", "license_number": "123-45-67890", "address": "서울시 성동구", "representative": "박대표", "fao_broker": "최중개사" },

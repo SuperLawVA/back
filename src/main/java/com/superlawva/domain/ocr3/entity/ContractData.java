@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import jakarta.persistence.GenerationType;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.superlawva.global.security.converter.AriaCryptoConverter;
 import com.superlawva.global.security.converter.AesCryptoConverter;
 
@@ -35,10 +36,12 @@ public class ContractData {
     
     @Lob
     @Column(name = "articles_json", columnDefinition = "TEXT")
+    @JsonProperty("articles")
     private String articlesJson; // List<String> → JSON String
     
     @Lob
     @Column(name = "agreements_json", columnDefinition = "TEXT") 
+    @JsonProperty("agreements")
     private String agreementsJson; // List<String> → JSON String
 
     @Embedded
