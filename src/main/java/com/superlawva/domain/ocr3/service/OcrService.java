@@ -198,6 +198,63 @@ public class OcrService {
         }
     }
 
+    // S3 업로드 메서드를 public으로 변경
+    public String uploadEncryptedToS3(MultipartFile file, String userId, String baseDir) throws IOException {
+        byte[] originalBytes = file.getBytes();
+        String base64 = java.util.Base64.getEncoder().encodeToString(originalBytes);
+        String encrypted = com.superlawva.global.security.util.AESUtil.encrypt(base64);
+        byte[] encryptedBytes = encrypted.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        String ext = "";
+        String original = file.getOriginalFilename();
+        if (original != null && original.lastIndexOf('.') != -1) {
+            ext = original.substring(original.lastIndexOf('.'));
+        }
+        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
+
+        return s3Service.uploadBytes(encryptedBytes, userId, baseDir, ext, contentType);
+    }
+
+    // S3 업로드 없이 AI 원본 JSON만 반환
+    public String processContractWithoutSavingRawJsonNoUpload(MultipartFile file) throws Exception {
+        log.info("Starting OCR processing without saving (for JH, raw JSON, no upload) for file: {}", file.getOriginalFilename());
+        // Step 1: Extract text using Document AI
+        String extractedText = extractTextFromImage(file);
+        log.info("Text extraction completed");
+        // Step 2: Analyze text with Gemini (원본 JSON 그대로 반환)
+        String prompt = buildGeminiPrompt(extractedText);
+        Map<String, Object> requestBody = new HashMap<>();
+        List<Map<String, String>> partsList = new ArrayList<>();
+        Map<String, String> part = new HashMap<>();
+        part.put("text", prompt);
+        partsList.add(part);
+        List<Map<String, Object>> contentsList = new ArrayList<>();
+        Map<String, Object> content = new HashMap<>();
+        content.put("parts", partsList);
+        contentsList.add(content);
+        requestBody.put("contents", contentsList);
+        Map<String, String> generationConfig = new HashMap<>();
+        generationConfig.put("response_mime_type", "application/json");
+        requestBody.put("generationConfig", generationConfig);
+        String url = String.format("%s/v1beta/models/%s:generateContent?key=%s",
+                geminiApiUrl, geminiModelName, geminiApiKey);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        ResponseEntity<Map> response = restTemplate.postForEntity(url, entity, Map.class);
+        if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+            Map<String, Object> responseBody = response.getBody();
+            List<Map<String, Object>> candidates = (List<Map<String, Object>>) responseBody.get("candidates");
+            Map<String, Object> candidate = candidates.get(0);
+            Map<String, Object> candidateContent = (Map<String, Object>) candidate.get("content");
+            List<Map<String, String>> parts = (List<Map<String, String>>) candidateContent.get("parts");
+            String jsonText = parts.get(0).get("text");
+            return jsonText;
+        } else {
+            throw new RuntimeException("Failed to get valid response from Gemini API");
+        }
+    }
+
     private ContractData mapGeminiToContractData(ContractData geminiData, MultipartFile file, String userId, double generationTime) throws JsonProcessingException {
         ContractData contractData = new ContractData();
         contractData.setUserId(userId != null ? userId : geminiData.getUserId());
@@ -383,23 +440,6 @@ public class OcrService {
     }
 
     // ==================== Helper Methods ====================
-    private String uploadEncryptedToS3(MultipartFile file, String userId, String baseDir) throws IOException {
-        byte[] originalBytes = file.getBytes();
-        String base64 = java.util.Base64.getEncoder().encodeToString(originalBytes);
-        String encrypted = com.superlawva.global.security.util.AESUtil.encrypt(base64);
-        byte[] encryptedBytes = encrypted.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-
-        String ext = "";
-        String original = file.getOriginalFilename();
-        if (original != null && original.lastIndexOf('.') != -1) {
-            ext = original.substring(original.lastIndexOf('.'));
-        }
-        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
-
-        return s3Service.uploadBytes(encryptedBytes, userId, baseDir, ext, contentType);
-    }
-
-    // 기존 extractTextFromImage를 한 줄로 래핑
     private String extractedTextFromImage(MultipartFile file) throws Exception {
         return extractTextFromImage(file);
     }

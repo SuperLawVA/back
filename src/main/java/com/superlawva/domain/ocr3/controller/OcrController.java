@@ -259,9 +259,12 @@ public class OcrController {
             return ResponseEntity.badRequest().body(Map.of("success", false, "error", "파일이 비어있습니다."));
         }
         try {
-            // 외부 AI에서 받아온 원본 JSON을 가공 없이 그대로 반환
-            String rawJson = ocrService.processContractWithoutSavingRawJson(file);
+            // S3 업로드 및 file_url 확보
+            String fileUrl = ocrService.uploadEncryptedToS3(file, "temp-user", "temp");
+            // AI 원본 JSON만 그대로 반환
+            String rawJson = ocrService.processContractWithoutSavingRawJsonNoUpload(file);
             return ResponseEntity.ok()
+                    .header("X-File-Url", fileUrl)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(rawJson);
         } catch (Exception e) {
