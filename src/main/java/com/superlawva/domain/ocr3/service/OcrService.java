@@ -290,9 +290,18 @@ public class OcrService {
                 if (articlesObj != null) {
                     String articlesJson = objectMapper.writeValueAsString(articlesObj);
                     contractData.setArticlesJson(articlesJson);
+                    
+                    // 🟢 List<String>으로도 설정 (리스폰스용)
+                    if (articlesObj instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<String> articlesList = (List<String>) articlesObj;
+                        contractData.setArticles(articlesList);
+                    }
+                    
                     log.info("🟢 Articles 추출 성공: {}", articlesJson);
                 } else {
                     contractData.setArticlesJson("[]");
+                    contractData.setArticles(new ArrayList<>());
                     log.warn("⚠️ Articles가 AI 응답에 없음");
                 }
                 
@@ -301,20 +310,33 @@ public class OcrService {
                 if (agreementsObj != null) {
                     String agreementsJson = objectMapper.writeValueAsString(agreementsObj);
                     contractData.setAgreementsJson(agreementsJson);
+                    
+                    // 🟢 List<String>으로도 설정 (리스폰스용)
+                    if (agreementsObj instanceof List) {
+                        @SuppressWarnings("unchecked")
+                        List<String> agreementsList = (List<String>) agreementsObj;
+                        contractData.setAgreements(agreementsList);
+                    }
+                    
                     log.info("🟢 Agreements 추출 성공: {}", agreementsJson);
                 } else {
                     contractData.setAgreementsJson("[]");
+                    contractData.setAgreements(new ArrayList<>());
                     log.warn("⚠️ Agreements가 AI 응답에 없음");
                 }
             } else {
                 contractData.setArticlesJson("[]");
                 contractData.setAgreementsJson("[]");
+                contractData.setArticles(new ArrayList<>());
+                contractData.setAgreements(new ArrayList<>());
                 log.error("❌ contract_data가 AI 응답에 없음");
             }
         } catch (Exception e) {
             log.error("AI 원본 JSON에서 articles/agreements 추출 실패: {}", e.getMessage(), e);
             contractData.setArticlesJson("[]");
             contractData.setAgreementsJson("[]");
+            contractData.setArticles(new ArrayList<>());
+            contractData.setAgreements(new ArrayList<>());
         }
         
         contractData.setRecommendedAgreementsJson(objectMapper.writeValueAsString(geminiData.getRecommendedAgreementsJson()));

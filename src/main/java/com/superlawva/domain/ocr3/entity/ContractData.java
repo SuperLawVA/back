@@ -36,13 +36,20 @@ public class ContractData {
     
     @Lob
     @Column(name = "articles_json", columnDefinition = "TEXT")
-    @JsonProperty("articles")
-    private String articlesJson; // List<String> → JSON String
+    private String articlesJson; // List<String> → JSON String (DB 저장용)
     
     @Lob
     @Column(name = "agreements_json", columnDefinition = "TEXT") 
+    private String agreementsJson; // List<String> → JSON String (DB 저장용)
+    
+    // 🟢 AI 응답에서 직접 매핑용 필드 (DB 저장 안함)
+    @Transient
+    @JsonProperty("articles")
+    private List<String> articles;
+    
+    @Transient
     @JsonProperty("agreements")
-    private String agreementsJson; // List<String> → JSON String
+    private List<String> agreements;
 
     @Embedded
     @AttributeOverrides({
